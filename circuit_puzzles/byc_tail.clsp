@@ -1,0 +1,167 @@
+(mod (STATUTES_STRUCT_HASH COLLATERAL_VAULT_MOD_HASH CAT_MOD_HASH ORACLE_PRICE_INDEX
+      Truths parent_is_cat lineage_proof delta inner_conditions
+      (@ solution (
+        vault_parent_id
+        (
+          ;LATER: pass in hashed args, to avoid all this extra data cost, like in treasury coins
+          launcher_id byc_tail_hash p2_treasury_hash offer_mod_hash deposited_amount
+          minted_amount auction_state inner_puzzle_hash
+          discounted_principal
+        )
+        amount
+        mint_amount
+        my_coin_id
+        target_puzzle_hash
+      )
+      )
+     )
+
+  (include *standard-cl-23*)
+  (defconstant VAULT_ANN_PREFIX 0x56) ; starts with "V"
+  (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
+
+  (include condition_codes.clib)
+  (include cat_truths.clib)
+  (include sha256tree.clib)
+  (include curry.clib)
+  (include statutes_utils.clib)
+
+  (defconstant b32 32)
+  (defun size-b32 (var)
+    (= (strlen var) b32)
+  )
+
+  (defun calculate-coin-id (parent puzzle_hash amount)
+    (if (all (size-b32 parent) (size-b32 puzzle_hash) (> amount -1))
+      (sha256 parent puzzle_hash amount)
+      (x 'not a coin id:' parent puzzle_hash amount)
+    )
+  )
+
+  (defun generate-coin-id (MOD_HASH parent_id cat_mod_hash statutes_struct_hash launcher_id byc_tail_hash
+                                 p2_treasury_hash offer_mod_hash oracle_price_index
+                                 deposited_amount minted_amount auction_state
+                                 inner_puzzle_hash discounted_principal amount)
+    (calculate-coin-id
+      parent_id
+      (curry_hashes MOD_HASH
+         (sha256tree MOD_HASH)
+        (sha256tree cat_mod_hash)
+        (sha256tree launcher_id)
+        statutes_struct_hash
+        (sha256tree byc_tail_hash)
+        (sha256tree p2_treasury_hash)
+        (sha256tree offer_mod_hash)
+        (sha256tree oracle_price_index)
+        (sha256tree deposited_amount)
+        (sha256tree minted_amount)
+        (sha256tree auction_state)
+        inner_puzzle_hash
+        (sha256tree discounted_principal)
+      )
+      amount
+    )
+  )
+
+(defun return-conditions (vault_coin_id my_coin_id delta mint_amount target_puzzle_hash STATUTES_STRUCT_HASH)
+    (list
+      (list REMARK
+            vault_coin_id
+            VAULT_ANN_PREFIX
+            (if (> 0 delta) "x" "i")
+            my_coin_id
+            (if (> 0 delta) delta mint_amount)
+            STATUTES_STRUCT_HASH ; need to tie it to statutes struct
+      )
+      (list
+          ASSERT_COIN_ANNOUNCEMENT
+          (sha256
+            vault_coin_id
+            VAULT_ANN_PREFIX
+            (if (> 0 delta) "x" "i")
+            my_coin_id
+            (if (> 0 delta) delta mint_amount)
+            STATUTES_STRUCT_HASH ; need to tie it to statutes struct
+          )
+      )
+      (list
+        CREATE_COIN_ANNOUNCEMENT
+        (concat
+          BYC_ANN_PREFIX
+          (if (> 0 delta) "x" "i")
+          vault_coin_id
+          (if (> 0 delta) delta mint_amount)
+          STATUTES_STRUCT_HASH
+        )
+      )
+    )
+)
+
+(defun stager (COLLATERAL_VAULT_MOD_HASH
+               vault_parent_id
+              CAT_MOD_HASH
+              STATUTES_STRUCT_HASH
+              launcher_id
+              p2_treasury_hash
+              byc_tail_hash
+              offer_mod_hash
+              deposited_amount
+              minted_amount
+              auction_state
+              inner_puzzle_hash
+              discounted_principal
+              amount
+              my_coin_id
+              mint_amount
+              delta
+              oracle_price_index
+              target_puzzle_hash
+              )
+  (return-conditions
+            (generate-coin-id
+              COLLATERAL_VAULT_MOD_HASH
+              vault_parent_id
+              CAT_MOD_HASH
+              STATUTES_STRUCT_HASH
+              launcher_id
+              byc_tail_hash
+              p2_treasury_hash
+              offer_mod_hash
+              oracle_price_index
+              deposited_amount
+              minted_amount
+              auction_state
+              inner_puzzle_hash
+              discounted_principal
+              deposited_amount ; vault amount
+            )
+            my_coin_id
+            delta
+            mint_amount
+            target_puzzle_hash
+            STATUTES_STRUCT_HASH
+  )
+)
+  ; TODO: shouldn't we only use delta or mint amount, not always mint amount?
+  (stager
+    COLLATERAL_VAULT_MOD_HASH
+    vault_parent_id
+    CAT_MOD_HASH
+    STATUTES_STRUCT_HASH
+    launcher_id
+    p2_treasury_hash
+    byc_tail_hash
+    offer_mod_hash
+    deposited_amount
+    minted_amount
+    auction_state
+    inner_puzzle_hash
+    discounted_principal
+    amount
+    my_coin_id
+    mint_amount
+    delta
+    ORACLE_PRICE_INDEX
+    target_puzzle_hash
+  )
+)

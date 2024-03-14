@@ -1,0 +1,365 @@
+(mod (MOD_HASH 
+      CAT_MOD_HASH 
+      TAIL_MOD_HASH 
+      STATUTES_STRUCT 
+      INNER_PUZZLE 
+      BILL 
+      BLOCK_HEIGHT_RELATIVE_TO_ENACT 
+      MEMOS 
+      inner_solution
+      veto_conditions
+     ) 
+   
+    (include *standard-cl-23*)
+    (include sha256tree.clib)
+    (include curry.clib)
+    (include condition_codes.clib)
+    (include statutes_utils.clib)
+
+    
+    (defconstant VETO_BILL_REQUEST -2)
+    (defconstant VETO_BILL -1)
+    (defconstant SET_BILL 1)
+    (defconstant PROPOSE_BILL 2)
+    (defconstant ENACT_BILL 3)
+
+    (defconstant ANN_PROPOSED '^')
+    (defconstant ANN_ENACTED '$')
+    (defconstant ANN_VETO 'v')
+    (defconstant ANN_VETOED 'x')
+    (defconstant ANN_PREFIX 0x43) ; starts with "C"
+
+
+   (defun assert_ (items)
+      (if (r items)
+        (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
+        (f items)
+      )
+    )
+    (defmac assert items (assert_ items))
+
+
+    (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+                              final_bill bill_operation final_block_height_relative_to_enact
+                               (@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_conditions)
+      (if conditions
+        (if (= condition_code CREATE_COIN)
+          (filter-conditions
+            MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+            final_bill bill_operation final_block_height_relative_to_enact
+            rest_of_conditions
+            (c
+              ; REMARK condition to make it easy to generate puzzle reveal
+              (list REMARK
+                ; TODO: test that remark conditions are filtered out
+                bill_operation
+                final_bill
+                (f condition_rest) ; inner puzzle hash
+                final_block_height_relative_to_enact
+                (if (all (r (r condition_rest)) (= bill_operation PROPOSE_BILL))
+                  ; only proposal can set memos
+                  (f (r (r condition_rest)))
+                  ; if it's not a propose bill, set it to whatever was curried
+                  MEMOS
+                )
+              )
+              (c
+                (c
+                  CREATE_COIN
+                  (c
+                    (curry_hashes MOD_HASH
+                      (sha256tree MOD_HASH)
+                      (sha256tree CAT_MOD_HASH)
+                      (sha256tree TAIL_MOD_HASH)
+                      (sha256tree STATUTES_STRUCT)
+                      ; this is not hashed, because it's a puzzle reveal and puzzle hash is what we need
+                      (f  condition_rest)
+                      (sha256tree final_bill)
+                      (sha256tree final_block_height_relative_to_enact)
+                      (sha256tree
+                        (if (all (r (r condition_rest)) (= bill_operation PROPOSE_BILL))
+                          ; only proposal can set memos
+                          (f (r (r condition_rest)))
+                          ; if it's not a propose bill, set it to whatever was curried
+                          MEMOS
+                        )
+                      )
+                    )
+                    (r condition_rest)
+                  )
+                )
+                filtered_conditions
+              )
+            )
+          )
+          (if (= condition_code CREATE_COIN_ANNOUNCEMENT)
+            (assert
+              ; not just filter out announcements with our prefix namespace
+              ; but raise an error if someone is trying to be cheeky
+              (not
+                  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
+              )
+              (f conditions)
+            )
+            (if (= condition_code REMARK)
+              (filter-conditions
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+                final_bill bill_operation final_block_height_relative_to_enact
+                rest_of_conditions
+                filtered_conditions
+              )
+              (filter-conditions
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+                final_bill bill_operation final_block_height_relative_to_enact
+                rest_of_conditions
+                (c (f conditions) filtered_conditions)
+              )
+            )
+          )
+        )
+        filtered_conditions
+      )
+    )
+
+
+    (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill block_height_relative_to_enact memos )
+      (curry_hashes CAT_MOD_HASH (sha256tree CAT_MOD_HASH) (sha256tree TAIL_MOD_HASH) 
+        (curry_hashes MOD_HASH
+          (sha256tree MOD_HASH)
+          (sha256tree CAT_MOD_HASH)
+          (sha256tree TAIL_MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          inner_puzzle_hash
+          (sha256tree bill)
+          (sha256tree block_height_relative_to_enact)
+          (sha256tree memos)
+        )
+      )
+    )
+
+    (defun merge-lists (list_a list_b)
+      (if list_a
+        (c (f list_a) (merge-lists (r list_a) list_b))
+        list_b
+      )
+    )
+  
+    (defun validate-veto-conditions (veto_conditions return_conditions)
+      (if veto_conditions
+        (if (any (= (f (f veto_conditions)) REMARK) (= (f (f veto_conditions)) ASSERT_COIN_ANNOUNCEMENT))
+          (validate-veto-conditions (r veto_conditions) (c (f veto_conditions) return_conditions))
+          (x "not a valid veto condition:" (f (f veto_conditions)))
+        )
+        return_conditions
+      )
+    )
+
+    (defun print (to-show result) (if (all "$print$" to-show result) result result))
+    
+    (defun find_bill_condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
+      (if conditions
+        (if (= condition_code REMARK)
+          ; found REMARK
+          (if (= 'b' (f condition_body))
+            (r condition_body)
+            (find_bill_condition rest_of_conditions)
+          )
+          (find_bill_condition rest_of_conditions)
+        )
+        (list () () ())
+      )
+    )
+    (defun get-bill-operation-lambda (bill_operations bill_operation)
+      (if bill_operations
+        (if (= (f (f bill_operations)) bill_operation)
+          (f (r (f bill_operations)))
+          (get-bill-operation-lambda (r bill_operations) bill_operation)
+        ) 
+        ()
+      )
+    )
+
+    ; ###################  MAIN ENTRY POINT  ######################## 
+    (assign
+      raw_inner_conditions (if inner_solution
+        (a INNER_PUZZLE (print "inner solution" inner_solution))
+        ; someone is trying to veto this bill, there are no CREATE_COIN conditions in the solution, so we're good
+        (assign my_amount (f (r (r (r (r (r (f (print "veto solution: " veto_conditions))))))))
+          (c
+            ; we can't run inner puzzle as we don't control it, but we still need to run it to veto it
+            ; recreate coin to the same inner puzzle
+            (list CREATE_COIN (sha256tree INNER_PUZZLE) my_amount MEMOS)
+            (validate-veto-conditions veto_conditions ())
+          )
+        )
+      )
+      (statutes_inner_puzzle_hash bill_operation . args) (find_bill_condition raw_inner_conditions)
+      statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+      bill_operations (list 
+        (list SET_BILL  
+          (lambda (bill)
+            (list
+              ; new state 
+              (list bill () () )
+              ; conditions required for this state to apply 
+              ()
+            )
+          )
+        )
+
+        (list PROPOSE_BILL 
+          (lambda ((& statutes_puzzle_hash) bill relative_height_needed amount amount_needed)
+            (assert (> amount amount_needed) (> (print "propose height needed" relative_height_needed) 0) 
+                    (> amount_needed 0)
+              (list 
+              (list bill relative_height_needed ())
+                (list
+                  (list ASSERT_MY_AMOUNT (print "my amount" amount))
+                  (assert-statute
+                    statutes_puzzle_hash
+                    STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
+                    relative_height_needed)
+                  (assert-statute
+                    statutes_puzzle_hash
+                    STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
+                    amount_needed)
+                  ; no ephemeral coins, thanks 
+                  (list ASSERT_HEIGHT_RELATIVE 1)
+                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_PROPOSED))
+                )
+              )
+            )
+          )
+        )
+
+        (list ENACT_BILL 
+          (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT statutes_puzzle_hash) bill amount amount_needed) 
+          
+            (assert (> amount amount_needed) (= (sha256tree BILL) (sha256tree bill))
+              (list 
+                ; if enactment passes, reset this coins bill state 
+                (list () () ())
+                (list 
+                  (list ASSERT_HEIGHT_RELATIVE BLOCK_HEIGHT_RELATIVE_TO_ENACT)
+                  (list ASSERT_MY_AMOUNT amount)
+                  (assert-statute
+                    statutes_puzzle_hash
+                    STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
+                    BLOCK_HEIGHT_RELATIVE_TO_ENACT)
+                  (assert-statute
+                    statutes_puzzle_hash
+                    STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
+                    amount_needed)
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT
+                    (sha256 statutes_puzzle_hash STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree BILL))
+                  )
+                  (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX (sha256tree BILL)))
+                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_ENACTED))
+                )
+              )
+            )
+          )
+        )
+        
+        (list VETO_BILL
+          (lambda ((& MOD_HASH 
+                      CAT_MOD_HASH 
+                      TAIL_MOD_HASH 
+                      STATUTES_STRUCT 
+                      BILL 
+                      BLOCK_HEIGHT_RELATIVE_TO_ENACT
+                      MEMOS 
+                      statutes_puzzle_hash) 
+                    bill 
+                    amount
+                    amount_needed
+                    veto_amount
+                    veto_inner_puzzle_hash
+                  )
+                   (assert BILL (> amount amount_needed) (> veto_amount amount)
+                    (> BLOCK_HEIGHT_RELATIVE_TO_ENACT 0)
+                    
+                    (= (sha256tree BILL) (sha256tree bill))
+                    (list 
+                      (list () () MEMOS)
+                      (list 
+                        (list ASSERT_BEFORE_HEIGHT_RELATIVE BLOCK_HEIGHT_RELATIVE_TO_ENACT)
+                        (list ASSERT_MY_AMOUNT amount)
+                        (assert-statute
+                          statutes_puzzle_hash
+                          STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
+                          BLOCK_HEIGHT_RELATIVE_TO_ENACT)
+                        (assert-statute
+                          statutes_puzzle_hash
+                          STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
+                          amount_needed)
+                        ; no ephemeral coins
+                        (list ASSERT_HEIGHT_RELATIVE 1)
+                        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
+                        ; assert announcement from another CRT coin with higher amount than this one 
+                        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate-crt-puzzle MOD_HASH
+                                                                                      CAT_MOD_HASH
+                                                                                      TAIL_MOD_HASH
+                                                                                      STATUTES_STRUCT
+                                                                                      veto_inner_puzzle_hash 
+                                                                                      () 
+                                                                                      () 
+                                                                                      ()  ; memos are null for veto 
+                                                                 ) 
+                                                                 (concat ANN_PREFIX ANN_VETO (sha256tree bill) veto_amount)
+                                                         )
+                        )
+                      )
+                    )
+                   )
+          )
+        )
+
+        (list VETO_BILL_REQUEST 
+          (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT) bill amount)
+            (assert (not BILL) bill (> amount 0) 
+              (list 
+                (list () () ())
+                (list 
+                  (list ASSERT_MY_AMOUNT amount)
+                  ; no ephemeral coins
+                  (list ASSERT_HEIGHT_RELATIVE 1)
+                  ; puzzle hash allows for mass vetoing too
+                  (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETO (sha256tree bill) amount))
+
+                )
+              )
+            )
+          )
+        )
+      )
+      (
+        (
+          final_bill
+          final_block_height_relative_to_enact
+          ; LATER: remove memos here (why?)
+          _
+        )
+        bill_conditions
+      ) (a
+        (assign func (get-bill-operation-lambda bill_operations bill_operation)
+          (if func
+            func
+            (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS))
+              (list
+                (list BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS)
+                (list )
+              )
+            )
+          )
+        )
+        args
+      )
+      inner_conditions (filter-conditions
+        MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+        final_bill bill_operation final_block_height_relative_to_enact
+        raw_inner_conditions ()
+      )
+      (merge-lists bill_conditions inner_conditions)
+    )
+)

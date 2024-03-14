@@ -1,0 +1,98 @@
+; This is a "limitations_program" for use with cat.clvm for CRT token
+(mod (GENESIS_ID
+      ; TODO: approval mods could come from statutes directly
+      ;       so we don't technically need to curry all these
+      RECHARGE_MOD_HASH ; can mint
+      SURPLUS_MOD_HASH ; can melt
+      CAT_MOD_HASH
+      BYC_TAIL_HASH
+      STATUTES_STRUCT_HASH ; this is needed to tie all the relevant puzzles to a single statutes struct
+      Truths parent_is_cat lineage_proof delta inner_conditions
+      solution
+     ) 
+
+  (include condition_codes.clib)
+  (include cat_truths.clib)
+  (include sha256tree.clib)
+  (include curry.clib)
+  (include *standard-cl-23*)
+
+  (defun sha256tree1 (TREE)
+    (if (l TREE)
+      (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+      (sha256 1 TREE))
+  )
+  (defun generate-coin-id (STATUTES_STRUCT_HASH parent_id mod_hash launcher_id statutes_struct start_time last_bid lot_amount)
+    (sha256
+      parent_id
+      (curry_hashes mod_hash
+        (sha256tree1 mod_hash)
+        (sha256tree1 launcher_id)
+        STATUTES_STRUCT_HASH
+        (sha256tree1 start_time)
+        (sha256tree1 last_bid)
+      )
+      lot_amount
+    )
+  )
+
+  (if delta
+    (if (> 0 delta)
+      ; no minting
+      (x)
+      ; melting only by surplus auction
+      (assign
+        (crt_tail_hash p2_treasury_hash p2_surplus_auction_hash statute_struct launcher_id byc_lot_amount last_bid) solution
+        puzzle_hash (
+          curry_hashes CAT_MOD_HASH
+            (sha256tree1 CAT_MOD_HASH)
+            (sha256tree1 crt_tail_hash)
+            (curry_hashes SURPLUS_MOD_HASH
+              (sha256tree1 SURPLUS_MOD_HASH)
+              (sha256tree1 p2_treasury_hash)
+              (sha256tree1 p2_surplus_auction_hash)
+              STATUTES_STRUCT_HASH
+              (sha256tree1 launcher_id)
+              (sha256tree1 byc_lot_amount)
+              (sha256tree1 last_bid)
+            )
+        )
+        (list
+          ; if this is a surplus auction and it called for melting, then we should melt
+          (list ASSERT_MY_PUZZLEHASH puzzle_hash)
+        )
+      )
+    )
+    (if (= (my_parent_cat_truth Truths) GENESIS_ID)
+      ()
+      (if (all (= (f solution) RECHARGE_MOD_HASH) (= delta 0)) ; third option is issuing by recharge auction
+        (assign
+          (
+            mod_hash
+            parent_id
+            curried_mod_args
+            amount
+            my_coin_id
+          ) solution
+
+          approving_coin_id (
+            sha256
+              parent_id
+              (curry_hashes CAT_MOD_HASH
+                (sha256tree1 CAT_MOD_HASH)
+                (sha256tree1 BYC_TAIL_HASH)
+                (tree_hash_of_apply mod_hash curried_mod_args)
+              )
+              amount
+
+          )
+          (list
+            (list CREATE_COIN_ANNOUNCEMENT (concat STATUTES_STRUCT_HASH delta))
+            (list ASSERT_COIN_ANNOUNCEMENT (sha256 STATUTES_STRUCT_HASH approving_coin_id my_coin_id delta))
+          )
+        )
+        (x)
+      )
+    ) 
+  )
+)

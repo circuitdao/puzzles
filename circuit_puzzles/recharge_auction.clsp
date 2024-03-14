@@ -1,0 +1,170 @@
+; This is a singleton puzzle, it will be generated once when protocol launches and has different states that it
+; can be in. recharge auction will contain value of the vault it was created from.
+; normally, these coins won't contain any value, this is mostly for extreme scenarios where price has been
+; falling so dramatically that keepers don't even want to bid anymore 
+;
+; # Auction process
+; auction starts off and bids are being accepted, auction runs for X hours, and TTL for each bid is Y hours.
+; each BID compromises of bid value in BYC and asking CRT, BYC in the bid is absorbed by recharge auction coin 
+; and moved into the buffer.
+
+; ## Bidding Scenarios
+; - **TTL ends**; time starts ticking for TTL, if there are no other bids placed in that time, auction ends by spending the bid coin and recharge auction coin. 
+; this burns the BYC in bid coin, and mints newly minted CRT to target puzzle hash that bidder specified. 
+; - **multiple bids**; if another bid is placed before TTL, then the previous bid is refunded, and new bid is accepted.
+; - **no bids**; the auction can be restarted forever or until system is shut down  
+
+; ## Minting CRT 
+; We mint CRT by spending bidder providing a coin with enough mojos that can be transformed into a CRT CAT coin. This means that
+; CRT tail can be controlled by recharge auction puzzle.
+
+; WARN: lineage is important here, recharge auctions are valid IFF they are created from statutes.
+
+(mod (MOD_HASH CAT_MOD_HASH P2_TREASURY_HASH CRT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
+      statutes_inner_puzzle_hash  op_code . op_args)
+
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include sha256tree.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+
+  (defun assert_ (items)
+    (if (r items)
+      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
+      (f items)
+      )
+    )
+
+  (defmac assert items (assert_ items))
+  (defun recreate-coin (MOD_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID AMOUNT)
+    (list
+      CREATE_COIN
+      (curry_hashes
+        MOD_HASH
+        (sha256tree MOD_HASH)
+        (sha256tree LAUNCHER_ID)
+        (sha256tree STATUTES_STRUCT)
+        (sha256tree START_TIME)
+        (sha256tree LAST_BID)
+      )
+      AMOUNT
+    )
+  )
+
+  (defun print (to-show result) (if (all "$print$" to-show result) result result))
+  (defconst LAUNCH 0)
+  (defconst START_AUCTION 1)
+  (defconst BID 2)
+  (defconst COMPLETE 3) ; NOTE: this doesn't melt the coin, just resets it to 0 and allows it to be reused
+  ; TODO: what about melt/destroying auction coin? this covers cases where for some reason we want multiple recharge auctions
+
+  (assign
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    (if (= (print "opcode: " op_code) START_AUCTION)
+      (assign
+        start_time (f op_args)
+        auction_timeout (f (r op_args))
+        (assert
+          ; can't run if LAST_BID is set
+          (not LAST_BID)
+          ; can't run if auction is still running and hasn't expired yet
+          (> (- start_time START_TIME) auction_timeout)
+            (list
+                (recreate-coin MOD_HASH STATUTES_STRUCT start_time ())
+                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+                ; start_time minus one tx block time should already be in the past
+                (list ASSERT_SECONDS_ABSOLUTE (- start_time 55))
+                ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
+                (list ASSERT_MY_AMOUNT 0)
+                ; FIXME: prove treasury hit below hard minimum
+
+            )
+        )
+      )
+      (if (= op_code BID)
+        (assign
+          ; op_args -> (bid_crt_amount target_puzzle_hash timestamp)
+          (bid_crt_amount target_puzzle_hash current_timestamp minimum_bid_amount auction_timeout ttl lot_amount) op_args
+          (last_bid_crt_amount last_target_puzzle_hash last_bid_timestamp) (
+            if LAST_BID
+              LAST_BID
+              (list () () -1)
+          )
+          (assert
+            ; must be smaller than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
+            (any (= last_bid_crt_amount -1) (> last_bid_crt_amount bid_crt_amount))
+            ; bids can't be smaller than this
+            (> minimum_bid_amount bid_crt_amount)
+            ; auction hasn't expired yet
+            (> auction_timeout (- current_timestamp START_TIME))
+            ; TTL for bid hasn't expired yet
+            (> (- current_timestamp last_bid_timestamp) ttl)
+            (list
+              ; return BYC to previous bidder
+              (list CREATE_COIN last_target_puzzle_hash lot_amount)
+              ; update LAST_BID
+              (recreate-coin
+                MOD_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME
+                (list bid_crt_amount target_puzzle_hash current_timestamp)
+                lot_amount
+              )
+              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_LOT_AMOUNT lot_amount)
+              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID_AMOUNT minimum_bid_amount)
+              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
+              ; current_time minus one tx block time should already be in the past
+              (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+              ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+              (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+              ; announcement of a new bid to secure fee coins against it
+              (list CREATE_COIN_ANNOUNCEMENT (concat target_puzzle_hash bid_crt_amount))
+            )
+          )
+        )
+        (if (= op_code COMPLETE)
+          ; we have a winning bid
+          ; op_args -> (ttl auction_timeout)
+          (assign
+            (bid_crt_amount target_puzzle_hash timestamp) LAST_BID
+            (ttl current_timestamp auction_timeout lot_amount parent_id) op_args
+            funding_coin_id (sha256
+              parent_id
+              (curry_hashes
+                CAT_MOD_HASH
+                (sha256tree CAT_MOD_HASH)
+                (sha256tree CRT_TAIL_HASH)
+                target_puzzle_hash
+              )
+              bid_crt_amount
+            )
+            (assert
+              ; ttl should've expired
+              (> (- current_timestamp timestamp) ttl)
+              ; auction hasn't expired yet
+              (> auction_timeout (- current_timestamp START_TIME))
+              (list
+                (recreate-coin MOD_HASH STATUTES_STRUCT () ())
+                (list ASSERT_MY_AMOUNT lot_amount)
+                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
+                ; current_time minus one tx block time should already be in the past
+                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                ; approve minting of CRT coins to target_puzzle_hash
+                (list CREATE_COIN_ANNOUNCEMENT (concat funding_coin_id bid_crt_amount))
+                ; assert they were minted
+                (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id bid_crt_amount))
+                ; FIXME: transfer BYC to treasury coins evenly
+
+              )
+            )
+          )
+          (x "unknow opcode")
+        )
+      )
+    )
+  )
+)

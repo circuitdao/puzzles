@@ -1,0 +1,302 @@
+(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
+      lineage_proof statutes_inner_puzzle_hash current_amount
+      input_conditions . args)
+  ; anyone can crete these coins, but only the owner can spend them
+  ; this can wrap any coin and make it a treasury coin
+
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+  (include statutes_utils.clib)
+  (include *standard-cl-23*)
+
+  (defconstant ANN_PREFIX 0x24) ; -> '$'
+
+   (defun assert_ (items)
+    (if (r items)
+      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
+      (f items)
+      )
+    )
+
+  (defmac assert items (assert_ items))
+
+  (defun print (to-show result) (if (all "$print$" to-show result) result result))
+
+  (defun filter-ann-conditions ( (@ ann_conditions ( (condition_code . condition_rest) . rest)) filtered_announcements)
+    (if ann_conditions
+      (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
+        (if (not
+            (any
+              (= 2 (strlen (f condition_rest)))
+              (= (substr (f condition_rest) 0 1) ANN_PREFIX)
+            )
+           )
+          (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
+          ; bad announcement found, error
+          (x)
+        )
+        (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
+      )
+      filtered_announcements
+    )
+  )
+
+  (defun parse-conditions (input_conditions my_puzzle_hash my_create_coin_exists return_conditions new_amount withdraw_amount)
+    (if (l input_conditions)
+      (assign
+        (condition_code condition_body . rest_condition) (f input_conditions)
+        (if (= condition_code CREATE_COIN)
+          (if condition_body
+            (if (= condition_body my_puzzle_hash)
+              ; if it's paying into our puzzle hash, increase the sum (they're depositing)
+              (if my_create_coin_exists
+                ; can't pay into our own puzzle hash twice
+                (x "Cant pay into our own puzzle hash twice")
+                (parse-conditions (r input_conditions) my_puzzle_hash 1 (c (f input_conditions) return_conditions) (+ new_amount (f rest_condition)) withdraw_amount)
+              )
+              ; if it's paying into a different puzzle hash, decrease the sum (they're withdrawing)
+              (parse-conditions (r input_conditions) my_puzzle_hash my_create_coin_exists (c (f input_conditions) return_conditions) new_amount (+ withdraw_amount (f rest_condition)))
+            )
+            (parse-conditions (r input_conditions) my_puzzle_hash my_create_coin_exists (c (f input_conditions) return_conditions) new_amount withdraw_amount)
+          )
+          (parse-conditions (r input_conditions) my_puzzle_hash my_create_coin_exists (c (f input_conditions) return_conditions) new_amount withdraw_amount)
+        )
+      )
+      ; all done, return sum and enforce our create coin condition
+      (assert my_create_coin_exists (list new_amount withdraw_amount return_conditions))
+    )
+  )
+
+      ; filter conditions to only those that are allowed
+  (assign
+    filtered_conditions (filter-ann-conditions input_conditions ())
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    ; 1. we're withdrawing/depositing/announcing, lineage proof is parent_id of parent coin and amount, we need to assert
+    ;    that assert_parent_id is `(parent_id . previous_amount)`
+    ; 2. we're changing lineage, lineage proof is `(parent_id . prev_launcher_id)` and
+    ;    asserts announcement from statutes vote
+    generate-puzzle-hash (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                                     RING_PREV_LAUNCHER_ID LAUNCHER_ID)
+                                     prev_launcher_id launcher_id)
+        (curry_hashes CAT_MOD_HASH
+          (sha256tree CAT_MOD_HASH)
+          (sha256tree CAT_TAIL_HASH)
+          (curry_hashes MOD_HASH ; puzzle hash
+            (sha256tree MOD_HASH)
+            (sha256tree CAT_MOD_HASH)
+            (sha256tree CAT_TAIL_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (if prev_launcher_id
+              (sha256tree prev_launcher_id)
+              (sha256tree RING_PREV_LAUNCHER_ID)
+            )
+            (if launcher_id
+              (sha256tree launcher_id)
+              (sha256tree LAUNCHER_ID)
+            )
+          )
+        )
+    )
+    (my_puzzle_hash parent_id) (if (= (strlen (r lineage_proof)) 32)
+      ; we're changing lineage
+      (list
+        ;(a generate-puzzle-hash (list (r lineage_proof))) ; we can only change ring formation
+        (curry_hashes MOD_HASH ; inner puzzle hash
+          (sha256tree MOD_HASH)
+          (sha256tree CAT_MOD_HASH)
+          (sha256tree CAT_TAIL_HASH)
+          (sha256tree STATUTES_STRUCT)
+          ; we can only change ring formation
+          (sha256tree (r lineage_proof))
+          (sha256tree LAUNCHER_ID)
+        )
+        (if (= (f lineage_proof) LAUNCHER_ID)
+          ; this is initial launch, assert launcher coin
+          LAUNCHER_ID
+          ; not launch, just update, assert previous coin spend
+          (sha256
+            (f lineage_proof) ; parent id
+            (a generate-puzzle-hash (list () ()))
+            ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
+            current_amount ; previous amount
+          )
+        )
+      )
+      ; we're spending/announcing
+      (list
+        (curry_hashes MOD_HASH ; inner puzzle hash
+          (sha256tree MOD_HASH)
+          (sha256tree CAT_MOD_HASH)
+          (sha256tree CAT_TAIL_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256tree RING_PREV_LAUNCHER_ID)
+          (sha256tree LAUNCHER_ID)
+        )
+        ; this ensures that we're keeping lineage the same
+        (sha256
+          (f lineage_proof)
+          (a generate-puzzle-hash (list () ()))
+          ; pass through previous amount
+          (r lineage_proof)
+        )
+      )
+    )
+    (new_amount withdraw_amount_pre conditions) (parse-conditions
+      filtered_conditions
+      my_puzzle_hash
+      0 ; create coin exists = false
+      () ; return_conditions
+      () ; collect conditions here
+      ; init new_amount = 0
+      0
+      ; init withdraw_amount = 0
+      0
+    )
+    withdraw_amount (
+      if (> current_amount new_amount)
+        (if (= 0 withdraw_amount_pre)
+          ; there's a delta but no create coin wants to capture the amount, must be a melt
+          (- current_amount new_amount)
+          ; withdraw is set, use that
+          (if (> withdraw_amount_pre 0)
+            withdraw_amount_pre
+            ; withdraw_amount_pre is negative, use it
+            (assert (x withdraw_amount_pre (- new_amount current_amount)) (* -1 withdraw_amount_pre))
+          )
+        )
+        withdraw_amount_pre
+    )
+    (assert
+     ; can't go into negative
+     (> new_amount -1) (> withdraw_amount -1)
+     ; no change allowed
+     ;(> (+ new_amount withdraw_amount) (- current_amount 1))
+     (any
+      ; we can't leave any change if withdrawing
+      (= current_amount (+ new_amount withdraw_amount))
+      ; or if depositing must be higher than previous value
+      (all (= withdraw_amount 0) (> new_amount current_amount))
+     )
+     ; we can't do both a withdrawal and a deposit at the same time
+     (not (all (> withdraw_amount 0) (> new_amount current_amount)))
+     ; must have at least one condition
+     (l conditions)
+     ; ---- all asserts passed, return conditions
+      (c (list
+        ASSERT_MY_AMOUNT current_amount)
+        (c (list
+          ; TODO: is inner puzzle hash enough, or do we need to double check it's correct puzzle?
+          REMARK
+               withdraw_amount  (- new_amount current_amount)
+              )
+          (c (list
+            ASSERT_MY_PARENT_ID parent_id)
+            (if (all (= (strlen (r lineage_proof)) 32) (= withdraw_amount 0))
+              ; updating lineage, don't require approving mods
+              ; there is initial launch and later update of the ring
+              (c
+                (list ASSERT_PUZZLE_ANNOUNCEMENT
+                  ; get approval from statutes
+                  (sha256
+                    statutes_puzzle_hash
+                    ANN_PREFIX
+                    (f args) ; my_coin_id
+                    LAUNCHER_ID
+                    (r lineage_proof) ; prev ring launcher id
+                  )
+                )
+                (c (list ASSERT_MY_COIN_ID (f args))
+                  ; confirm back to statutes that we indeed updated the curried args
+                  (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX LAUNCHER_ID (r lineage_proof)))
+                    conditions
+                  )
+                )
+              )
+              ; we're spending/announcing, require approving mods
+              (assign
+                ; ring_prev_prev_info is (ring_prev_prev_id . ring_prev_prev_amount)
+                (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
+                approving_mod_hash_tree_arg approving_mod_ann_prefix approving_mod_hashes my_coin_id . ring_prev_prev_info) args
+                approver_coin_id (assert
+                  ; check that this approving mod hash is allowed
+                  (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
+                  (sha256  ; FIXME: this should be done with coinid!!
+                    approving_parent_id
+                    ; we want to ensure that the approving puzzle is using the correct mod
+                    (if (l approving_mod_curried_args_hash)
+                      ; this puzzle is wrapped inside a CAT puzzle
+                      (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
+                        (curry_hashes CAT_MOD_HASH
+                          (sha256tree CAT_MOD_HASH)
+                          (sha256tree CAT_TAIL_HASH)
+                          (tree_hash_of_apply approving_mod_hash (r approving_mod_curried_args_hash))
+                        )
+                      )
+                      (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
+                    )
+                    approver_amount
+                  )
+                )
+
+                ; FIXME: if approver mod is collateral vault and it's being transferred by a keeper
+                ;  it needs to be above a minimum deposit amount, ignore if it's coming from vault owner x
+                (c
+                  ; assert approver coin announcement is valid
+                  (list ASSERT_COIN_ANNOUNCEMENT
+                    (sha256
+                      approver_coin_id
+                      approving_mod_ann_prefix
+                      my_coin_id
+                      (- new_amount current_amount)
+                      new_amount
+                    )
+                  )
+                  (c
+                    ; create announcement back to approver confirming we have withdrawn
+                    ; NOTE: we must use coin announcements to avoid duplications of announcements
+                    (list CREATE_COIN_ANNOUNCEMENT
+                      (concat
+                        ANN_PREFIX
+                        approver_coin_id
+                        (- new_amount current_amount)
+                        new_amount
+                      )
+                    )
+                    ; assert that approving mod hashes are valid
+                    (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
+                    ; assert that passed coin id is ours
+                      (c (list ASSERT_MY_COIN_ID my_coin_id)
+                        (if (= current_amount new_amount)
+                          ; FIXME: we don't need this part as withdrawal is already announcing the amounts
+                          ; we're announcing, add puzzle announcements to
+                          ; ensure all treasury coins in the ring were spent
+                          (c
+                            (list ASSERT_PUZZLE_ANNOUNCEMENT
+                              (sha256
+                                ; assert announcement from our previous ring launcher id
+                                (a generate-puzzle-hash (list (f ring_prev_prev_info) RING_PREV_LAUNCHER_ID ))
+                                ANN_PREFIX
+                                '=' ; as in '$=amount', to avoid collisions
+                                (f (r ring_prev_prev_info))
+                              )
+                            )
+                            (c (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount))
+                                conditions
+
+                            )
+                          )
+                          conditions
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

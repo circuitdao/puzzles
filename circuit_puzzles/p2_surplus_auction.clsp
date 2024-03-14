@@ -1,0 +1,62 @@
+(mod (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH SURPLUS_AUCTION_MOD_HASH SURPLUS_AUCTION_LAUNCHER_ID
+      surplus_auction_parent_id surplus_auction_curried_args_hash surplus_auction_amount
+      my_coin_id amount puzzle_hash)
+
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include sha256tree.clib)
+   (defun assert_ (items)
+    (if (r items)
+      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
+      (f items)
+      )
+    )
+
+  (defmac assert items (assert_ items))
+  (assign
+    my_puzzle_hash (curry_hashes
+      MOD_HASH
+      (sha256tree MOD_HASH)
+      (sha256tree CAT_MOD_HASH)
+      (sha256tree BYC_TAIL_HASH)
+      (sha256tree SURPLUS_AUCTION_MOD_HASH)
+      (sha256tree SURPLUS_AUCTION_LAUNCHER_ID)
+    )
+    launcher_coin_id (sha256
+      surplus_auction_parent_id
+      (curry_hashes CAT_MOD_HASH
+        (sha256tree CAT_MOD_HASH)
+        (sha256tree BYC_TAIL_HASH)
+        (tree_hash_of_apply SURPLUS_AUCTION_MOD_HASH surplus_auction_curried_args_hash)
+      )
+      surplus_auction_amount
+    )
+    (if (= puzzle_hash my_puzzle_hash)
+    (assert
+      ; check that calculated launcher_coin_id is the same as auctions launcher id
+      (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID)
+      (list ;create / fill the coin from treasury
+        (list CREATE_COIN_ANNOUNCEMENT SURPLUS_AUCTION_LAUNCHER_ID amount puzzle_hash)
+        ; surplus auction is being created and started, since we should have enough in treasury
+        ; to fill this coin, let see. We also guarantee that we are actually locked into launcher coin
+        (list ASSERT_COIN_ANNOUNCEMENT (sha256 SURPLUS_AUCTION_LAUNCHER_ID my_coin_id SURPLUS_AUCTION_LAUNCHER_ID amount puzzle_hash))
+        ; recreate ourselves with the surplus BYC lot amount
+        (list CREATE_COIN puzzle_hash amount)
+        (list ASSERT_MY_COIN_ID my_coin_id)
+      )
+    )
+    ; we're transferring funds to surplus auction winner
+    (list
+      (list ASSERT_MY_PUZZLEHASH my_puzzle_hash)
+      ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
+      ; and the winning bid amount to melt
+      (list ASSERT_COIN_ANNOUNCEMENT (sha256 launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID amount puzzle_hash))
+      ; confirm to surplus auction that we have transferred funds to the winner (puzzle_hash)
+      (list CREATE_COIN_ANNOUNCEMENT launcher_coin_id amount puzzle_hash)
+      ; do it
+      (list CREATE_COIN puzzle_hash amount)
+    )
+    )
+  )
+)

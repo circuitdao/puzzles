@@ -1,0 +1,283 @@
+(mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICE LAST_UPDATED 
+      ; solution 
+      statutes_inner_puzzle_hash
+      (@ oracle_mutation
+        (
+          allowed_pub_keys_root 
+          m_of_n
+          price_updatable_after_seconds
+          price_updatable_threshold_percent
+          current_timestamp
+          ; price_announcements -> ((pubkey mr_proof_for_pubkey price before_timestamp))
+          price_announcements
+        )
+      )
+     )
+
+  (include *standard-cl-23*)
+  (include sha256tree.clib)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include merkle_utils.clib)
+
+  (defun assert_ (items)
+    (if (r items)
+      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x)))
+      (f items)
+      )
+  )
+
+  (defmac assert items (assert_ items))
+
+  (defun filter (pred (@ lst (first . rest)))
+    (if lst
+      (assign item (a pred (list first))
+        (if item
+          (c item (filter pred rest))
+          (filter pred rest)
+        )
+      )
+      ()
+    )
+  )
+
+  (defun list-length (lst count)
+    (if lst
+      (list-length (r lst) (+ count 1))
+      count
+    )
+  )
+
+  (defun not-contains (lst item)
+    (if lst
+      (if (= (f (f lst)) item)
+        (x)
+        (not-contains (r lst) item)
+      )
+      1
+    )
+  )
+
+  (defun unique (lst)
+    (if (r lst)
+      (if (not-contains (r lst) (f (f lst)))
+        (unique (r lst))
+        (x)
+      )
+      1
+    )
+  )
+(defun and_ (CLAUSES)
+   (if (r CLAUSES)
+     (qq (if (unquote (f CLAUSES)) (unquote (and_ (r CLAUSES))) ()))
+     (f CLAUSES)
+     )
+   )
+
+(defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
+
+(defun or_ (CLAUSES)
+   (if (r CLAUSES) ;; There are more.
+     (qq (if (unquote (f CLAUSES)) (unquote (f CLAUSES)) (unquote (or_ (r CLAUSES)))))
+     (f CLAUSES)
+     )
+   )
+
+ (defmac or CLAUSES (if CLAUSES (or_ CLAUSES) ()))
+
+(defun _reverse (L R)
+  (if L
+      (_reverse (r L) (c (f L) R))
+    R))
+
+(defun reverse (L)
+  (_reverse L ()))
+
+(defun-inline endp (L)
+  (if (not L) 1 (if (not (r L)) 1 0)))
+
+(defun _split (Z L R)
+  (if (endp R)
+      (list (reverse L) Z)
+      (_split (r Z) (c (f Z) L) (r (r R))))
+  )
+
+(defun split (Z)
+  (_split Z () Z))
+
+(defun _merge (L R A)
+  (if (and (not L) (not R)) (reverse A)
+    (if (not L) (_merge () (r R) (c (f R) A))
+      (if (not R) (_merge (r L) () (c (f L) A))
+        (if (> (f R) (f L)) (_merge (r L) R (c (f L) A))
+            (_merge L (r R) (c (f R) A)))))))
+
+(defun merge (L R)
+  (_merge L R ()))
+
+; thanks @geoff for the mergesort implementation on https://aggsig.me/mergesort.html
+(defun mergesort (Z)
+  (if Z
+      (if (r Z)
+          (assign (L R) (split Z)
+                  (merge (mergesort L) (mergesort R)))
+        Z)
+    ()))
+
+  (defun sort-prices ((@ lst ((pubkey proof price) . rest)) price_list) 
+    (if lst
+      (sort-prices (r lst) (c price price_list))
+      (mergesort price_list)
+    )
+  )
+
+  (defun-inline announce-price (PRICE)
+    (list CREATE_PUZZLE_ANNOUNCEMENT PRICE)
+  )
+
+  (defun-inline get-median-index (length)
+    ; if odd, we return the middle value
+    ; if even, we return the one smaller since prices are sorted in descending order
+    (/ length 2)
+  )
+
+  (defun get-price (prices index curr_index)
+    (if prices
+      (if (= index curr_index)
+        (f prices)
+        (get-price (r prices) index (+ curr_index 1))
+      )
+      (x)
+    )
+  )
+  (defun-inline get-merkle-root-for-pubkey-proof (pubkey proof)
+    (simplify_merkle_proof (sha256 pubkey) proof) 
+  )
+
+  (defun generate-ann-conditions (ATOM_ANNOUNCER_PUZZLE_HASH price_announcements allowed_pub_keys_root)
+    (if price_announcements
+      (assign 
+        announcer (f price_announcements)
+        ; price_announcements -> ((pubkey mr_proof_for_pubkey price before_timestamp))
+        (pubkey proof price before_timestamp) announcer
+        merkle_root_for_pubkey  (get-merkle-root-for-pubkey-proof pubkey proof)
+        ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
+        (assert (= allowed_pub_keys_root merkle_root_for_pubkey)
+          (c 
+            (list ASSERT_PUZZLE_ANNOUNCEMENT 
+              (sha256 
+                (curry_hashes ATOM_ANNOUNCER_PUZZLE_HASH 
+                  (sha256tree ATOM_ANNOUNCER_PUZZLE_HASH) 
+                  (sha256tree pubkey)
+                  (sha256tree price)
+                  (sha256tree before_timestamp)
+                )
+                '!'
+              )
+            )
+            (if (r price_announcements)
+              (generate-ann-conditions ATOM_ANNOUNCER_PUZZLE_HASH (r price_announcements) allowed_pub_keys_root)
+              ()
+            )
+          )
+        )
+      )
+      ()
+    )
+  )
+
+  (defun print (to-show result) (if (all "$print$" to-show result) result result))
+
+  (defun-inline positive (number)
+    (if (> number -1) number (* number -1))
+  )
+  ; ###################### MAIN ############################
+  
+  (assign 
+    price_announcements_length (if oracle_mutation (list-length price_announcements 0) ())
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    existing_announce_conditions
+      ; recreate yourself to conserve updates so far 
+      (c (list CREATE_COIN 
+          (curry_hashes MOD_HASH 
+              (sha256tree MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256tree ATOM_ANNOUNCER_PUZZLE_HASH) 
+              (sha256tree PRICE)
+              (sha256tree LAST_UPDATED)
+          )
+          ; min singleton amount, force it to be this 
+          1
+        )
+        (list (announce-price PRICE))
+      )
+    ; assert statutes 
+    (if oracle_mutation
+      (if (all (> price_announcements_length (- m_of_n 1))
+              ; check that prices are unique
+              (unique price_announcements)
+        )
+        ; we have enough updates and enough time passed
+        (assign
+          sorted_prices (sort-prices price_announcements ())
+          ; get median price, divide length by 2 and add 1 to get the middle when length is even
+          mean_price (get-price sorted_prices (get-median-index price_announcements_length) 0)
+          announcer_conditions  (generate-ann-conditions ATOM_ANNOUNCER_PUZZLE_HASH price_announcements allowed_pub_keys_root)
+          ;  new coin will have updated price, increase the counter of updates
+          ;###  main expression
+          ; check that we haven't updated the price recently OR new price is much higher than previous
+          (assert
+            (any
+              (> (- current_timestamp LAST_UPDATED ) price_updatable_after_seconds)
+              (if (> PRICE 0)
+                (> (positive (/ (* (- PRICE mean_price) 100) PRICE) ) price_updatable_threshold_percent)
+                1
+              )
+            )
+            ; should be confirmed at least within 5 blocks since it was pushed to mempool
+            (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 55 5)))
+              (c (list ASSERT_SECONDS_ABSOLUTE LAST_UPDATED)
+                ; current_timestamp - 1 min should've passed already too -> why?
+                (c (list REMARK ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                  (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
+                    (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_ALLOWED_PUB_KEYS_ROOT allowed_pub_keys_root)
+                      (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_AFTER_SECONDS price_updatable_after_seconds)
+                        (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_PERCENT_THRESHOLD price_updatable_threshold_percent)
+                          (c (announce-price mean_price)
+                            (c
+                              (list
+                                CREATE_COIN
+                                (curry_hashes MOD_HASH
+                                  (sha256tree MOD_HASH)
+                                  (sha256tree STATUTES_STRUCT)
+                                  (sha256tree ATOM_ANNOUNCER_PUZZLE_HASH)
+                                  (sha256tree mean_price)
+                                  (sha256tree current_timestamp)
+
+                                )
+                                ; min singleton amount, force it to be ONE
+                                1
+                              )
+                              (c
+                                (list REMARK mean_price current_timestamp)
+                                announcer_conditions
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        existing_announce_conditions
+      )
+      ; no updates, just assert and announce
+      existing_announce_conditions
+    )
+  )
+)

@@ -1,0 +1,75 @@
+(
+
+  (defconstant STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES -3)
+  (defconstant STATUTE_CUMULATIVE_INTEREST_RATE -2)
+  (defconstant STATUTE_CUMULATIVE_STABILITY_FEE_RATE -1)
+  (defconstant STATUTE_PRICE_ORACLES 0) ; a list of (curried_oracle_mod) with missing price and last updated
+  (defconstant STATUTE_STABILITY_FEE_RATE 1)
+  (defconstant STATUTE_INTEREST_RATE 2)
+  (defconstant STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE 3)
+  (defconstant STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE 4)
+  (defconstant STATUTE_COLLATERALIZATION_RATIO 5)
+  (defconstant STATUTE_ORACLE_M_OF_N 6)
+  (defconstant STATUTE_ORACLE_ALLOWED_PUB_KEYS_ROOT 7)
+  (defconstant STATUTE_ORACLE_PRICE_UPDATABLE_AFTER_SECONDS 8)
+  (defconstant STATUTE_ORACLE_PRICE_UPDATABLE_PERCENT_THRESHOLD 9)
+  (defconstant STATUTE_ORACLE_FLAT_FEE 10)
+  (defconstant STATUTE_ORACLE_PUZZLE_HASH 11)
+  (defconstant STATUTE_MIN_PRICE_UPDATE_DELAY 12)
+  (defconstant STATUTE_MINIMUM_BYC_MINT_AMOUNT 13)
+  (defconstant STATUTE_VAULT_AUCTION_STEP_TIME_INTERVAL 14)
+  (defconstant STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR 15)
+  (defconstant STATUTE_VAULT_AUCTION_TIMEOUT 16)
+  (defconstant STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR 17)
+  (defconstant STATUTE_VAULT_INITIATOR_FLAT_INCENTIVE 18)
+  (defconstant STATUTE_VAULT_INITIATOR_RELATIVE_INCENTIVE_PERCENT 19)
+  (defconstant STATUTE_VAULT_LIQUIDATION_PENALTY_PERCENT 20)
+  (defconstant STATUTE_VAULT_LIQUIDATION_DEBT_COVER_INCENTIVE_PERCENT 21)
+  (defconstant STATUTE_TREASURY_HARD_MINIMUM 22)
+  (defconstant STATUTE_TREASURY_SOFT_MINIMUM 23)
+  (defconstant STATUTE_TREASURY_MAXIMUM 24)
+  (defconstant STATUTE_TREASURY_LEADER_COIN_NAME 25)
+  (defconstant STATUTE_RECHARGE_AUCTION_TIMEOUT 26)
+  (defconstant STATUTE_RECHARGE_AUCTION_LOT_AMOUNT 27)
+  (defconstant STATUTE_RECHARGE_AUCTION_BID_TTL 28)
+  (defconstant STATUTE_RECHARGE_AUCTION_MINIMUM_BID_AMOUNT 29)
+  (defconstant STATUTE_SURPLUS_AUCTION_TIMEOUT 30)
+  (defconstant STATUTE_SURPLUS_AUCTION_LOT_AMOUNT 31)
+  (defconstant STATUTE_SURPLUS_AUCTION_BID_TTL 32)
+
+
+  (defconstant STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
+  (defconstant STATUTES_MUTATION_PREFIX "m")
+  (defconstant STATUTE_PREFIX "s")
+  (defconstant PRICE_PREFIX "p")
+
+  (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
+      (curry_hashes (f STATUTES_STRUCT)
+                    (sha256tree STATUTES_STRUCT)
+                    inner_puzzle_hash
+      )
+  )
+
+  (defun-inline assert-statute (statutes_puzzle_hash statute_index statute_value)
+    (list ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+         statutes_puzzle_hash
+        (concat
+          STATUTES_ANN_PREFIX
+          (sha256tree (list STATUTE_PREFIX statute_index statute_value))
+        )
+      )
+    )
+  )
+
+  (defun-inline assert-price (statutes_puzzle_hash oracle_id price_info)
+    (list ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256 statutes_puzzle_hash
+        (concat
+          STATUTES_ANN_PREFIX
+          (sha256tree (list PRICE_PREFIX oracle_id price_info))
+        )
+      )
+    )
+  )
+)
