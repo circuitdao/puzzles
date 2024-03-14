@@ -4,24 +4,23 @@ Circuit puzzles are what make the Circuit protocol tick. They are the building b
 
 This is a python package that includes all puzzles needed to run Circuit protocol. 
 
-## Installation 
 
-```bash
-pip install circuit_puzzles
-```
-## Status 
+## Project Status
 
-Most puzzles are in a feature complete stage, but not optimized yet. They should be safe though, so feel free to 
-review from a security perspective.
+The majority of the puzzles are currently in a _feature complete_ stage.
+They are functional but have not been optimized or audited yet.
+These puzzles are currently in operation on [circuitdao.com](https://circuitdao.com)
+and are undergoing testing on the testnet.
 
-Auction puzzles are still under heavy development and are not ready for review.
+Please note that the **auction puzzles** are still under active development and are not ready for review.
 
 ## Contributing
+We welcome contributions from the community.
+If you encounter a bug or have a feature request, please open an issue.
+For major changes, please open an issue first to discuss what you would like to change.
 
-Please open an issue if you find a bug or have a feature request.
-
-Find us on [Discord](https://discord.gg/8j6Y6k3) if you have any questions.
+You can also reach us on [Discord](https://discord.gg/VDwVCAgmf2) if you have any questions or need further 
+clarification.
 
 ## License 
 All rights reserved to Voltage Technologies Ltd.
-
