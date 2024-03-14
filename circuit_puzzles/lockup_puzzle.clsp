@@ -1,8 +1,0 @@
-;company mints them, and then sends them to an address that we control (or they get minted directly into that address, don't think that makes a difference)
-;the company (not governance) would have the right to melt any unvested tokens if one of us leaves
-;so we'd need some sort of spend path in the puzzle that's locking up those coins that allows the company to do that
-;
-;pretty indifferent re vesting intervals. monthly is pretty standard, but if a step function is a hassle to implement we can also do daily or even by the second if that simplifies the timestamp maths
-;yes, vesting schedule would have to be part of it
-
-; TODO: implement a lockup puzzle to lockup coins for a certain amount of time
