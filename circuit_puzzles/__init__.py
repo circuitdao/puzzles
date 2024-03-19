@@ -10,13 +10,13 @@ except ImportError:
     # for py3.8
     from importlib_resources import files
 
-PUZZLE_PATHS = [Path(x).with_suffix(".hex") for x in Path("circuit_puzzles").iterdir() if x.name.endswith(".clsp")]
+PUZZLE_PATHS = [Path(x).with_suffix(".hex") for x in Path(str(files(__package__))).iterdir() if x.name.endswith(".clsp")]
 clsp_builder = ChialispBuild([Path(str(files(__package__) / "include"))])
 for puzzle_path in PUZZLE_PATHS:
     try:
         clsp_builder(puzzle_path)
     except Exception as e:
-        if "Runtime error" in str(e):
+        if "error" in str(e):
             warnings.warn(f"Failed to build {puzzle_path}")
             continue
         raise

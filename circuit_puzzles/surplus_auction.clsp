@@ -4,10 +4,11 @@
       P2_SURPLUS_AUCTION_HASH ; need to be able to hold surplus funds to be auctioned
       STATUTES_STRUCT ; to assert statutes
       LAUNCHER_ID ; to assert uniqueness of launcher_id
-      BYC_LOT_AMOUNT ; amount of BYC in a lot to win
-      BYC_TAIL_HASH ; hash of BYC tail puzzle that we're giving out
+      CAT_LOT_AMOUNT ; amount of BYC in a lot to win
+      CAT_TAIL_HASH ; hash of BYC tail puzzle that we're giving out
       LAST_BID ; to hold bid data -> (bid_crt_amount bid_coin_parent_id target_puzzle_hash current_timestamp)
       statutes_inner_puzzle_hash
+      lineage_proof
       op_code . op_args)
 
   (include *standard-cl-23*)
@@ -33,8 +34,8 @@
 
   (defmac assert items (assert_ items))
 
-  (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
-                                           treasury_coins my_coin_id lot_amount sum_amount byc_leftover)
+  (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+                                           treasury_coins my_coin_id lot_amount sum_amount CAT_leftover)
     ; treasury_coins -> ((leader_launcher_1 . amount1) (launcher_2 . amount2)...)
     ; sorted in reverse order as we have no have to go backwards in a list
     ; we iterate over them extracting launcher id and previous launcher id to
@@ -49,12 +50,12 @@
             parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
-              (sha256tree BYC_TAIL_HASH)
+              (sha256tree CAT_TAIL_HASH)
               (curry_hashes
                 P2_TREASURY_HASH
                 (sha256tree P2_TREASURY_HASH)
                 (sha256tree CAT_MOD_HASH)
-                (sha256tree BYC_TAIL_HASH)
+                (sha256tree CAT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree launcher_id) ; taking first of (launcher_id amount) pair
                 (sha256tree prev_launcher_id) ; same here ^
@@ -82,12 +83,12 @@
               )
             )
             (assert-treasury-coins-withdrawal
-              P2_TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+              P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
               (r treasury_coins)
               my_coin_id
               lot_amount
               (+ sum_amount withdraw_amount)
-              (- (+ byc_leftover current_amount) withdraw_amount)
+              (- (+ CAT_leftover current_amount) withdraw_amount)
             )
           )
         )
@@ -95,7 +96,7 @@
       ; we're withdrawing exactly what lot we require for this surplus auction
       ; and treasury needs to stay above maximum threshold, so to trigger surplus auction
       ; we need maximum + lot_amount
-      (assert (= sum_amount lot_amount) (> byc_leftover treasury_maximum)
+      (assert (= sum_amount lot_amount) (> CAT_leftover treasury_maximum)
         (list (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MAXIMUM treasury_maximum)) ; end of recursion
       )
     )
@@ -103,7 +104,7 @@
 
 
   (assign
-    recreate-coin (lambda ((& MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH P2_TREASURY_HASH P2_SURPLUS_AUCTION_HASH STATUTES_STRUCT)
+    recreate-coin (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH P2_TREASURY_HASH P2_SURPLUS_AUCTION_HASH STATUTES_STRUCT)
                            launcher_id bid lot_amount amount)
       (list
         CREATE_COIN
@@ -116,7 +117,7 @@
           (sha256tree STATUTES_STRUCT)
           (sha256tree launcher_id)
           (sha256tree lot_amount)
-          (sha256tree BYC_TAIL_HASH)
+          (sha256tree CAT_TAIL_HASH)
           (sha256tree bid)
         )
         amount
@@ -125,22 +126,22 @@
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (if (= op_code START_AUCTION)
       (assign
-        (p2_surplus_action_coin_parent_id lot_amount
+        (p2_surplus_auction_coin_parent_id lot_amount
         start_time my_coin_id treasury_coins treasury_maximum) op_args
         p2_surplus_puzzle_hash (
           curry_hashes CAT_MOD_HASH
             (sha256tree CAT_MOD_HASH)
-            (sha256tree BYC_TAIL_HASH)
+            (sha256tree CAT_TAIL_HASH)
             (curry_hashes P2_SURPLUS_AUCTION_HASH
               (sha256tree P2_SURPLUS_AUCTION_HASH)
               (sha256tree CAT_MOD_HASH)
-              (sha256tree BYC_TAIL_HASH)
+              (sha256tree CAT_TAIL_HASH)
               (sha256tree MOD_HASH)
               (sha256tree my_coin_id)
             )
         )
-        p2_surplus_action_coin_id (sha256
-            p2_surplus_action_coin_parent_id
+        p2_surplus_auction_coin_id (sha256
+            p2_surplus_auction_coin_parent_id
             p2_surplus_puzzle_hash
             0 ; initial amount for the coin that holds our lot should be 0
         )
@@ -155,7 +156,7 @@
           ;     it can't be filled again, hence can be used as unique event in this coins history
           (not LAUNCHER_ID)
           (c
-            ; recreate itself setting the launcher_id, no bid and coin amount is 0
+            ; recreate itself setting the launcher_id, empty bid and coin amount is 0
             (a recreate-coin (list my_coin_id () lot_amount 0))
             (c (list ASSERT_MY_AMOUNT 0)
               (c (list ASSERT_MY_COIN_ID my_coin_id)
@@ -165,13 +166,13 @@
                     ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
                     (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
                       ; assert p2_surplus_auction coin received the lot amount
-                      (c (list CREATE_COIN_ANNOUNCEMENT (concat p2_surplus_action_coin_id lot_amount p2_surplus_puzzle_hash))
-                        (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_action_coin_id my_coin_id lot_amount p2_surplus_puzzle_hash))
-                          (c (list REMARK my_coin_id p2_surplus_action_coin_id p2_surplus_puzzle_hash lot_amount)
+                      (c (list CREATE_COIN_ANNOUNCEMENT (concat p2_surplus_auction_coin_id lot_amount p2_surplus_puzzle_hash))
+                        (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id lot_amount p2_surplus_puzzle_hash))
+                          (c (list REMARK my_coin_id p2_surplus_auction_coin_id p2_surplus_puzzle_hash lot_amount)
                             (assert-treasury-coins-withdrawal
                               P2_TREASURY_HASH
                               CAT_MOD_HASH
-                              BYC_TAIL_HASH
+                              CAT_TAIL_HASH
                               STATUTES_STRUCT
                               treasury_maximum
                               statutes_puzzle_hash
@@ -196,29 +197,30 @@
         (assign
           ; op_args -> (bid_crt_amount target_puzzle_hash timestamp)
           ; FIXME: must be agnostic of what kind of coin surplus auction is wrapping
-          (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl lot_amount) op_args
-          (last_target_puzzle_hash last_bid_timestamp) LAST_BID
-          (assert
-            ; ensure bidder is aware what they bidding for
-            (= lot_amount BYC_LOT_AMOUNT)
+          (bid_crt_amount crt_tail_hash target_puzzle_hash current_timestamp my_amount ttl lot_amount) op_args
+          (last_target_puzzle_hash last_bid_timestamp) (if LAST_BID LAST_BID (list 0 0))
+          bid_conditions (assert
+            ; we need lineage proof to ensure that a CAT lot is associated with this surplus auction
+            (l lineage_proof)
+            ; ensure bidder is aware what they bidding for, this might be different if lot amount changes while auction
+            ; is running, so we're double checking it here to make sure that bidder is aware of the current lot amount
+            (= lot_amount CAT_LOT_AMOUNT)
             ; must be smaller than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
-            (> my_amount bid_crt_amount)
+            (any (all (= my_amount 0) (> bid_crt_amount 0)) (> my_amount bid_crt_amount))
             ; TTL for bid hasn't expired yet
-            (> (- current_timestamp last_bid_timestamp) ttl)
+            (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
             (list
               (list ASSERT_MY_AMOUNT my_amount)
-              ; return CRT to previous bidder
-              (list CREATE_COIN last_target_puzzle_hash my_amount)
               ; recreate with new top bid and new timestamp
               (a
                 recreate-coin
                 (list
                   LAUNCHER_ID
                   (list target_puzzle_hash current_timestamp)
+                  lot_amount
                   bid_crt_amount
                 )
               )
-              (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT_AMOUNT lot_amount)
               (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
               ; current_time minus one tx block time should already be in the past
               (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
@@ -226,7 +228,38 @@
               (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
               ; announcement of a new bid to secure fee coins against it
               (list CREATE_COIN_ANNOUNCEMENT (concat target_puzzle_hash bid_crt_amount))
+              ; ensure lineage so we don't lose track of the lot
+              (list ASSERT_MY_PARENT_ID
+                (sha256
+                  (f lineage_proof)
+                  (curry_hashes
+                    CAT_MOD_HASH
+                    (sha256tree CAT_MOD_HASH)
+                    (sha256tree crt_tail_hash)
+                    (curry_hashes MOD_HASH
+                      (sha256tree MOD_HASH)
+                      (sha256tree CAT_MOD_HASH)
+                      (sha256tree P2_TREASURY_HASH)
+                      (sha256tree P2_SURPLUS_AUCTION_HASH)
+                      (sha256tree STATUTES_STRUCT)
+                      (sha256tree LAUNCHER_ID)
+                      (sha256tree CAT_LOT_AMOUNT)
+                      (sha256tree CAT_TAIL_HASH)
+                      (sha256tree (f (r (r lineage_proof))))
+                    )
+                  )
+                  ; parent bid amount
+                  (f (r lineage_proof))
+                )
+              )
             )
+          )
+          (if last_target_puzzle_hash
+            (c
+              (list CREATE_COIN last_target_puzzle_hash my_amount (list last_target_puzzle_hash))
+              bid_conditions
+            )
+            bid_conditions
           )
         )
         (if (= op_code COMPLETE)
@@ -235,43 +268,47 @@
           ; op_args -> (ttl auction_timeout)
           (assign
             (target_puzzle_hash timestamp) LAST_BID
-            (ttl current_timestamp my_amount crt_tail_puzzle cat_mod_hash p2_surplus_action_coin_parent_id my_coin_id lot_amount) op_args
+            (ttl current_timestamp my_amount crt_tail_puzzle p2_surplus_auction_coin_parent_id my_coin_id lot_amount) op_args
             crt_tail_hash (sha256tree crt_tail_puzzle)
             p2_surplus_puzzle_hash (
               curry_hashes
-                cat_mod_hash
-                (sha256tree cat_mod_hash)
+                CAT_MOD_HASH
+                (sha256tree CAT_MOD_HASH)
+                (sha256tree CAT_TAIL_HASH)
                 (curry_hashes
                   P2_SURPLUS_AUCTION_HASH
                   (sha256tree P2_SURPLUS_AUCTION_HASH)
+                  (sha256tree CAT_MOD_HASH)
+                  (sha256tree CAT_TAIL_HASH)
                   (sha256tree MOD_HASH)
                   (sha256tree LAUNCHER_ID)
                 )
             )
             my_puzzle_hash (
-              curry_hashes
-                cat_mod_hash
-                (sha256tree cat_mod_hash)
-                crt_tail_hash
-                (curry_hashes
-                  MOD_HASH
+              curry_hashes CAT_MOD_HASH
+                (sha256tree CAT_MOD_HASH)
+                (sha256tree crt_tail_hash)
+                (curry_hashes MOD_HASH
                   (sha256tree MOD_HASH)
+                  (sha256tree CAT_MOD_HASH)
                   (sha256tree P2_TREASURY_HASH)
                   (sha256tree P2_SURPLUS_AUCTION_HASH)
                   (sha256tree STATUTES_STRUCT)
                   (sha256tree LAUNCHER_ID)
-                  (sha256tree BYC_LOT_AMOUNT)
+                  (sha256tree CAT_LOT_AMOUNT)
+                  (sha256tree CAT_TAIL_HASH)
                   (sha256tree LAST_BID)
                 )
             )
-            p2_surplus_action_coin_id (sha256
-                p2_surplus_action_coin_parent_id
+            p2_surplus_auction_coin_id (sha256
+                p2_surplus_auction_coin_parent_id
                 p2_surplus_puzzle_hash
-                0 ; initial amount for the coin that holds our lot should be 0
+                CAT_LOT_AMOUNT
             )
             (assert
               ; ttl should've expired
               (> (- current_timestamp timestamp) ttl)
+              (= lot_amount CAT_LOT_AMOUNT)
               (list
                 (list ASSERT_MY_AMOUNT my_amount)
                 ; no recreate here, we create melting condition
@@ -282,14 +319,14 @@
                     P2_SURPLUS_AUCTION_HASH
                     STATUTES_STRUCT
                     LAUNCHER_ID
-                    BYC_LOT_AMOUNT
+                    CAT_LOT_AMOUNT
                     LAST_BID
                   )
                 )
                 ; ensure provided crt tail puzzle is correct (we're melting ourselves)
                 (list ASSERT_MY_PUZZLEHASH my_puzzle_hash)
                 ; remaining mojos got to the winner
-                (list CREATE_COIN target_puzzle_hash my_amount)
+                (list CREATE_COIN target_puzzle_hash my_amount (list target_puzzle_hash))
                 (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
                 ; current_time minus one tx block time should already be in the past
                 (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
@@ -297,7 +334,31 @@
                 (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
                 ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
                 (list CREATE_COIN_ANNOUNCEMENT (concat LAUNCHER_ID lot_amount target_puzzle_hash))
-                (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_action_coin_id my_coin_id lot_amount target_puzzle_hash))
+                (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id lot_amount target_puzzle_hash))
+                ; ensure lineage so nobody can fake the winning bid
+                (list ASSERT_MY_PARENT_ID
+                  (sha256
+                    (f lineage_proof)
+                    (curry_hashes
+                      CAT_MOD_HASH
+                      (sha256tree CAT_MOD_HASH)
+                      (sha256tree crt_tail_hash)
+                      (curry_hashes MOD_HASH
+                        (sha256tree MOD_HASH)
+                        (sha256tree CAT_MOD_HASH)
+                        (sha256tree P2_TREASURY_HASH)
+                        (sha256tree P2_SURPLUS_AUCTION_HASH)
+                        (sha256tree STATUTES_STRUCT)
+                        (sha256tree LAUNCHER_ID)
+                        (sha256tree CAT_LOT_AMOUNT)
+                        (sha256tree CAT_TAIL_HASH)
+                        (sha256tree (f (r (r lineage_proof))))
+                      )
+                    )
+                    ; parent bid amount
+                    (f (r lineage_proof))
+                  )
+                )
               )
             )
           )

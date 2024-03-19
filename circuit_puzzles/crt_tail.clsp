@@ -41,6 +41,7 @@
       ; no minting
       (x)
       ; melting only by surplus auction
+      ; TODO: double check that parent is a cat
       (assign
         (crt_tail_hash p2_treasury_hash p2_surplus_auction_hash statute_struct launcher_id byc_lot_amount last_bid) solution
         puzzle_hash (
