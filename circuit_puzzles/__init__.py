@@ -16,9 +16,7 @@ for puzzle_path in PUZZLE_PATHS:
     try:
         clsp_builder(puzzle_path)
     except Exception as e:
-        if "error" in str(e):
-            warnings.warn(f"Failed to build {puzzle_path}")
-            continue
+        print(f"Failed to compile {puzzle_path}: {e}")
         raise
 
 

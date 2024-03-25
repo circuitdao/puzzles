@@ -1,4 +1,6 @@
 (mod (STATUTES_STRUCT_HASH COLLATERAL_VAULT_MOD_HASH CAT_MOD_HASH ORACLE_PRICE_INDEX
+      ; TODO: shall we also pass in curried values for P2 treasury so that someone
+      ;       can't create their own treasury and start stealing money that way /via @bramv-chia
       Truths parent_is_cat lineage_proof delta inner_conditions
       (@ solution (
         vault_parent_id
@@ -73,6 +75,7 @@
             (if (> 0 delta) delta mint_amount)
             STATUTES_STRUCT_HASH ; need to tie it to statutes struct
       )
+      (list ASSERT_MY_COIN_ID my_coin_id) ; thanks @bramv-chia for the suggestion
       (list
           ASSERT_COIN_ANNOUNCEMENT
           (sha256

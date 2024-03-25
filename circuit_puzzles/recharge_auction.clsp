@@ -1,4 +1,4 @@
-; This is a singleton puzzle, it will be generated once when protocol launches and has different states that it
+; This is a BYC coin, it will be generated once when protocol launches and has different states that it
 ; can be in. recharge auction will contain value of the vault it was created from.
 ; normally, these coins won't contain any value, this is mostly for extreme scenarios where price has been
 ; falling so dramatically that keepers don't even want to bid anymore 

@@ -213,7 +213,7 @@
                   )
                 )
               )
-              ; we're spending/announcing, require approving mods
+              ;ELSE; we're spending/announcing, require approving mods
               (assign
                 ; ring_prev_prev_info is (ring_prev_prev_id . ring_prev_prev_amount)
                 (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
@@ -225,14 +225,15 @@
                     approving_parent_id
                     ; we want to ensure that the approving puzzle is using the correct mod
                     (if (l approving_mod_curried_args_hash)
-                      ; this puzzle is wrapped inside a CAT puzzle
+                      ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
                       (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
                         (curry_hashes CAT_MOD_HASH
                           (sha256tree CAT_MOD_HASH)
-                          (sha256tree CAT_TAIL_HASH)
-                          (tree_hash_of_apply approving_mod_hash (r approving_mod_curried_args_hash))
+                          (sha256tree (f (r approving_mod_curried_args_hash)))
+                          (tree_hash_of_apply approving_mod_hash (f (r (r approving_mod_curried_args_hash))))
                         )
                       )
+                      ; ELSE;
                       (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
                     )
                     approver_amount

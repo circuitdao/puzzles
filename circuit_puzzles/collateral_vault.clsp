@@ -10,7 +10,7 @@
         ; - transform to bad debt
         keeper_operation)
      )
-
+    ; NEXT: don't curry important hashes like treasury and mod has, they should be passed in as arguments and verified by statutes
     (include *standard-cl-23*)
     (include sha256tree.clib)
     (include curry.clib)
@@ -457,7 +457,8 @@
               BYC_TAIL_HASH
               byc_melting_coin_info
             )
-
+            ; TODO: attacker could mint above the min amount and then immediately melt it to
+                  ; start another vault, circumventing the min mint amount requirement
             (assert (> byc_to_repay 0) (> new_byc_minted_amount -1)
               (list
                 (list DEPOSITED_AMOUNT new_byc_minted_amount AUCTION_STATE INNER_PUZZLE discounted_principal)
