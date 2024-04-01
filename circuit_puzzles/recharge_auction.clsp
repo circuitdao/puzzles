@@ -1,4 +1,4 @@
-(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH P2_TREASURY_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT
+(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH P2_TREASURY_HASH OFFER_MOD_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT
       statutes_inner_puzzle_hash lineage_proof op_code . op_args)
 
   (include *standard-cl-23*)
@@ -182,7 +182,7 @@
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     recreate-coin (lambda ((& MOD_HASH CAT_MOD_HASH P2_TREASURY_HASH CAT_TAIL_HASH
-                              STATUTES_STRUCT)
+                              STATUTES_STRUCT OFFER_MOD_HASH)
                            launcher_id start_time bid lot_amount amount)
       (list
         CREATE_COIN
@@ -192,6 +192,7 @@
           (sha256tree CAT_MOD_HASH)
           (sha256tree CAT_TAIL_HASH)
           (sha256tree P2_TREASURY_HASH)
+          (sha256tree OFFER_MOD_HASH)
           (sha256tree launcher_id)
           (sha256tree STATUTES_STRUCT)
           (sha256tree start_time)
@@ -334,14 +335,14 @@
         (if (= op_code BID)
           (assign
             (bid_amount target_puzzle_hash current_timestamp minimum_bid_amount
-            auction_timeout ttl lot_amount raw_announcements) op_args
+            auction_timeout ttl my_coin_id lot_amount raw_announcements) op_args
             announcements (filter-announcements raw_announcements ())
             (last_bid_amount last_target_puzzle_hash last_bid_timestamp) (
               if LAST_BID
                 LAST_BID
                 (list 0 () 0)
             )
-            (assert
+            conditions (assert
               LAUNCHER_ID ; can't bid if auction hasn't started yet
               (> CRT_LOT_AMOUNT 0)
               (> bid_amount 0)
@@ -401,6 +402,7 @@
                                           (sha256tree CAT_MOD_HASH)
                                           (sha256tree CAT_TAIL_HASH)
                                           (sha256tree P2_TREASURY_HASH)
+                                          (sha256tree OFFER_MOD_HASH)
                                           (sha256tree (f (r (r lineage_proof)))) ; launcher_id
                                           (sha256tree STATUTES_STRUCT)
                                           (sha256tree (f (r (r (r lineage_proof))))) ; start_time
@@ -423,6 +425,26 @@
                   )
                 )
               )
+            )
+            (if last_target_puzzle_hash
+              (c
+                ; assert that keeper absorbed their collateral + left over mojos from melting
+                (list ASSERT_PUZZLE_ANNOUNCEMENT
+                  (sha256
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256tree CAT_MOD_HASH)
+                      (sha256tree CAT_TAIL_HASH)
+                      OFFER_MOD_HASH
+                    )
+                    (sha256tree
+                      (c my_coin_id
+                      (list
+                        (list last_target_puzzle_hash last_bid_amount (list last_target_puzzle_hash)))))
+                  )
+                )
+                conditions
+              )
+              conditions
             )
           )
           (if (= op_code WIN)
@@ -497,6 +519,7 @@
                                           (sha256tree CAT_MOD_HASH)
                                           (sha256tree CAT_TAIL_HASH)
                                           (sha256tree P2_TREASURY_HASH)
+                                          (sha256tree OFFER_MOD_HASH)
                                           (sha256tree (f (r (r lineage_proof)))) ; launcher_id
                                           (sha256tree STATUTES_STRUCT)
                                           (sha256tree (f (r (r (r lineage_proof))))) ; start_time
