@@ -1,8 +1,13 @@
 (mod (MOD_STATUTES_HASH
-      ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
-      TREASURY_APPROVAL_MOD_HASHES
+      (
+        ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
+        TREASURY_APPROVAL_MOD_HASHES
+        P2_TREASURY_MOD_HASH
+        OFFER_MOD_HASH
+        P2_SURPLUS_AUCTION_MOD_HASH
+      )
       CAT_MOD_HASH
-      CRT_TAIL
+      CRT_TAIL_HASH
       ; statutes are (ORACLE_PRICES . statutes) where ORACLE_PRICES are a list of
       ; ((ORACLE_MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER) (oracle_launcher_id1 oracle_launcherid2 ...))
       STATUTES
@@ -52,16 +57,25 @@
     )
   )
 
-  (defun-inline create-coin-condition (mod_hash approval_mod_hashes cat_mod_hash crt_tail statutes
-                                       prices cumulative_stability_fee cumulative_interest_rate)
+  (defun-inline create-coin-condition (MOD_STATUTES_HASH TREASURY_APPROVAL_MOD_HASHES
+                                          P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
+                                          CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
+                                          statutes prices cumulative_stability_fee cumulative_interest_rate)
     (list
       CREATE_COIN
       ; puzzle
-      (curry_hashes mod_hash
-        (sha256 ONE mod_hash)
-        (sha256tree approval_mod_hashes)
-        (sha256 ONE cat_mod_hash)
-        (sha256 ONE crt_tail)
+      (curry_hashes MOD_STATUTES_HASH
+        (sha256 ONE MOD_STATUTES_HASH)
+        (sha256tree
+          (list
+            TREASURY_APPROVAL_MOD_HASHES
+            P2_TREASURY_MOD_HASH
+            OFFER_MOD_HASH
+            P2_SURPLUS_AUCTION_MOD_HASH
+          )
+        )
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE CRT_TAIL_HASH)
         (sha256tree statutes)
         (sha256tree prices)
         (sha256tree cumulative_stability_fee)
@@ -119,8 +133,8 @@
     )
   )
 
-  (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL INNER_PUZZLE_HASH)
-    (curry_hashes CAT_MOD_HASH (sha256 ONE CAT_MOD_HASH) (sha256 ONE CRT_TAIL) INNER_PUZZLE_HASH)
+  (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL_HASH INNER_PUZZLE_HASH)
+    (curry_hashes CAT_MOD_HASH (sha256 ONE CAT_MOD_HASH) (sha256 ONE CRT_TAIL_HASH) INNER_PUZZLE_HASH)
   )
 
 
@@ -219,8 +233,11 @@
     create_coin_condition (create-coin-condition
       MOD_STATUTES_HASH
       TREASURY_APPROVAL_MOD_HASHES
+      P2_TREASURY_MOD_HASH
+      P2_SURPLUS_AUCTION_MOD_HASH
       CAT_MOD_HASH
-      CRT_TAIL
+      OFFER_MOD_HASH
+      CRT_TAIL_HASH
       statutes
       prices
       cumulative_stability_fee
@@ -237,27 +254,42 @@
     conditions (c create_coin_condition
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT
-          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
+          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)))
         )
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
+            (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -5 OFFER_MOD_HASH)))
           )
           (c
             (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
+              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)))
             )
-            (if announcements
-              (merge-lists
-                announcements
-                (merge-lists
-                  (announce-statutes prices PRICE_PREFIX 0)
-                  (announce-statutes statutes STATUTE_PREFIX 0)
-                )
+            (c
+              (list CREATE_PUZZLE_ANNOUNCEMENT
+                (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
               )
-              (merge-lists
-                (announce-statutes prices PRICE_PREFIX 0)
-                (announce-statutes statutes STATUTE_PREFIX 0)
+              (c
+                (list CREATE_PUZZLE_ANNOUNCEMENT
+                  (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
+                )
+                (c
+                  (list CREATE_PUZZLE_ANNOUNCEMENT
+                    (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
+                  )
+                  (if announcements
+                    (merge-lists
+                      announcements
+                      (merge-lists
+                        (announce-statutes prices PRICE_PREFIX 0)
+                        (announce-statutes statutes STATUTE_PREFIX 0)
+                      )
+                    )
+                    (merge-lists
+                      (announce-statutes prices PRICE_PREFIX 0)
+                      (announce-statutes statutes STATUTE_PREFIX 0)
+                    )
+                  )
+                )
               )
             )
           )
@@ -275,11 +307,11 @@
           )
           ; assert from CRT vote that mutation was indeed voted for and confirmed
           (c (list REMARK
-              (list (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL crt_inner_puzzle_hash)
+              (list (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
                                            CRT_ANN_PREFIX (r mutation)))
             (c
               (list ASSERT_PUZZLE_ANNOUNCEMENT
-                (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL crt_inner_puzzle_hash)
+                (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
                                              CRT_ANN_PREFIX (sha256tree (r mutation))))
               conditions
             )

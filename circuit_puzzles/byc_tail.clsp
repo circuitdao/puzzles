@@ -20,6 +20,7 @@
      )
 
   (include *standard-cl-23*)
+
   (defconstant VAULT_ANN_PREFIX 0x56) ; starts with "V"
   (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
 
@@ -48,7 +49,7 @@
     (calculate-coin-id
       parent_id
       (curry_hashes MOD_HASH
-         (sha256tree MOD_HASH)
+        (sha256tree MOD_HASH)
         (sha256tree cat_mod_hash)
         (sha256tree launcher_id)
         statutes_struct_hash
