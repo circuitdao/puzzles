@@ -320,7 +320,7 @@
                     (sha256tree
                       (c my_coin_id
                       (list
-                        (list last_target_puzzle_hash my_amount))))
+                        (list last_target_puzzle_hash my_amount (list last_target_puzzle_hash)))))
                   )
                 )
                 bid_conditions
