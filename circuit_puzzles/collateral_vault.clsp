@@ -1,4 +1,4 @@
-(mod (MOD_HASH CAT_MOD_HASH LAUNCHER_ID STATUTES_STRUCT BYC_TAIL_HASH P2_TREASURY_HASH OFFER_MOD_HASH ORACLE_PRICE_ID DEPOSITED_AMOUNT
+(mod (MOD_HASH CAT_MOD_HASH LAUNCHER_ID STATUTES_STRUCT BYC_TAIL_MOD_HASH ORACLE_PRICE_ID DEPOSITED_AMOUNT
       BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL
       (
         lineage_proof
@@ -92,20 +92,6 @@
         ;(/ (* (* (/ (* byc_minted 100) xch_price) coll_ratio) MOJOS) 100000)
         (/ (* -1 (* (/ (* -1 byc_minted 100) xch_price) coll_ratio) MOJOS) 100000)
   )
-
-  (defun-inline calculate-full-puzzle-hash (MOD_HASH LAUNCHER_ID TARGET_PUZZLE_HASH BYC_TAIL_HASH lineage_proof)
-    (if (r (r lineage_proof))
-      ; not a launch
-      (curry_hashes MOD_HASH
-                    (sha256tree MOD_HASH)
-                    (sha256tree LAUNCHER_ID)
-                    (sha256tree TARGET_PUZZLE_HASH)
-                    (sha256tree BYC_TAIL_HASH)
-      )
-      (f (r lineage_proof))
-    )
-  )
-
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark final_conditions)
   ; restricts conditions to only allow vault operations and remarks
@@ -243,7 +229,7 @@
       )
     )
   )
-
+  (defconstant ONE 1)
   ; OWNER OPERATIONS
   (defconstant LAUNCH 0)
   (defconstant MINT_BYC 1)
@@ -261,16 +247,22 @@
 
 
   (assign
-    raw_conditions
-      (if keeper_operation
-        ; we return only conditions that are allowed for keeper operations
-        (list (validate-keeper-operation keeper_operation))
-        ; owner can provide other conditions too so normal inner puzzle operation
-        (assert (not AUCTION_STATE)
-          ; but only if AUCTION_STATE is empty, ie liquidation hasn't started yet
-          (a INNER_PUZZLE solution)
-        )
+    ; generate tail hash from curried params to avoid any malicious currying
+    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
+      (sha256 ONE (sha256tree STATUTES_STRUCT))
+      (sha256tree MOD_HASH)
+      (sha256tree CAT_MOD_HASH)
+      (sha256tree ORACLE_PRICE_ID)
+    )
+    raw_conditions (if keeper_operation
+      ; we return only conditions that are allowed for keeper operations
+      (list (validate-keeper-operation keeper_operation))
+      ; owner can provide other conditions too so normal inner puzzle operation
+      (assert (not AUCTION_STATE)
+        ; but only if AUCTION_STATE is empty, ie liquidation hasn't started yet
+        (a INNER_PUZZLE solution)
       )
+    )
     (conditions vault_operation_condition) (restrict-conditions raw_conditions 0 0 ())
     (statutes_inner_puzzle_hash vault_operation . args) (if vault_operation_condition vault_operation_condition (list () ()))
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
@@ -401,10 +393,11 @@
       )
       ; #### MELT
       (list MELT_BYC
-        (lambda ((& BYC_TAIL_HASH OFFER_MOD_HASH STATUTES_STRUCT P2_TREASURY_HASH CAT_MOD_HASH
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH
                     statutes_puzzle_hash DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
                  ; solution
-                 byc_to_repay my_coin_id cumulative_stability_fee_rate byc_melting_coin_info byc_treasury_coin_info)
+                 byc_to_repay my_coin_id cumulative_stability_fee_rate byc_melting_coin_info
+                 byc_treasury_coin_info p2_treasury_mod_hash)
           (assign
             ; TODO: calculate stability fee for the time since price was last updated too
             ;       you can do that by checking the last_updated time and calculating the fee for the time since then
@@ -439,8 +432,8 @@
                   treasury_parent
                   treasury_amount
                   (curry_hashes
-                    P2_TREASURY_HASH
-                    (sha256tree P2_TREASURY_HASH)
+                    p2_treasury_mod_hash
+                    (sha256tree p2_treasury_mod_hash)
                     (sha256tree CAT_MOD_HASH)
                     (sha256tree BYC_TAIL_HASH)
                     (sha256tree STATUTES_STRUCT)
@@ -579,12 +572,12 @@
       )
 
       (list BID ; == 11
-        (lambda ((& BYC_TAIL_HASH OFFER_MOD_HASH STATUTES_STRUCT P2_TREASURY_HASH CAT_MOD_HASH statutes_puzzle_hash
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash
                DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
             ; solution to bid
             current_time byc_to_bid byc_melting_coin_info byc_treasury_coin_info
             liquidation_penalty_percent cumulative_stability_fee_rate target_puzzle_hash
-            step_price_decrease_factor my_coin_id auction_timeout
+            step_price_decrease_factor my_coin_id auction_timeout offer_mod_hash p2_treasury_mod_hash
           )
           (assign
             fees (calculate-fees
@@ -653,8 +646,8 @@
                 treasury_parent
                 treasury_amount
                 (curry_hashes
-                  P2_TREASURY_HASH
-                  (sha256tree P2_TREASURY_HASH)
+                  p2_treasury_mod_hash
+                  (sha256tree p2_treasury_mod_hash)
                   (sha256tree CAT_MOD_HASH)
                   (sha256tree BYC_TAIL_HASH)
                   (sha256tree STATUTES_STRUCT)
@@ -718,7 +711,7 @@
                     ; assert that keeper absorbed their collateral + left over mojos from melting
                     (list ASSERT_PUZZLE_ANNOUNCEMENT
                       (sha256
-                        OFFER_MOD_HASH
+                        offer_mod_hash
                         (sha256tree
                           (c my_coin_id
                           (list
@@ -734,7 +727,7 @@
                           (calculate-stability-fee-puzzle
                             CAT_MOD_HASH
                             BYC_TAIL_HASH
-                            OFFER_MOD_HASH
+                            offer_mod_hash
                           )
                           ; nonce = my_coin_id, payments = (initiator puzzle hash, initiator incentive fee)
                           (sha256tree
@@ -784,13 +777,14 @@
       )
 
       (list TRANSFER_SF_TO_TREASURY ; == 13
-        (lambda ((& BYC_TAIL_HASH OFFER_MOD_HASH STATUTES_STRUCT P2_TREASURY_HASH CAT_MOD_HASH statutes_puzzle_hash
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash
                DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
             ; solution to bid
             byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
             cumulative_stability_fee_rate
             my_coin_id
             treasury_coin_info
+            p2_treasury_mod_hash
           )
           (assign
             byc_principal_to_melt BYC_MINTED_AMOUNT
@@ -815,8 +809,8 @@
                 treasury_parent
                 treasury_amount
                 (curry_hashes
-                  P2_TREASURY_HASH
-                  (sha256tree P2_TREASURY_HASH)
+                  p2_treasury_mod_hash
+                  (sha256tree p2_treasury_mod_hash)
                   (sha256tree CAT_MOD_HASH)
                   (sha256tree BYC_TAIL_HASH)
                   (sha256tree STATUTES_STRUCT)
@@ -873,7 +867,7 @@
         )
       )
       (list RECOVER_BAD_DEBT ; == 12
-        (lambda ((& BYC_TAIL_HASH OFFER_MOD_HASH STATUTES_STRUCT P2_TREASURY_HASH CAT_MOD_HASH statutes_puzzle_hash
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash
                DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
             ; solution to bid
             reconcile_amount
@@ -881,6 +875,7 @@
             my_coin_id
             treasury_coin_info
             auction_timeout
+            p2_treasury_mod_hash
           )
           (assign
             (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
@@ -892,8 +887,8 @@
                 treasury_parent
                 treasury_amount
                 (curry_hashes
-                  P2_TREASURY_HASH
-                  (sha256tree P2_TREASURY_HASH)
+                  p2_treasury_mod_hash
+                  (sha256tree p2_treasury_mod_hash)
                   (sha256tree CAT_MOD_HASH)
                   (sha256tree BYC_TAIL_HASH)
                   (sha256tree STATUTES_STRUCT)
@@ -1040,9 +1035,7 @@
               (sha256tree CAT_MOD_HASH)
               (sha256tree LAUNCHER_ID)
               (sha256tree STATUTES_STRUCT)
-              (sha256tree BYC_TAIL_HASH)
-              (sha256tree P2_TREASURY_HASH)
-              (sha256tree OFFER_MOD_HASH)
+              (sha256tree BYC_TAIL_MOD_HASH)
               (sha256tree ORACLE_PRICE_ID)
               (sha256tree final_xch_deposited_amount)
               (sha256tree final_byc_deposited_amount)
@@ -1076,9 +1069,7 @@
                       (sha256tree CAT_MOD_HASH)
                       (sha256tree LAUNCHER_ID)
                       (sha256tree STATUTES_STRUCT)
-                      (sha256tree BYC_TAIL_HASH)
-                      (sha256tree P2_TREASURY_HASH)
-                      (sha256tree OFFER_MOD_HASH)
+                      (sha256tree BYC_TAIL_MOD_HASH)
                       (sha256tree ORACLE_PRICE_ID)
                       (sha256tree deposited_amount)
                       (sha256tree byc_minted_amount)
@@ -1117,9 +1108,7 @@
                   (sha256tree CAT_MOD_HASH)
                   (sha256tree LAUNCHER_ID)
                   (sha256tree STATUTES_STRUCT)
-                  (sha256tree BYC_TAIL_HASH)
-                  (sha256tree P2_TREASURY_HASH)
-                  (sha256tree OFFER_MOD_HASH)
+                  (sha256tree BYC_TAIL_MOD_HASH)
                   (sha256tree ORACLE_PRICE_ID)
                   (sha256tree 0)
                   (sha256tree 0)
