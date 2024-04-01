@@ -23,4 +23,6 @@ for puzzle_path in PUZZLE_PATHS:
 def load_puzzle(puzzle_name: str) -> Program:
     from chialisp_loader import load_program
 
-    return load_program("circuit_puzzles", f"{puzzle_name}.hex")
+    puzzle = load_program("circuit_puzzles", f"{puzzle_name}.hex")
+    print("Loaded puzzle", puzzle.tree_hash().hex())
+    return puzzle

@@ -1,20 +1,21 @@
 (mod (STATUTES_STRUCT_HASH COLLATERAL_VAULT_MOD_HASH CAT_MOD_HASH ORACLE_PRICE_INDEX
-      ; TODO: shall we also pass in curried values for P2 treasury so that someone
+      ; FIXME: shall we also pass in curried values for P2 treasury so that someone
       ;       can't create their own treasury and start stealing money that way /via @bramv-chia
       Truths parent_is_cat lineage_proof delta inner_conditions
-      (@ solution (
-        vault_parent_id
+      (@ solution
         (
-          ;LATER: pass in hashed args, to avoid all this extra data cost, like in treasury coins
-          launcher_id byc_tail_hash p2_treasury_hash offer_mod_hash deposited_amount
-          minted_amount auction_state inner_puzzle_hash
-          discounted_principal
+          vault_parent_id
+          (
+            ;LATER: pass in hashed args, to avoid all this extra data cost, like in treasury coins
+            launcher_id byc_tail_hash p2_treasury_hash offer_mod_hash deposited_amount
+            minted_amount auction_state inner_puzzle_hash
+            discounted_principal
+          )
+          amount
+          mint_amount
+          my_coin_id
+          target_puzzle_hash
         )
-        amount
-        mint_amount
-        my_coin_id
-        target_puzzle_hash
-      )
       )
      )
 

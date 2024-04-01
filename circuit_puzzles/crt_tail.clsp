@@ -16,6 +16,8 @@
   (include sha256tree.clib)
   (include curry.clib)
   (include *standard-cl-23*)
+  (defconst RECHARGE_ANN_PREFIX 'v')
+
   (defun assert_ (items)
     (if (r items)
       (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
@@ -47,7 +49,7 @@
     (if (> 0 delta)
       ; melting only by surplus auction
       (assign
-        (crt_tail_hash byc_tail_hash p2_treasury_hash p2_surplus_auction_hash launcher_id byc_lot_amount last_bid) solution
+        (crt_tail_hash byc_tail_hash p2_treasury_hash offer_mod_hash p2_surplus_auction_hash launcher_id byc_lot_amount last_bid) solution
         puzzle_hash (
           curry_hashes CAT_MOD_HASH
             (sha256tree1 CAT_MOD_HASH)
@@ -56,6 +58,7 @@
               (sha256tree1 SURPLUS_MOD_HASH)
               (sha256tree1 CAT_MOD_HASH)
               (sha256tree1 p2_treasury_hash)
+              (sha256tree1 offer_mod_hash)
               (sha256tree1 p2_surplus_auction_hash)
               STATUTES_STRUCT_HASH
               (sha256tree1 launcher_id)
@@ -84,9 +87,10 @@
             parent_id
             curried_mod_args
             amount
+            issuance_amount
             my_coin_id
           ) solution
-
+          ; TODO: use calculate-coin-id to get the coin_id
           approving_coin_id (
             sha256
               parent_id
@@ -96,11 +100,15 @@
                 (tree_hash_of_apply mod_hash curried_mod_args)
               )
               amount
-
           )
           (list
-            (list CREATE_COIN_ANNOUNCEMENT (concat STATUTES_STRUCT_HASH delta))
-            (list ASSERT_COIN_ANNOUNCEMENT (sha256 STATUTES_STRUCT_HASH approving_coin_id my_coin_id delta))
+            (list REMARK "Recharge auction" parent_id (curry_hashes CAT_MOD_HASH
+                (sha256tree1 CAT_MOD_HASH)
+                (sha256tree1 BYC_TAIL_HASH)
+                (tree_hash_of_apply mod_hash curried_mod_args)
+              ) approving_coin_id my_coin_id amount)
+            (list CREATE_COIN_ANNOUNCEMENT (concat STATUTES_STRUCT_HASH issuance_amount))
+            (list ASSERT_COIN_ANNOUNCEMENT (sha256 approving_coin_id RECHARGE_ANN_PREFIX STATUTES_STRUCT_HASH my_coin_id issuance_amount))
           )
         )
         (x)

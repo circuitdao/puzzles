@@ -188,6 +188,7 @@
         (c (list
           ; TODO: is inner puzzle hash enough, or do we need to double check it's correct puzzle?
           REMARK
+
                withdraw_amount  (- new_amount current_amount)
               )
           (c (list
@@ -268,26 +269,12 @@
                     (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
                     ; assert that passed coin id is ours
                       (c (list ASSERT_MY_COIN_ID my_coin_id)
-                        (if (= current_amount new_amount)
-                          ; FIXME: we don't need this part as withdrawal is already announcing the amounts
-                          ; we're announcing, add puzzle announcements to
-                          ; ensure all treasury coins in the ring were spent
-                          (c
-                            (list ASSERT_PUZZLE_ANNOUNCEMENT
-                              (sha256
-                                ; assert announcement from our previous ring launcher id
-                                (a generate-puzzle-hash (list (f ring_prev_prev_info) RING_PREV_LAUNCHER_ID ))
-                                ANN_PREFIX
-                                '=' ; as in '$=amount', to avoid collisions
-                                (f (r ring_prev_prev_info))
-                              )
-                            )
-                            (c (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount))
-                                conditions
-
-                            )
+                        (c
+                          ; assert my new balance so someone can check whole ring balance
+                          (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                          (c (list REMARK approver_coin_id my_coin_id new_amount)
+                            conditions
                           )
-                          conditions
                         )
                       )
                     )

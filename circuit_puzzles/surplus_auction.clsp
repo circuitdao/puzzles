@@ -1,6 +1,7 @@
 (mod (MOD_HASH
       CAT_MOD_HASH
       P2_TREASURY_HASH ; need for approving withdrawal from treasury
+      OFFER_MOD_HASH
       P2_SURPLUS_AUCTION_HASH ; need to be able to hold surplus funds to be auctioned
       STATUTES_STRUCT ; to assert statutes
       LAUNCHER_ID ; to assert uniqueness of launcher_id
@@ -24,6 +25,12 @@
   (defconst BID 2)
   (defconst COMPLETE 3) ; NOTE: this also melts the coin
 
+    (defun merge-lists (list_a list_b)
+      (if list_a
+          (c (f list_a) (merge-lists (r list_a) list_b))
+          list_b
+      )
+    )
 
    (defun assert_ (items)
     (if (r items)
@@ -137,7 +144,7 @@
 
 
   (assign
-    recreate-coin (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH P2_TREASURY_HASH
+    recreate-coin (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH P2_TREASURY_HASH OFFER_MOD_HASH
                               P2_SURPLUS_AUCTION_HASH CRT_TAIL_HASH STATUTES_STRUCT)
                            launcher_id bid lot_amount amount)
       (list
@@ -147,6 +154,7 @@
           (sha256tree MOD_HASH)
           (sha256tree CAT_MOD_HASH)
           (sha256tree P2_TREASURY_HASH)
+          (sha256tree OFFER_MOD_HASH)
           (sha256tree P2_SURPLUS_AUCTION_HASH)
           (sha256tree STATUTES_STRUCT)
           (sha256tree launcher_id)
@@ -237,7 +245,7 @@
         (assign
           ; op_args -> (bid_crt_amount target_puzzle_hash timestamp)
           ; FIXME: must be agnostic of what kind of coin surplus auction is wrapping
-          (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl lot_amount raw_announcements) op_args
+          (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl my_coin_id lot_amount raw_announcements) op_args
           (last_target_puzzle_hash last_bid_timestamp) (if LAST_BID LAST_BID (list 0 0))
           announcements (filter-announcements raw_announcements ())
           bid_conditions (assert
@@ -268,8 +276,7 @@
               (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
               ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
               (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
-              ; announcement of a new bid to secure fee coins against it
-              (list CREATE_COIN_ANNOUNCEMENT (concat target_puzzle_hash bid_crt_amount))
+              (list ASSERT_MY_COIN_ID my_coin_id)
               ; ensure lineage so we don't lose track of the lot
               (list ASSERT_MY_PARENT_ID
                 (sha256
@@ -282,6 +289,7 @@
                       (sha256tree MOD_HASH)
                       (sha256tree CAT_MOD_HASH)
                       (sha256tree P2_TREASURY_HASH)
+                      (sha256tree OFFER_MOD_HASH)
                       (sha256tree P2_SURPLUS_AUCTION_HASH)
                       (sha256tree STATUTES_STRUCT)
                       (sha256tree (f (r (r lineage_proof)))) ; launcher id
@@ -295,20 +303,31 @@
                   (f (r lineage_proof))
                 )
               )
-              (if announcements
-                ; one announcement should be enough to secure the bid
-                (f announcements)
-                (list REMARK)
-              )
             )
           )
-          (if last_target_puzzle_hash
-            (c
-              ; we have a previous bid, we need to return the funds to the previous bidder
-              (list CREATE_COIN last_target_puzzle_hash my_amount (list last_target_puzzle_hash))
+          ; TODO: replace merge-lists with cons
+          (merge-lists
+            (if last_target_puzzle_hash
+              (c
+                ; assert that keeper absorbed their collateral + left over mojos from melting
+                (list ASSERT_PUZZLE_ANNOUNCEMENT
+                  (sha256
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256tree CAT_MOD_HASH)
+                      (sha256tree CRT_TAIL_HASH)
+                      OFFER_MOD_HASH
+                    )
+                    (sha256tree
+                      (c my_coin_id
+                      (list
+                        (list last_target_puzzle_hash my_amount))))
+                  )
+                )
+                bid_conditions
+              )
               bid_conditions
             )
-            bid_conditions
+            announcements
           )
         )
         (if (= op_code COMPLETE)
@@ -371,6 +390,7 @@
                         (sha256tree MOD_HASH)
                         (sha256tree CAT_MOD_HASH)
                         (sha256tree P2_TREASURY_HASH)
+                        (sha256tree OFFER_MOD_HASH)
                         (sha256tree P2_SURPLUS_AUCTION_HASH)
                         (sha256tree STATUTES_STRUCT)
                         (sha256tree (f (r (r lineage_proof))))
@@ -387,9 +407,7 @@
               )
             )
             (if announcements
-              ; one announcement should be enough to secure the bid
-              ; TODO: shall we just use merge lists?
-              (c (f announcements) conditions)
+              (merge-lists conditions announcements)
               conditions
             )
           )

@@ -1,5 +1,5 @@
 (mod (MOD_STATUTES_HASH
-      ; puzzle mods that are allowed to withdraw from the treasury
+      ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
       TREASURY_APPROVAL_MOD_HASHES
       CAT_MOD_HASH
       CRT_TAIL
@@ -17,302 +17,304 @@
       crt_inner_puzzle_hash 
       (@ mutation (op_code mutation_index mutation_value)))
 
-    (include *standard-cl-23*)
-    (include sha256tree.clib)
-    (include curry.clib)
-    (include condition_codes.clib)
-    (include statutes_utils.clib)
+  (include *standard-cl-23*)
+  (include sha256tree.clib)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
 
-    (defconstant ONE 1)
+  (defconstant ONE 1)
 
-    (defconstant CRT_ANN_PREFIX 0x43) ; starts with "C"
+  (defconstant CRT_ANN_PREFIX 0x43) ; starts with "C"
 
-    (defun merge-lists (list_a list_b)
-      (if list_a
-          (c (f list_a) (merge-lists (r list_a) list_b))
-          list_b
-      )
+  (defun merge-lists (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge-lists (r list_a) list_b))
+        list_b
     )
+  )
 
-    (defun announce-statutes (statutes prefix start_index)
-      (if statutes
-        (c 
-          (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX
-              (sha256tree
-                (list prefix start_index (f statutes))
-              )
+  (defun announce-statutes (statutes prefix start_index)
+    (if statutes
+      (c
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (concat STATUTES_ANN_PREFIX
+            (sha256tree
+              (list prefix start_index (f statutes))
             )
           )
-          (c (list REMARK STATUTES_ANN_PREFIX (list prefix start_index (f statutes)))
-            (announce-statutes (r statutes) prefix (+ start_index 1))
-          )
         )
-        ()
+        (c (list REMARK STATUTES_ANN_PREFIX (list prefix start_index (f statutes)))
+          (announce-statutes (r statutes) prefix (+ start_index 1))
+        )
       )
+      ()
     )
+  )
 
-    (defun-inline create-coin-condition (mod_hash approval_mod_hashes cat_mod_hash crt_tail statutes
-                                         prices cumulative_stability_fee cumulative_interest_rate)
-        (list CREATE_COIN  
-              ; puzzle
-              (curry_hashes mod_hash 
-                (sha256 ONE mod_hash)
-                (sha256tree approval_mod_hashes)
-                (sha256 ONE cat_mod_hash) 
-                (sha256 ONE crt_tail)
-                (sha256tree statutes)
-                (sha256tree prices)
-                (sha256tree cumulative_stability_fee)
-                (sha256tree cumulative_interest_rate)
-              )
-              ; amount, 1 mojo for singletons or any odd number
-              1
-        )
-
-    )
-
-
-    (defun mutate-list (mutation_index new_value statutes index)
-        (if (l statutes)
-            (c 
-                (if (= index mutation_index) new_value (f statutes)) 
-                (mutate-list mutation_index new_value (r statutes) (+ index 1)))
-            (if (= mutation_index index) ; no more statutes left and index is same as end of list
-              ; means we want to append to the end of the list 
-              (list new_value)
-              (if (> mutation_index index)
-                (x "mutation index out of bounds")
-                ()
-              )
-            )
-        )
-    )
-    (defconstant PRECISION 10000000000)
-    (defun calculate-cumulative-stability-fee-rate (past_cumulative_stability_fee
-                                               current_stability_fee
-                                               current_timestamp
-                                               previous_timestamp
-                                              )
-      (if (> previous_timestamp current_timestamp)
-        past_cumulative_stability_fee
-        (calculate-cumulative-stability-fee-rate
-          (/ (* past_cumulative_stability_fee current_stability_fee) PRECISION)
-          current_stability_fee
-          current_timestamp
-          ; per minute calculation
-          (+ previous_timestamp 60))
+  (defun-inline create-coin-condition (mod_hash approval_mod_hashes cat_mod_hash crt_tail statutes
+                                       prices cumulative_stability_fee cumulative_interest_rate)
+    (list
+      CREATE_COIN
+      ; puzzle
+      (curry_hashes mod_hash
+        (sha256 ONE mod_hash)
+        (sha256tree approval_mod_hashes)
+        (sha256 ONE cat_mod_hash)
+        (sha256 ONE crt_tail)
+        (sha256tree statutes)
+        (sha256tree prices)
+        (sha256tree cumulative_stability_fee)
+        (sha256tree cumulative_interest_rate)
       )
+      ; amount, 1 mojo for singletons or any odd number
+      1
     )
+  )
 
-    (defun get-list-item-at-index (index a_list counter_index)
-        (if (l a_list)
-            (if (= counter_index index)
-              (f a_list)
-              (get-list-item-at-index index (r a_list) (+ counter_index 1))
-            )
-            ; fail if you don't find an item
-            (x "index out of bounds" index a_list counter_index)
-        )
-    )
 
-    (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL INNER_PUZZLE_HASH)
-      (curry_hashes CAT_MOD_HASH (sha256 ONE CAT_MOD_HASH) (sha256 ONE CRT_TAIL) INNER_PUZZLE_HASH)
-    )
-
-    (defun print (to-show result) (if (all "$print$" to-show result) result result))
-; (@ conditions ((condition_code . condition_body) . rest_of_conditions))
-    (defun filter-ann-conditions ( ann_conditions
-          filtered_announcements)
-      (if ann_conditions
-        (assign
-          condition (f ann_conditions)
-          (condition_code . condition_body) condition
-          rest (r ann_conditions)
-          condition_first (f condition_body)
-          (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT)
-                   (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
-            (if (not
-                (all
-                  (= 2 (strlen condition_first))
-                  (= (substr condition_first 0 1) STATUTES_ANN_PREFIX)
-                )
-               )
-              (filter-ann-conditions rest (c condition filtered_announcements))
-              ; no announcements, skip
-              (filter-ann-conditions rest filtered_announcements)
-            )
-            (filter-ann-conditions rest filtered_announcements)
-          )
-        )
-        filtered_announcements
+  (defun mutate-list (mutation_index new_value statutes index)
+    (if (l statutes)
+      (c
+        (if (= index mutation_index) new_value (f statutes))
+        (mutate-list mutation_index new_value (r statutes) (+ index 1))
       )
-    )
-
-    (defun-inline get-oracle-puzzle-hash (statutes_struct launcher_id oracle_mod_hash announcer_mod_hash price last_updated)
-        (curry_hashes 
-          (f statutes_struct) ; singleton mod hash 
-          (sha256tree (c (f statutes_struct) (c launcher_id (r (r statutes_struct)))))
-          ; no hashing as we're expecting a puzzle here, so mod_hash is fine
-          (curry_hashes oracle_mod_hash 
-            (sha256tree oracle_mod_hash) 
-            (sha256tree statutes_struct) 
-            (sha256tree announcer_mod_hash) 
-            (sha256tree price) 
-            (sha256tree last_updated)
-          ) 
-        )
-    )
-
-    (assign
-        ; TODO: add support for expedited votes and statutes delay before they can be applied fully
-        (op_code mutation_index mutation_value) (if mutation mutation (() () ()))
-        (statutes prices cumulative_stability_fee cumulative_interest_rate)
-          (if (= op_code 1)
-            (list 
-              ; we're maybe updating, if indexes match and it's not announcements
-              (if (= mutation_index -1)
-                STATUTES
-                (mutate-list mutation_index mutation_value STATUTES 0)
-              )
-              ; prices staying the same 
-              PRICES
-              ; don't change the rate
-              PAST_CUMULATIVE_STABILITY_FEE_RATE
-              PAST_CUMULATIVE_INTEREST_RATE
-            )
-            (if (= op_code 2)
-              ; we're updating prices
-              (list STATUTES
-                ; get the price, mutation value -> (oracle_index price last_updated)
-                (mutate-list mutation_index (r mutation_value) PRICES 0)
-                ; second index on statutes is current stability_fee rate in 2 decimals eg 500 -> 5%
-                ; to calculate stability_fee rate we need:
-                ; - past cumulative stability_fee rate
-                ; - current stability_fee rate
-                ; - current timestamp
-                ; - last timestamp of calculation previously
-                (calculate-cumulative-stability-fee-rate
-                  PAST_CUMULATIVE_STABILITY_FEE_RATE
-                  (f (r STATUTES))
-                  (f (r (r mutation_value))) ; current timestamp
-                  ; get previous timestamp when price was last updated
-                  ; NOTE: this assumes that at least one oracle is always present and active at position 0
-                  (f (r (get-list-item-at-index (f mutation_value) PRICES 0))) ; prev timestamp
-                )
-                (calculate-cumulative-stability-fee-rate
-                  PAST_CUMULATIVE_INTEREST_RATE
-                  ; current interest rate
-                  (f (r (r STATUTES)))
-                  (f (r (r mutation_value)))
-                  ; get previous timestamp when price was last updated
-                  ; NOTE: this assumes that at least one oracle is always present and active at position 0
-                  (f (r (get-list-item-at-index (f mutation_value) PRICES 0)))
-                )
-              )
-              ; unknown opcode, default to existing values 
-              (list STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE)
-            )
-          )
-        ; add dynamic / calculated statutes
-        create_coin_condition (create-coin-condition MOD_STATUTES_HASH
-                                TREASURY_APPROVAL_MOD_HASHES
-                                CAT_MOD_HASH
-                                CRT_TAIL
-                                statutes
-                                prices
-                                cumulative_stability_fee
-                                cumulative_interest_rate
-                                )
-
-        ; add announcements if any
-        announcements (if (all (= (print "op code:" op_code) 1) (= (print "mutation index:" mutation_index) -1))
-          ; filter announcements
-          (filter-ann-conditions (print "mutation value:" mutation_value) ())
-          ; no announcements
+      (if (= mutation_index index) ; no more statutes left and index is same as end of list
+        ; means we want to append to the end of the list
+        (list new_value)
+        (if (> mutation_index index)
+          (x "mutation index out of bounds")
           ()
         )
-        conditions (c create_coin_condition
+      )
+    )
+  )
+  (defconstant PRECISION 10000000000)
+  (defun calculate-cumulative-stability-fee-rate
+      (past_cumulative_stability_fee
+       current_stability_fee
+       current_timestamp
+       previous_timestamp
+      )
+    (if (> previous_timestamp current_timestamp)
+      past_cumulative_stability_fee
+      (calculate-cumulative-stability-fee-rate
+        (/ (* past_cumulative_stability_fee current_stability_fee) PRECISION)
+        current_stability_fee
+        current_timestamp
+        ; per minute calculation
+        (+ previous_timestamp 60)
+      )
+    )
+  )
+
+  (defun get-list-item-at-index (index a_list counter_index)
+    (if (l a_list)
+      (if (= counter_index index)
+        (f a_list)
+        (get-list-item-at-index index (r a_list) (+ counter_index 1))
+      )
+      ; fail if you don't find an item
+      (x "index out of bounds" index a_list counter_index)
+    )
+  )
+
+  (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL INNER_PUZZLE_HASH)
+    (curry_hashes CAT_MOD_HASH (sha256 ONE CAT_MOD_HASH) (sha256 ONE CRT_TAIL) INNER_PUZZLE_HASH)
+  )
+
+
+  (defun filter-ann-conditions (ann_conditions filtered_announcements)
+    (if ann_conditions
+      (assign
+        condition (f ann_conditions)
+        (condition_code . condition_body) condition
+        rest (r ann_conditions)
+        condition_first (f condition_body)
+        (if
+          (any
+              (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT)
+              (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+          (if
+            (not
+              (= (substr condition_first 0 1) STATUTES_ANN_PREFIX)
+            )
+            (filter-ann-conditions rest (c condition filtered_announcements))
+            ; no announcements, skip
+            (filter-ann-conditions rest filtered_announcements)
+          )
+          (filter-ann-conditions rest filtered_announcements)
+        )
+      )
+      filtered_announcements
+    )
+  )
+
+  (defun-inline get-oracle-puzzle-hash (statutes_struct launcher_id oracle_mod_hash announcer_mod_hash price last_updated)
+    (curry_hashes
+      (f statutes_struct) ; singleton mod hash
+      (sha256tree (c (f statutes_struct) (c launcher_id (r (r statutes_struct)))))
+      ; no hashing as we're expecting a puzzle here, so mod_hash is fine
+      (curry_hashes oracle_mod_hash
+        (sha256tree oracle_mod_hash)
+        (sha256tree statutes_struct)
+        (sha256tree announcer_mod_hash)
+        (sha256tree price)
+        (sha256tree last_updated)
+      )
+    )
+  )
+
+  (assign
+    ; TODO: add support for expedited votes and statutes delay before they can be applied fully
+    (op_code mutation_index mutation_value) (if mutation mutation (() () ()))
+    (statutes prices cumulative_stability_fee cumulative_interest_rate)
+      (if (= op_code 1)
+        (list
+          ; we're maybe updating, if indexes match and it's not announcements
+          (if (= mutation_index -1)
+            STATUTES
+            (mutate-list mutation_index mutation_value STATUTES 0)
+          )
+          ; prices staying the same
+          PRICES
+          ; don't change the rate
+          PAST_CUMULATIVE_STABILITY_FEE_RATE
+          PAST_CUMULATIVE_INTEREST_RATE
+        )
+        (if (= op_code 2)
+          ; we're updating prices
+          (list STATUTES
+            ; get the price, mutation value -> (oracle_index price last_updated)
+            (mutate-list mutation_index (r mutation_value) PRICES 0)
+            ; second index on statutes is current stability_fee rate in 2 decimals eg 500 -> 5%
+            ; to calculate stability_fee rate we need:
+            ; - past cumulative stability_fee rate
+            ; - current stability_fee rate
+            ; - current timestamp
+            ; - last timestamp of calculation previously
+            (calculate-cumulative-stability-fee-rate
+              PAST_CUMULATIVE_STABILITY_FEE_RATE
+              (f (r STATUTES))
+              (f (r (r mutation_value))) ; current timestamp
+              ; get previous timestamp when price was last updated
+              ; NOTE: this assumes that at least one oracle is always present and active at position 0
+              (f (r (get-list-item-at-index (f mutation_value) PRICES 0))) ; prev timestamp
+            )
+            (calculate-cumulative-stability-fee-rate
+              PAST_CUMULATIVE_INTEREST_RATE
+              ; current interest rate
+              (f (r (r STATUTES)))
+              (f (r (r mutation_value)))
+              ; get previous timestamp when price was last updated
+              ; NOTE: this assumes that at least one oracle is always present and active at position 0
+              (f (r (get-list-item-at-index (f mutation_value) PRICES 0)))
+            )
+          )
+          ; unknown opcode, default to existing values
+          (list STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE)
+        )
+      )
+    ; add dynamic / calculated statutes
+    create_coin_condition (create-coin-condition
+      MOD_STATUTES_HASH
+      TREASURY_APPROVAL_MOD_HASHES
+      CAT_MOD_HASH
+      CRT_TAIL
+      statutes
+      prices
+      cumulative_stability_fee
+      cumulative_interest_rate
+    )
+
+    ; add announcements if any
+    announcements (if (all (= op_code 1) (= mutation_index -1))
+      ; filter announcements
+      (filter-ann-conditions mutation_value ())
+      ; no announcements
+      ()
+    )
+    conditions (c create_coin_condition
+      (c
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
+        )
+        (c
+          (list CREATE_PUZZLE_ANNOUNCEMENT
+            (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
+          )
           (c
             (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
+              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
             )
-            (c
-              (list CREATE_PUZZLE_ANNOUNCEMENT
-                (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
+            (if announcements
+              (merge-lists
+                announcements
+                (merge-lists
+                  (announce-statutes prices PRICE_PREFIX 0)
+                  (announce-statutes statutes STATUTE_PREFIX 0)
+                )
               )
-              (c
-                (list CREATE_PUZZLE_ANNOUNCEMENT
-                  (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
-                )
-                (if announcements
-                  (merge-lists
-                    announcements
-                    (merge-lists
-                      (announce-statutes prices PRICE_PREFIX 0)
-                      (announce-statutes statutes STATUTE_PREFIX 0)
-                    )
-                  )
-                  (merge-lists
-                    (announce-statutes prices PRICE_PREFIX 0)
-                    (announce-statutes statutes STATUTE_PREFIX 0)
-                  )
-                )
+              (merge-lists
+                (announce-statutes prices PRICE_PREFIX 0)
+                (announce-statutes statutes STATUTE_PREFIX 0)
               )
             )
           )
         )
-
-        (if (any (= op_code 2) (= op_code 1))
-          (if (= op_code 1)
-            ;  updating statutes, assert permission
-            (c
-              ; confirm to CRT voting coin that mutation was applied
-              (list CREATE_PUZZLE_ANNOUNCEMENT
-                (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r mutation)))
-              )
-              ; assert from CRT vote that mutation was indeed voted for and confirmed
-              (c (list REMARK
-                  (list (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL crt_inner_puzzle_hash)
-                                               CRT_ANN_PREFIX (r mutation)))
-                (c
-                  (list ASSERT_PUZZLE_ANNOUNCEMENT
-                    (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL crt_inner_puzzle_hash)
-                                                 CRT_ANN_PREFIX (sha256tree (r mutation))))
-                  conditions
-                )
-              )
-            )
-            (if (= op_code 2)
-              ; updating prices, assert permission from oracle
-              (assign
-                (oracle_index price last_updated ) mutation_value
-                ; first item is price oracle info on statues
-                oracle_info (print "full oracle info:" (f STATUTES))
-                (oracle_mod_hash statutes_struct atom_announcer_puzhash) (f oracle_info)
-                ;oracle_launcher_id (x (r oracle_info))
-                oracle_launcher_id (get-list-item-at-index oracle_index (print "oracle info" (r oracle_info)) 0)
-                ; we need prev price to assert that latest one is fresher
-                (prev_price prev_last_updated) (get-list-item-at-index oracle_index PRICES 0)
-                (if (> (- last_updated prev_last_updated) (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0))
-                    ; confirm to oracle price announcement to update the price
-                    (c
-                      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (get-oracle-puzzle-hash
-                                                                  statutes_struct
-                                                                  oracle_launcher_id
-                                                                  oracle_mod_hash
-                                                                  atom_announcer_puzhash
-                                                                  price
-                                                                  last_updated)
-                                                                price))
-                      conditions)
-                    (x "price update too soon" last_updated prev_last_updated (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0))
-                )
-              )
-              (x "should never happen") ; should never happen since we only allow 1 or 2 as op_code
-            )
-          )
-          conditions  
-        )
+      )
     )
+
+    (if (any (= op_code 2) (= op_code 1))
+      (if (= op_code 1)
+        ;  updating statutes, assert permission
+        (c
+          ; confirm to CRT voting coin that mutation was applied
+          (list CREATE_PUZZLE_ANNOUNCEMENT
+            (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r mutation)))
+          )
+          ; assert from CRT vote that mutation was indeed voted for and confirmed
+          (c (list REMARK
+              (list (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL crt_inner_puzzle_hash)
+                                           CRT_ANN_PREFIX (r mutation)))
+            (c
+              (list ASSERT_PUZZLE_ANNOUNCEMENT
+                (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL crt_inner_puzzle_hash)
+                                             CRT_ANN_PREFIX (sha256tree (r mutation))))
+              conditions
+            )
+          )
+        )
+        (if (= op_code 2)
+          ; updating prices, assert permission from oracle
+          (assign
+            (oracle_index price last_updated ) mutation_value
+            ; first item is price oracle info on statues
+            oracle_info (f STATUTES)
+            (oracle_mod_hash statutes_struct atom_announcer_puzhash) (f oracle_info)
+            ;oracle_launcher_id (x (r oracle_info))
+            oracle_launcher_id (get-list-item-at-index oracle_index (r oracle_info) 0)
+            ; we need prev price to assert that latest one is fresher
+            (prev_price prev_last_updated) (get-list-item-at-index oracle_index PRICES 0)
+            (if (> (- last_updated prev_last_updated) (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0))
+                ; confirm to oracle price announcement to update the price
+                (c
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (get-oracle-puzzle-hash
+                                                              statutes_struct
+                                                              oracle_launcher_id
+                                                              oracle_mod_hash
+                                                              atom_announcer_puzhash
+                                                              price
+                                                              last_updated)
+                                                            price))
+                  conditions)
+                (x "price update too soon" last_updated prev_last_updated (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0))
+            )
+          )
+          (x "should never happen") ; should never happen since we only allow 1 or 2 as op_code
+        )
+      )
+      conditions
+    )
+  )
 )
