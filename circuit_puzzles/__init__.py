@@ -10,7 +10,8 @@ except ImportError:
     # for py3.8
     from importlib_resources import files
 
-PUZZLE_PATHS = [Path(x).with_suffix(".hex") for x in Path(str(files(__package__))).iterdir() if x.name.endswith(".clsp")]
+PUZZLE_PATHS = [Path(x).with_suffix(".hex") for x in Path(str(files(__package__))).iterdir() if
+                x.name.endswith(".clsp")]
 clsp_builder = ChialispBuild([Path(str(files(__package__) / "include"))])
 for puzzle_path in PUZZLE_PATHS:
     try:
@@ -23,6 +24,4 @@ for puzzle_path in PUZZLE_PATHS:
 def load_puzzle(puzzle_name: str) -> Program:
     from chialisp_loader import load_program
 
-    puzzle = load_program("circuit_puzzles", f"{puzzle_name}.hex")
-    print("Loaded puzzle", puzzle.tree_hash().hex())
-    return puzzle
+    return load_program("circuit_puzzles", f"{puzzle_name}.hex")
