@@ -459,23 +459,27 @@
                   conditions (c
                     (list REMARK "melting ann->" byc_to_repay negative_byc_principal_to_melt cumulative_stability_fee_rate calculated_stability_fee
                                                new_treasury_amount new_byc_minted_amount undiscounted_principal DISCOUNTED_PRINCIPAL discounted_principal)
-                    (c (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
+                    (c
+                      (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
                       (c
-                        (list ASSERT_MY_COIN_ID my_coin_id)
-                        (if (> negative_byc_principal_to_melt -1)
-                          (list )
-                          (list
-                            ; signal to tail that it can melt the BYC
-                            (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX 'x' byc_coin_id_to_melt negative_byc_principal_to_melt (sha256tree STATUTES_STRUCT)))
-                            ; get a melt confirmation from BYC tail
-                            (list ASSERT_COIN_ANNOUNCEMENT
-                              (sha256
-                                byc_coin_id_to_melt
-                                BYC_ANN_PREFIX
-                                'x'
-                                my_coin_id
-                                negative_byc_principal_to_melt
-                                (sha256tree STATUTES_STRUCT)
+                        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+                        (c
+                          (list ASSERT_MY_COIN_ID my_coin_id)
+                          (if (> negative_byc_principal_to_melt -1)
+                            (list )
+                            (list
+                              ; signal to tail that it can melt the BYC
+                              (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX 'x' byc_coin_id_to_melt negative_byc_principal_to_melt (sha256tree STATUTES_STRUCT)))
+                              ; get a melt confirmation from BYC tail
+                              (list ASSERT_COIN_ANNOUNCEMENT
+                                (sha256
+                                  byc_coin_id_to_melt
+                                  BYC_ANN_PREFIX
+                                  'x'
+                                  my_coin_id
+                                  negative_byc_principal_to_melt
+                                  (sha256tree STATUTES_STRUCT)
+                                )
                               )
                             )
                           )
@@ -746,6 +750,8 @@
                     (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
                     ; assert liquidation penalty percent
                     (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_PERCENT liquidation_penalty_percent)
+                    (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+                    (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
                   )
                   (if (> fees_for_treasury 0)
                     ; get an announcement that BYC was paid into treasury
@@ -859,6 +865,7 @@
                       )
                     )
                     (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
+                    (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
                     (list ASSERT_MY_COIN_ID my_coin_id)
                 )
               )
@@ -917,6 +924,7 @@
                     (list ASSERT_SECONDS_ABSOLUTE (- current_time 60))
                     (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_time 60))
                     (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
+                    (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
                     ; signal to tail that it can issue BYC with certain amount
                     (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX "x" treasury_coin_id (* -1 reconcile_amount) (sha256tree STATUTES_STRUCT) ))
                     ; make sure tail has actually issued it too
