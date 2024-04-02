@@ -41,18 +41,6 @@
         (= vault_mod_hash (f approved_mod_hashes))
 
         (list
-          (list REMARK "BYC TAIL==>"
-            vault_parent_id
-            (tree_hash_of_apply vault_mod_hash vault_curried_args)
-            vault_amount
-            vault_coin_id
-            VAULT_ANN_PREFIX
-            (if (> 0 delta) "x" "i")
-            my_coin_id
-            (if (> 0 delta) delta to_mint_amount)
-            statutes_struct_hash ; need to tie it to statutes struct
-            ORACLE_PRICE_INDEX
-          )
           (list ASSERT_MY_COIN_ID my_coin_id) ; thanks @bramv-chia
           (list
               ASSERT_COIN_ANNOUNCEMENT
@@ -77,9 +65,10 @@
               ORACLE_PRICE_INDEX
             )
           )
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
         )
       )
     )
-    (x "no minting")
+    (x)  ; no minting
   )
 )
