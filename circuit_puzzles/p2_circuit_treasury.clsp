@@ -187,7 +187,6 @@
       (c (list
         ASSERT_MY_AMOUNT current_amount)
         (c (list
-          ; TODO: is inner puzzle hash enough, or do we need to double check it's correct puzzle?
           REMARK
 
                withdraw_amount  (- new_amount current_amount)

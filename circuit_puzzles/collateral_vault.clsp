@@ -397,7 +397,7 @@
                  byc_to_repay my_coin_id cumulative_stability_fee_rate byc_melting_coin_info
                  byc_treasury_coin_info p2_treasury_mod_hash)
           (assign
-            ; TODO: calculate stability fee for the time since price was last updated too
+            ; NEXT: calculate stability fee for the time since price was last updated too
             ;       you can do that by checking the last_updated time and calculating the fee for the time since then
             calculated_stability_fee (calculate-fees
               byc_to_repay
@@ -448,7 +448,7 @@
               BYC_TAIL_HASH
               byc_melting_coin_info
             )
-            ; TODO: attacker could mint above the min amount and then immediately melt it to
+            ; NEXT: attacker could mint above the min amount and then immediately melt it to
                   ; start another vault, circumventing the min mint amount requirement
             (assert (> byc_to_repay 0) (> new_byc_minted_amount -1)
               (list

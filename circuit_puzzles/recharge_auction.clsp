@@ -6,6 +6,7 @@
   (include sha256tree.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
+  (include utils.clib)
 
   (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
@@ -35,8 +36,7 @@
         new_amount (+ next_current_amount delta)
         new_prev_amount (+ current_amount deposit_amount (if (= launcher_id (f (r first_treasury_coin))) potential_remainder 0))
         prev_treasury_coin_id (
-          ; FIXME: use calculate coin id for this instead of sha256
-          sha256 ; treasury coin id
+          calculate-coin-id
             parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
@@ -54,8 +54,7 @@
             current_amount ; taking second of (launcher_id amount) pair
         )
         treasury_coin_id (
-          ; FIXME: use calculate coin id for this instead of sha256
-          sha256 ; treasury coin id
+          calculate-coin-id
             next_parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
