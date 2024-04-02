@@ -20,7 +20,8 @@
 
       ; solution
       crt_inner_puzzle_hash 
-      (@ mutation (op_code mutation_index mutation_value)))
+      mutation
+     )
 
   (include *standard-cl-23*)
   (include sha256tree.clib)
@@ -32,14 +33,7 @@
 
   (defconstant CRT_ANN_PREFIX 0x43) ; starts with "C"
 
-  (defun merge-lists (list_a list_b)
-    (if list_a
-        (c (f list_a) (merge-lists (r list_a) list_b))
-        list_b
-    )
-  )
-
-  (defun announce-statutes (statutes prefix start_index)
+  (defun announce-statutes (statutes prefix start_index rest)
     (if statutes
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT
@@ -49,11 +43,9 @@
             )
           )
         )
-        (c (list REMARK STATUTES_ANN_PREFIX (list prefix start_index (f statutes)))
-          (announce-statutes (r statutes) prefix (+ start_index 1))
-        )
+        (announce-statutes (r statutes) prefix (+ start_index 1) rest)
       )
-      ()
+      rest
     )
   )
 
@@ -97,13 +89,14 @@
         ; means we want to append to the end of the list
         (list new_value)
         (if (> mutation_index index)
-          (x "mutation index out of bounds")
+          (x)
           ()
         )
       )
     )
   )
   (defconstant PRECISION 10000000000)
+
   (defun calculate-cumulative-stability-fee-rate
       (past_cumulative_stability_fee
        current_stability_fee
@@ -129,7 +122,7 @@
         (get-list-item-at-index index (r a_list) (+ counter_index 1))
       )
       ; fail if you don't find an item
-      (x "index out of bounds" index a_list counter_index)
+      (x)
     )
   )
 
@@ -138,27 +131,26 @@
   )
 
 
-  (defun filter-ann-conditions (ann_conditions filtered_announcements)
+  (defun filter-ann-conditions ((@ ann_conditions
+                                  (
+                                    (@ condition
+                                      (condition_code . condition_body)) . rest)
+                                ) filtered_announcements)
     (if ann_conditions
-      (assign
-        condition (f ann_conditions)
-        (condition_code . condition_body) condition
-        rest (r ann_conditions)
-        condition_first (f condition_body)
+      (if
+        (any
+            (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT)
+            (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT)
+        )
         (if
-          (any
-              (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT)
-              (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
-          (if
-            (not
-              (= (substr condition_first 0 1) STATUTES_ANN_PREFIX)
-            )
-            (filter-ann-conditions rest (c condition filtered_announcements))
-            ; no announcements, skip
-            (filter-ann-conditions rest filtered_announcements)
+          (not
+            (= (substr (f condition_body) 0 1) STATUTES_ANN_PREFIX)
           )
+          (filter-ann-conditions rest (c condition filtered_announcements))
+          ; no announcements, skip
           (filter-ann-conditions rest filtered_announcements)
         )
+        (filter-ann-conditions rest filtered_announcements)
       )
       filtered_announcements
     )
@@ -180,7 +172,7 @@
   )
 
   (assign
-    ; TODO: add support for expedited votes and statutes delay before they can be applied fully
+    ; NEXT: add support for expedited votes and statutes delay before they can be applied fully
     (op_code mutation_index mutation_value) (if mutation mutation (() () ()))
     (statutes prices cumulative_stability_fee cumulative_interest_rate)
       (if (= op_code 1)
@@ -229,7 +221,6 @@
           (list STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE)
         )
       )
-    ; add dynamic / calculated statutes
     create_coin_condition (create-coin-condition
       MOD_STATUTES_HASH
       TREASURY_APPROVAL_MOD_HASHES
@@ -276,18 +267,10 @@
                   (list CREATE_PUZZLE_ANNOUNCEMENT
                     (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
                   )
-                  (if announcements
-                    (merge-lists
-                      announcements
-                      (merge-lists
-                        (announce-statutes prices PRICE_PREFIX 0)
-                        (announce-statutes statutes STATUTE_PREFIX 0)
-                      )
-                    )
-                    (merge-lists
-                      (announce-statutes prices PRICE_PREFIX 0)
-                      (announce-statutes statutes STATUTE_PREFIX 0)
-                    )
+                  (announce-statutes
+                    prices
+                    PRICE_PREFIX 0
+                    (announce-statutes statutes STATUTE_PREFIX 0 announcements)
                   )
                 )
               )
@@ -306,15 +289,11 @@
             (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r mutation)))
           )
           ; assert from CRT vote that mutation was indeed voted for and confirmed
-          (c (list REMARK
-              (list (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-                                           CRT_ANN_PREFIX (r mutation)))
-            (c
-              (list ASSERT_PUZZLE_ANNOUNCEMENT
-                (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-                                             CRT_ANN_PREFIX (sha256tree (r mutation))))
-              conditions
-            )
+          (c
+            (list ASSERT_PUZZLE_ANNOUNCEMENT
+              (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
+                                           CRT_ANN_PREFIX (sha256tree (r mutation))))
+            conditions
           )
         )
         (if (= op_code 2)
@@ -340,10 +319,10 @@
                                                               last_updated)
                                                             price))
                   conditions)
-                (x "price update too soon" last_updated prev_last_updated (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0))
+                (x)
             )
           )
-          (x "should never happen") ; should never happen since we only allow 1 or 2 as op_code
+          (x) ; should never happen since we only allow 1 or 2 as op_code
         )
       )
       conditions

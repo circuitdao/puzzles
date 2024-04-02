@@ -55,11 +55,9 @@
                             filtered_conditions)
     (if conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (if (not (any
-              ; TODO: this should be less restrictive, maybe limit to exact length too
-              (= 2 (strlen (f condition_rest)))
+        (if (not
               (= (substr (f condition_rest) 0 1) ANN_PREFIX)
-            ))
+            )
           (filter-conditions
             generate-puzzle-hash
             rest_of_conditions
@@ -228,7 +226,7 @@
       )
       pre_final_conditions
     )
-    ; TODO: there should be minimum amount to withdraw to avoid dust on treasury coins (e.g. 10 BYC)
+    ; NEXT: there should be minimum amount to withdraw to avoid dust on treasury coins (e.g. 10 BYC)
     (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
       (c
         (list ASSERT_MY_COIN_ID my_coin_id)
