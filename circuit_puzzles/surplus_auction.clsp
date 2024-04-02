@@ -369,7 +369,6 @@
                 (list ASSERT_MY_AMOUNT my_amount)
                 ; no recreate here, we create melting condition
                 (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
-                (list REMARK) ; no remark as coin is melting
                 (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
                 ; current_time minus one tx block time should already be in the past
                 (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
