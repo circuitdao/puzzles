@@ -1,0 +1,24 @@
+(mod (STATUTES_STRUCT statutes_inner_puzzle_hash price)
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include statutes_utils.clib)
+  (include sha256tree.clib)
+
+  (list
+    (assert-price
+      (curry_hashes (f STATUTES_STRUCT)
+        (sha256tree STATUTES_STRUCT)
+        statutes_inner_puzzle_hash
+      )
+      0 ; oracle index
+      price
+    )
+    (list REMARK price)
+    (list REMARK "puzzle hash for statutes: "
+      (curry_hashes (f STATUTES_STRUCT)
+        (sha256tree STATUTES_STRUCT)
+        statutes_inner_puzzle_hash
+      )
+    )
+  )
+)

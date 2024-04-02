@@ -1,27 +1,5 @@
-; This is a singleton puzzle, it will be generated once when protocol launches and has different states that it
-; can be in. recharge auction will contain value of the vault it was created from.
-; normally, these coins won't contain any value, this is mostly for extreme scenarios where price has been
-; falling so dramatically that keepers don't even want to bid anymore 
-;
-; # Auction process
-; auction starts off and bids are being accepted, auction runs for X hours, and TTL for each bid is Y hours.
-; each BID compromises of bid value in BYC and asking CRT, BYC in the bid is absorbed by recharge auction coin 
-; and moved into the buffer.
-
-; ## Bidding Scenarios
-; - **TTL ends**; time starts ticking for TTL, if there are no other bids placed in that time, auction ends by spending the bid coin and recharge auction coin. 
-; this burns the BYC in bid coin, and mints newly minted CRT to target puzzle hash that bidder specified. 
-; - **multiple bids**; if another bid is placed before TTL, then the previous bid is refunded, and new bid is accepted.
-; - **no bids**; the auction can be restarted forever or until system is shut down  
-
-; ## Minting CRT 
-; We mint CRT by spending bidder providing a coin with enough mojos that can be transformed into a CRT CAT coin. This means that
-; CRT tail can be controlled by recharge auction puzzle.
-
-; WARN: lineage is important here, recharge auctions are valid IFF they are created from statutes.
-
-(mod (MOD_HASH CAT_MOD_HASH P2_TREASURY_HASH CRT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
-      statutes_inner_puzzle_hash  op_code . op_args)
+(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT
+      statutes_inner_puzzle_hash lineage_proof op_code . op_args)
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -29,140 +7,562 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
 
+  (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
+  (defconst ANN_PREFIX 'v')
+
   (defun assert_ (items)
     (if (r items)
       (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
       (f items)
-      )
     )
-
+  )
   (defmac assert items (assert_ items))
-  (defun recreate-coin (MOD_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID AMOUNT)
-    (list
-      CREATE_COIN
-      (curry_hashes
-        MOD_HASH
-        (sha256tree MOD_HASH)
-        (sha256tree LAUNCHER_ID)
-        (sha256tree STATUTES_STRUCT)
-        (sha256tree START_TIME)
-        (sha256tree LAST_BID)
+
+
+  (defun deposit-to-treasury (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                              treasury_minimum statutes_puzzle_hash final_treasury_amount
+                              amount_deposited deposit_amount potential_remainder
+                              first_treasury_coin treasury_coins my_coin_id announcements)
+    (if treasury_coins
+      (assign
+        (parent_id launcher_id prev_launcher_id current_amount) (f treasury_coins)
+        (remainder next_parent_id next_launcher_id next_prev_launcher_id next_current_amount) (
+          if (r treasury_coins)
+            (c 0x00 (f (r treasury_coins)))
+            (c potential_remainder first_treasury_coin)
+        )
+        delta (+ deposit_amount remainder)
+        new_amount (+ next_current_amount delta)
+        new_prev_amount (+ current_amount deposit_amount (if (= launcher_id (f (r first_treasury_coin))) potential_remainder 0))
+        prev_treasury_coin_id (
+          ; FIXME: use calculate coin id for this instead of sha256
+          sha256 ; treasury coin id
+            parent_id
+            (curry_hashes CAT_MOD_HASH
+              (sha256tree CAT_MOD_HASH)
+              (sha256tree CAT_TAIL_HASH)
+              (curry_hashes
+                P2_TREASURY_HASH
+                (sha256tree P2_TREASURY_HASH)
+                (sha256tree CAT_MOD_HASH)
+                (sha256tree CAT_TAIL_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256tree prev_launcher_id)
+                (sha256tree launcher_id)
+              )
+            )
+            current_amount ; taking second of (launcher_id amount) pair
+        )
+        treasury_coin_id (
+          ; FIXME: use calculate coin id for this instead of sha256
+          sha256 ; treasury coin id
+            next_parent_id
+            (curry_hashes CAT_MOD_HASH
+              (sha256tree CAT_MOD_HASH)
+              (sha256tree CAT_TAIL_HASH)
+              (curry_hashes
+                P2_TREASURY_HASH
+                (sha256tree P2_TREASURY_HASH)
+                (sha256tree CAT_MOD_HASH)
+                (sha256tree CAT_TAIL_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256tree next_prev_launcher_id)
+                (sha256tree next_launcher_id)
+              )
+            )
+            next_current_amount ; taking second of (launcher_id amount) pair
+        )
+        (c
+          (list ASSERT_COIN_ANNOUNCEMENT
+            (sha256
+              treasury_coin_id
+              TREASURY_COIN_ANN_PREFIX
+              my_coin_id
+              delta
+              new_amount
+            )
+          )
+          (c
+            ; we also create a coin announcement for each treasury coin
+            (list CREATE_COIN_ANNOUNCEMENT
+              (concat
+                ANN_PREFIX
+                treasury_coin_id
+                delta
+                new_amount
+              )
+            )
+            (c
+              ; check that whole ring is deposited
+              (list ASSERT_COIN_ANNOUNCEMENT
+                (sha256
+                  prev_treasury_coin_id
+                  TREASURY_COIN_ANN_PREFIX
+                  '=' ; as in '$=amount', to avoid collisions
+                  new_prev_amount
+                  ; link the coins, this previous coin to treasury_coin_id
+                  next_prev_launcher_id
+                )
+              )
+              (deposit-to-treasury
+                P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                treasury_minimum
+                statutes_puzzle_hash
+                final_treasury_amount
+                (+ amount_deposited new_amount)
+                deposit_amount
+                potential_remainder
+                first_treasury_coin
+                (r treasury_coins)
+                my_coin_id
+                announcements
+              )
+            )
+          )
+        )
       )
-      AMOUNT
+      (assert
+        (= amount_deposited final_treasury_amount)
+        (if (all (= deposit_amount 0) (= potential_remainder 0))
+          ; this is assert balance of treasury coins
+          (assert (> treasury_minimum final_treasury_amount)
+            announcements
+          )
+          ; we're depositing
+          (assert (> final_treasury_amount treasury_minimum)
+            announcements
+          )
+        )
+      )
     )
   )
 
   (defun print (to-show result) (if (all "$print$" to-show result) result result))
-  (defconst LAUNCH 0)
+  (defconst LAUNCH 10)
   (defconst START_AUCTION 1)
   (defconst BID 2)
-  (defconst COMPLETE 3) ; NOTE: this doesn't melt the coin, just resets it to 0 and allows it to be reused
-  ; TODO: what about melt/destroying auction coin? this covers cases where for some reason we want multiple recharge auctions
+  (defconst WIN 3) ; NOTE: this doesn't melt the coin, just resets it to 0 and allows it to be reused
 
-  (assign
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (if (= (print "opcode: " op_code) START_AUCTION)
-      (assign
-        start_time (f op_args)
-        auction_timeout (f (r op_args))
-        (assert
-          ; can't run if LAST_BID is set
-          (not LAST_BID)
-          ; can't run if auction is still running and hasn't expired yet
-          (> (- start_time START_TIME) auction_timeout)
-            (list
-                (recreate-coin MOD_HASH STATUTES_STRUCT start_time ())
-                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
-                ; start_time minus one tx block time should already be in the past
-                (list ASSERT_SECONDS_ABSOLUTE (- start_time 55))
-                ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
-                (list ASSERT_MY_AMOUNT 0)
-                ; FIXME: prove treasury hit below hard minimum
+  (defun count-treasury-coins (treasury_coins count total)
+    (if treasury_coins
+      (count-treasury-coins
+        (r treasury_coins)
+        (+ 1 count)
+        (+ total (f (r (r (r (f treasury_coins))))))
+      )
+      (list count total)
+    )
+  )
 
+  (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
+    (if conditions
+      (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
+        (if (not
+              (= (substr (f condition_rest) 0 1) ANN_PREFIX)
             )
+          (filter-announcements
+            rest_of_conditions
+            (c (f conditions) filtered_announcements)
+          )
+          ; bad announcement found, error
+          (x)
+        )
+        (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
+          (filter-announcements
+            rest_of_conditions
+            (c (f conditions) filtered_announcements)
+          )
+          ; no other conditions please
+          (x)
         )
       )
-      (if (= op_code BID)
-        (assign
-          ; op_args -> (bid_crt_amount target_puzzle_hash timestamp)
-          (bid_crt_amount target_puzzle_hash current_timestamp minimum_bid_amount auction_timeout ttl lot_amount) op_args
-          (last_bid_crt_amount last_target_puzzle_hash last_bid_timestamp) (
-            if LAST_BID
-              LAST_BID
-              (list () () -1)
-          )
-          (assert
-            ; must be smaller than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
-            (any (= last_bid_crt_amount -1) (> last_bid_crt_amount bid_crt_amount))
-            ; bids can't be smaller than this
-            (> minimum_bid_amount bid_crt_amount)
-            ; auction hasn't expired yet
-            (> auction_timeout (- current_timestamp START_TIME))
-            ; TTL for bid hasn't expired yet
-            (> (- current_timestamp last_bid_timestamp) ttl)
-            (list
-              ; return BYC to previous bidder
-              (list CREATE_COIN last_target_puzzle_hash lot_amount)
-              ; update LAST_BID
-              (recreate-coin
-                MOD_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME
-                (list bid_crt_amount target_puzzle_hash current_timestamp)
-                lot_amount
+      filtered_announcements
+    )
+  )
+  (assign
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    recreate-coin (lambda ((& MOD_HASH CAT_MOD_HASH  CAT_TAIL_HASH
+                              STATUTES_STRUCT)
+                           launcher_id start_time bid lot_amount amount)
+      (list
+        CREATE_COIN
+        (curry_hashes
+          MOD_HASH
+          (sha256tree MOD_HASH)
+          (sha256tree CAT_MOD_HASH)
+          (sha256tree CAT_TAIL_HASH)
+          (sha256tree launcher_id)
+          (sha256tree STATUTES_STRUCT)
+          (sha256tree start_time)
+          (sha256tree bid)
+          (sha256tree lot_amount)
+        )
+        amount
+      )
+    )
+    (if (= op_code LAUNCH)
+      (assign
+        (my_coin_id raw_announcements) op_args
+        announcements (filter-announcements raw_announcements ())
+        (assert
+          ; can't run if LAST_BID is set
+          (= LAST_BID ())
+          (= LAUNCHER_ID 0)
+          (= START_TIME 0)
+          (c
+            (a recreate-coin
+              (list
+                my_coin_id
+                0
+                () ; no bids
+                0 ; no lot amount when launching
+                0 ; start with zero balance
               )
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_LOT_AMOUNT lot_amount)
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID_AMOUNT minimum_bid_amount)
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-              ; current_time minus one tx block time should already be in the past
-              (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
-              ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-              (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
-              ; announcement of a new bid to secure fee coins against it
-              (list CREATE_COIN_ANNOUNCEMENT (concat target_puzzle_hash bid_crt_amount))
+            )
+            (c
+              (list REMARK
+                my_coin_id
+                0
+                () ; no bids
+                0
+                0
+              )
+              (c
+                (list ASSERT_MY_AMOUNT 0)
+                (c
+                  (list ASSERT_MY_COIN_ID my_coin_id)
+                  ; not LAUNCHER set, this is a launch, we need to get approval from statutes
+                  (c
+                    (list ASSERT_PUZZLE_ANNOUNCEMENT
+                      ; get approval from statutes to launch this auction coin
+                      (sha256
+                        statutes_puzzle_hash
+                        ANN_PREFIX
+                        my_coin_id
+                      )
+                    )
+                    (c
+                      ; confirm back to statutes that we indeed updated the curried args
+                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX my_coin_id))
+                      announcements
+                    )
+                  )
+                )
+              )
             )
           )
         )
-        (if (= op_code COMPLETE)
-          ; we have a winning bid
-          ; op_args -> (ttl auction_timeout)
-          (assign
-            (bid_crt_amount target_puzzle_hash timestamp) LAST_BID
-            (ttl current_timestamp auction_timeout lot_amount parent_id) op_args
-            funding_coin_id (sha256
-              parent_id
-              (curry_hashes
-                CAT_MOD_HASH
-                (sha256tree CAT_MOD_HASH)
-                (sha256tree CRT_TAIL_HASH)
-                target_puzzle_hash
-              )
-              bid_crt_amount
+      )
+      (if (= op_code START_AUCTION)
+        (assign
+          (start_time my_coin_id lot_amount treasury_minimum auction_timeout
+           p2_treasury_hash treasury_coins raw_announcements) op_args
+          announcements (filter-announcements raw_announcements ())
+          (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0)
+          (assert
+            LAUNCHER_ID
+            ; can't run if LAST_BID is set
+            (= LAST_BID ())
+            ; can only (re-)start auction if it hasn't started yet
+            (any
+              (= START_TIME 0)
+              (> (- start_time START_TIME) auction_timeout)
             )
-            (assert
-              ; ttl should've expired
-              (> (- current_timestamp timestamp) ttl)
-              ; auction hasn't expired yet
-              (> auction_timeout (- current_timestamp START_TIME))
-              (list
-                (recreate-coin MOD_HASH STATUTES_STRUCT () ())
-                (list ASSERT_MY_AMOUNT lot_amount)
-                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
-                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-                ; current_time minus one tx block time should already be in the past
-                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
-                ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
-                ; approve minting of CRT coins to target_puzzle_hash
-                (list CREATE_COIN_ANNOUNCEMENT (concat funding_coin_id bid_crt_amount))
-                ; assert they were minted
-                (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id bid_crt_amount))
-                ; FIXME: transfer BYC to treasury coins evenly
-
+            (c
+              (a recreate-coin
+                (list
+                  ; if this is a launch and also a start, then LAUNCHER_ID will be empty and we'll use my_coin_id
+                  LAUNCHER_ID
+                  start_time
+                  () ; no bids
+                  lot_amount
+                  0 ; start with zero balance
+                )
+              )
+              (c
+                (list REMARK
+                  LAUNCHER_ID
+                  start_time
+                  () ; no bids
+                  lot_amount
+                  0
+                )
+                (c
+                  (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+                  (c
+                    (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_LOT_AMOUNT lot_amount)
+                    (c
+                      (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
+                      (c
+                        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+                        (c
+                          ; start_time minus one tx block time should already be in the past
+                          (list ASSERT_SECONDS_ABSOLUTE (- start_time 55))
+                          (c
+                            ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
+                            (c
+                              ; start balance should be zero
+                              (list ASSERT_MY_AMOUNT 0)
+                              (c
+                                (list ASSERT_MY_COIN_ID my_coin_id)
+                                (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+                                  p2_treasury_hash
+                                  CAT_MOD_HASH
+                                  CAT_TAIL_HASH
+                                  STATUTES_STRUCT
+                                  treasury_minimum
+                                  statutes_puzzle_hash
+                                  treasury_coins_total ; expected balance after deposit of lot
+                                  0 ; amount deposited
+                                  0
+                                  0
+                                  (f treasury_coins)
+                                  treasury_coins
+                                  my_coin_id
+                                  announcements
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
               )
             )
           )
-          (x "unknow opcode")
+        )
+        (if (= op_code BID)
+          (assign
+            (bid_amount target_puzzle_hash current_timestamp minimum_bid_amount
+            offer_mod_hash auction_timeout ttl my_coin_id lot_amount raw_announcements) op_args
+            announcements (filter-announcements raw_announcements ())
+            (last_bid_amount last_target_puzzle_hash last_bid_timestamp) (
+              if LAST_BID
+                LAST_BID
+                (list 0 () 0)
+            )
+            conditions (assert
+              LAUNCHER_ID ; can't bid if auction hasn't started yet
+              (> CRT_LOT_AMOUNT 0)
+              (> bid_amount 0)
+              (any (= last_bid_amount 0) (> bid_amount last_bid_amount))
+              ; bids can't be smaller than this
+              (> bid_amount minimum_bid_amount)
+              ; auction hasn't expired yet
+              (> auction_timeout (- current_timestamp START_TIME))
+              ; TTL for bid hasn't expired yet
+              (any (= last_bid_timestamp 0) (> ttl (- current_timestamp last_bid_timestamp)))
+              (c
+                ; update LAST_BID
+                (a recreate-coin
+                  (list
+                    LAUNCHER_ID
+                    START_TIME
+                    (list bid_amount target_puzzle_hash current_timestamp) ; update with current bid
+                    lot_amount ; lot amount
+                    bid_amount ; we absorb bid amount into the coin
+                  )
+                )
+                (c
+                  (list REMARK
+                    LAUNCHER_ID
+                    START_TIME
+                    (list bid_amount target_puzzle_hash current_timestamp)
+                    lot_amount
+                    bid_amount
+                  )
+                  (c
+                    (list ASSERT_MY_AMOUNT last_bid_amount)
+                    (c
+                      (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_LOT_AMOUNT lot_amount)
+                      (c
+                        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID_AMOUNT minimum_bid_amount)
+                        (c
+                          (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+                          (c
+                            (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
+                            (c
+                              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
+                              ; current_time minus one tx block time should already be in the past
+                              (c
+                                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                                (c
+                                  ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                                  (c
+                                    (list ASSERT_MY_PARENT_ID
+                                      (sha256
+                                        (f lineage_proof)
+                                        (curry_hashes
+                                          CAT_MOD_HASH
+                                          (sha256tree CAT_MOD_HASH)
+                                          (sha256tree CAT_TAIL_HASH)
+                                          (curry_hashes
+                                            MOD_HASH
+                                            (sha256tree MOD_HASH)
+                                            (sha256tree CAT_MOD_HASH)
+                                            (sha256tree CAT_TAIL_HASH)
+                                            (sha256tree (f (r (r lineage_proof)))) ; launcher_id
+                                            (sha256tree STATUTES_STRUCT)
+                                            (sha256tree (f (r (r (r lineage_proof))))) ; start_time
+                                            (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
+                                            (sha256tree (f (r (r (r (r (r lineage_proof))))))) ; lot
+                                          )
+                                        )
+                                        ; parent bid amount
+                                        (f (r lineage_proof))
+                                      )
+                                    )
+                                    announcements
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+            (if last_target_puzzle_hash
+              (c
+                ; assert that keeper absorbed their collateral + left over mojos from melting
+                (list ASSERT_PUZZLE_ANNOUNCEMENT
+                  (sha256
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256tree CAT_MOD_HASH)
+                      (sha256tree CAT_TAIL_HASH)
+                      offer_mod_hash
+                    )
+                    (sha256tree
+                      (c my_coin_id
+                      (list
+                        (list last_target_puzzle_hash last_bid_amount (list last_target_puzzle_hash)))))
+                  )
+                )
+                conditions
+              )
+              conditions
+            )
+          )
+          (if (= op_code WIN)
+            ; we have a winning bid
+            ; op_args -> (ttl auction_timeout)
+            (assign
+              (winning_bid_amount target_puzzle_hash timestamp) LAST_BID
+              (ttl current_timestamp treasury_coins
+               p2_treasury_hash funding_coin_id treasury_minimum
+               my_coin_id raw_announcements) op_args
+              statutes_struct_hash (sha256tree STATUTES_STRUCT)
+              announcements (filter-announcements raw_announcements ())
+              (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0)
+              (treasury_deposit_per_coin . remainder) (divmod winning_bid_amount treasury_coins_count)
+              (assert
+                (> CRT_LOT_AMOUNT 0)
+                ; ttl should've expired
+                (> (- current_timestamp timestamp) ttl)
+                (c
+                  ; restart the auction
+                  (a recreate-coin
+                    (list
+                      LAUNCHER_ID ; we have launcher set, so it's going to be a start when START_AUCTION is called
+                      0
+                      ()
+                      0 ; no lot
+                      0 ; start with zero balance
+                    )
+                  )
+                  (c
+                    (list REMARK
+                      LAUNCHER_ID
+                      0
+                      ()
+                      0
+                      0
+                    )
+                    (c
+                      (list ASSERT_MY_AMOUNT winning_bid_amount)
+                      (c
+                        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
+                        (c
+                          (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+                          (c
+                            ; current_time minus one tx block time should already be in the past
+                            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                            (c
+                              ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                              (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                              (c
+                                ; approve issuance of new CRT coins to target_puzzle_hash
+                                (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX statutes_struct_hash funding_coin_id CRT_LOT_AMOUNT))
+                                (c
+                                  ; assert they were issued
+                                  (list ASSERT_COIN_ANNOUNCEMENT
+                                    (sha256
+                                      funding_coin_id
+                                      statutes_struct_hash
+                                      CRT_LOT_AMOUNT
+                                    )
+                                  )
+                                  (c
+                                    (list ASSERT_MY_PARENT_ID
+                                      (sha256
+                                        (f lineage_proof)
+                                        (curry_hashes
+                                          CAT_MOD_HASH
+                                          (sha256tree CAT_MOD_HASH)
+                                          (sha256tree CAT_TAIL_HASH)
+                                          (curry_hashes
+                                            MOD_HASH
+                                            (sha256tree MOD_HASH)
+                                            (sha256tree CAT_MOD_HASH)
+                                            (sha256tree CAT_TAIL_HASH)
+                                            (sha256tree (f (r (r lineage_proof)))) ; launcher_id
+                                            (sha256tree STATUTES_STRUCT)
+                                            (sha256tree (f (r (r (r lineage_proof))))) ; start_time
+                                            (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
+                                            (sha256tree (f (r (r (r (r (r lineage_proof))))))) ; lot
+                                          )
+                                        )
+                                        ; parent bid amount
+                                        (f (r lineage_proof))
+                                      )
+                                    )
+                                    (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+                                      p2_treasury_hash
+                                      CAT_MOD_HASH
+                                      CAT_TAIL_HASH
+                                      STATUTES_STRUCT
+                                      treasury_minimum
+                                      statutes_puzzle_hash
+                                      (+ treasury_coins_total winning_bid_amount) ; expected balance after deposit of lot
+                                      0 ; amount deposited
+                                      treasury_deposit_per_coin
+                                      remainder
+                                      (f treasury_coins)
+                                      treasury_coins
+                                      my_coin_id
+                                      announcements
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+            (x "unknown opcode" op_code)
+          )
         )
       )
     )

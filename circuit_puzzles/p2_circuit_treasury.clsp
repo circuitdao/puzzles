@@ -9,6 +9,7 @@
   (include sha256tree.clib)
   (include statutes_utils.clib)
   (include *standard-cl-23*)
+  (include utils.clib)
 
   (defconstant ANN_PREFIX 0x24) ; -> '$'
 
@@ -188,6 +189,7 @@
         (c (list
           ; TODO: is inner puzzle hash enough, or do we need to double check it's correct puzzle?
           REMARK
+
                withdraw_amount  (- new_amount current_amount)
               )
           (c (list
@@ -213,7 +215,7 @@
                   )
                 )
               )
-              ; we're spending/announcing, require approving mods
+              ;ELSE; we're spending/announcing, require approving mods
               (assign
                 ; ring_prev_prev_info is (ring_prev_prev_id . ring_prev_prev_amount)
                 (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
@@ -221,26 +223,25 @@
                 approver_coin_id (assert
                   ; check that this approving mod hash is allowed
                   (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
-                  (sha256  ; FIXME: this should be done with coinid!!
+                  (calculate-coin-id
                     approving_parent_id
                     ; we want to ensure that the approving puzzle is using the correct mod
                     (if (l approving_mod_curried_args_hash)
-                      ; this puzzle is wrapped inside a CAT puzzle
+                      ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
                       (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
                         (curry_hashes CAT_MOD_HASH
                           (sha256tree CAT_MOD_HASH)
-                          (sha256tree CAT_TAIL_HASH)
-                          (tree_hash_of_apply approving_mod_hash (r approving_mod_curried_args_hash))
+                          (sha256tree (f (r approving_mod_curried_args_hash)))
+                          (tree_hash_of_apply approving_mod_hash (f (r (r approving_mod_curried_args_hash))))
                         )
                       )
+                      ; ELSE;
                       (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
                     )
                     approver_amount
                   )
                 )
 
-                ; FIXME: if approver mod is collateral vault and it's being transferred by a keeper
-                ;  it needs to be above a minimum deposit amount, ignore if it's coming from vault owner x
                 (c
                   ; assert approver coin announcement is valid
                   (list ASSERT_COIN_ANNOUNCEMENT
@@ -267,26 +268,12 @@
                     (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
                     ; assert that passed coin id is ours
                       (c (list ASSERT_MY_COIN_ID my_coin_id)
-                        (if (= current_amount new_amount)
-                          ; FIXME: we don't need this part as withdrawal is already announcing the amounts
-                          ; we're announcing, add puzzle announcements to
-                          ; ensure all treasury coins in the ring were spent
-                          (c
-                            (list ASSERT_PUZZLE_ANNOUNCEMENT
-                              (sha256
-                                ; assert announcement from our previous ring launcher id
-                                (a generate-puzzle-hash (list (f ring_prev_prev_info) RING_PREV_LAUNCHER_ID ))
-                                ANN_PREFIX
-                                '=' ; as in '$=amount', to avoid collisions
-                                (f (r ring_prev_prev_info))
-                              )
-                            )
-                            (c (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount))
-                                conditions
-
-                            )
+                        (c
+                          ; assert my new balance so someone can check whole ring balance
+                          (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                          (c (list REMARK approver_coin_id my_coin_id new_amount)
+                            conditions
                           )
-                          conditions
                         )
                       )
                     )

@@ -10,24 +10,24 @@
       veto_conditions
      ) 
    
-    (include *standard-cl-23*)
-    (include sha256tree.clib)
-    (include curry.clib)
-    (include condition_codes.clib)
-    (include statutes_utils.clib)
+  (include *standard-cl-23*)
+  (include sha256tree.clib)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
 
-    
-    (defconstant VETO_BILL_REQUEST -2)
-    (defconstant VETO_BILL -1)
-    (defconstant SET_BILL 1)
-    (defconstant PROPOSE_BILL 2)
-    (defconstant ENACT_BILL 3)
 
-    (defconstant ANN_PROPOSED '^')
-    (defconstant ANN_ENACTED '$')
-    (defconstant ANN_VETO 'v')
-    (defconstant ANN_VETOED 'x')
-    (defconstant ANN_PREFIX 0x43) ; starts with "C"
+  (defconstant VETO_BILL_REQUEST -2)
+  (defconstant VETO_BILL -1)
+  (defconstant SET_BILL 1)
+  (defconstant PROPOSE_BILL 2)
+  (defconstant ENACT_BILL 3)
+
+  (defconstant ANN_PROPOSED '^')
+  (defconstant ANN_ENACTED '$')
+  (defconstant ANN_VETO 'v')
+  (defconstant ANN_VETOED 'x')
+  (defconstant ANN_PREFIX 0x43) ; starts with "C"
 
 
    (defun assert_ (items)
@@ -36,16 +36,16 @@
         (f items)
       )
     )
-    (defmac assert items (assert_ items))
+   (defmac assert items (assert_ items))
 
 
-    (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+   (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
                               final_bill bill_operation final_block_height_relative_to_enact
                                (@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_conditions)
       (if conditions
         (if (= condition_code CREATE_COIN)
           (filter-conditions
-            MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+            MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
             final_bill bill_operation final_block_height_relative_to_enact
             rest_of_conditions
             (c
@@ -67,23 +67,27 @@
                 (c
                   CREATE_COIN
                   (c
-                    (curry_hashes MOD_HASH
-                      (sha256tree MOD_HASH)
-                      (sha256tree CAT_MOD_HASH)
-                      (sha256tree TAIL_MOD_HASH)
-                      (sha256tree STATUTES_STRUCT)
-                      ; this is not hashed, because it's a puzzle reveal and puzzle hash is what we need
-                      (f  condition_rest)
-                      (sha256tree final_bill)
-                      (sha256tree final_block_height_relative_to_enact)
-                      (sha256tree
-                        (if (all (r (r condition_rest)) (= bill_operation PROPOSE_BILL))
-                          ; only proposal can set memos
-                          (f (r (r condition_rest)))
-                          ; if it's not a propose bill, set it to whatever was curried
-                          MEMOS
+                    (if (f condition_rest)
+                      (curry_hashes MOD_HASH
+                        (sha256tree MOD_HASH)
+                        (sha256tree CAT_MOD_HASH)
+                        (sha256tree TAIL_MOD_HASH)
+                        (sha256tree STATUTES_STRUCT)
+                        ; this is not hashed, because it's a puzzle reveal and puzzle hash is what we need
+                        (f  condition_rest)
+                        (sha256tree final_bill)
+                        (sha256tree final_block_height_relative_to_enact)
+                        (sha256tree
+                          (if (all (r (r condition_rest)) (= bill_operation PROPOSE_BILL))
+                            ; only proposal can set memos
+                            (f (r (r condition_rest)))
+                            ; if it's not a propose bill, set it to whatever was curried
+                            MEMOS
+                          )
                         )
                       )
+                      ; disable the governance and use the inner puzzle if passed puzzle hash is 0
+                      (sha256tree INNER_PUZZLE)
                     )
                     (r condition_rest)
                   )
@@ -103,13 +107,13 @@
             )
             (if (= condition_code REMARK)
               (filter-conditions
-                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
                 final_bill bill_operation final_block_height_relative_to_enact
                 rest_of_conditions
-                filtered_conditions
+                (print "filtered conditions from remark" filtered_conditions)
               )
               (filter-conditions
-                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
                 final_bill bill_operation final_block_height_relative_to_enact
                 rest_of_conditions
                 (c (f conditions) filtered_conditions)
@@ -156,7 +160,7 @@
 
     (defun print (to-show result) (if (all "$print$" to-show result) result result))
     
-    (defun find_bill_condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
+   (defun find_bill_condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
       (if conditions
         (if (= condition_code REMARK)
           ; found REMARK
@@ -168,16 +172,16 @@
         )
         (list () () ())
       )
-    )
-    (defun get-bill-operation-lambda (bill_operations bill_operation)
-      (if bill_operations
-        (if (= (f (f bill_operations)) bill_operation)
-          (f (r (f bill_operations)))
-          (get-bill-operation-lambda (r bill_operations) bill_operation)
-        ) 
-        ()
-      )
-    )
+   )
+   (defun get-bill-operation-lambda (bill_operations bill_operation)
+     (if bill_operations
+       (if (= (f (f bill_operations)) bill_operation)
+         (f (r (f bill_operations)))
+         (get-bill-operation-lambda (r bill_operations) bill_operation)
+       )
+       ()
+     )
+   )
 
     ; ###################  MAIN ENTRY POINT  ######################## 
     (assign
@@ -207,7 +211,7 @@
           )
         )
 
-        (list PROPOSE_BILL 
+        (list PROPOSE_BILL
           (lambda ((& statutes_puzzle_hash) bill relative_height_needed amount amount_needed)
             (assert (> amount amount_needed) (> (print "propose height needed" relative_height_needed) 0) 
                     (> amount_needed 0)
@@ -262,13 +266,8 @@
         )
         
         (list VETO_BILL
-          (lambda ((& MOD_HASH 
-                      CAT_MOD_HASH 
-                      TAIL_MOD_HASH 
-                      STATUTES_STRUCT 
-                      BILL 
-                      BLOCK_HEIGHT_RELATIVE_TO_ENACT
-                      MEMOS 
+          (lambda ((& MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH
+                      STATUTES_STRUCT BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS
                       statutes_puzzle_hash) 
                     bill 
                     amount
@@ -276,46 +275,50 @@
                     veto_amount
                     veto_inner_puzzle_hash
                   )
-                   (assert BILL (> amount amount_needed) (> veto_amount amount)
-                    (> BLOCK_HEIGHT_RELATIVE_TO_ENACT 0)
-                    
-                    (= (sha256tree BILL) (sha256tree bill))
-                    (list 
-                      (list () () MEMOS)
-                      (list 
-                        (list ASSERT_BEFORE_HEIGHT_RELATIVE BLOCK_HEIGHT_RELATIVE_TO_ENACT)
-                        (list ASSERT_MY_AMOUNT amount)
-                        (assert-statute
-                          statutes_puzzle_hash
-                          STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
-                          BLOCK_HEIGHT_RELATIVE_TO_ENACT)
-                        (assert-statute
-                          statutes_puzzle_hash
-                          STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
-                          amount_needed)
-                        ; no ephemeral coins
-                        (list ASSERT_HEIGHT_RELATIVE 1)
-                        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
-                        ; assert announcement from another CRT coin with higher amount than this one 
-                        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate-crt-puzzle MOD_HASH
-                                                                                      CAT_MOD_HASH
-                                                                                      TAIL_MOD_HASH
-                                                                                      STATUTES_STRUCT
-                                                                                      veto_inner_puzzle_hash 
-                                                                                      () 
-                                                                                      () 
-                                                                                      ()  ; memos are null for veto 
-                                                                 ) 
-                                                                 (concat ANN_PREFIX ANN_VETO (sha256tree bill) veto_amount)
-                                                         )
-                        )
-                      )
+            (assert
+              BILL
+              (> amount amount_needed)
+              (> veto_amount amount)
+              (> BLOCK_HEIGHT_RELATIVE_TO_ENACT 0)
+              (= (sha256tree BILL) (sha256tree bill))
+              (list
+                (list () () MEMOS)
+                (list
+                  (list ASSERT_BEFORE_HEIGHT_RELATIVE BLOCK_HEIGHT_RELATIVE_TO_ENACT)
+                  (list ASSERT_MY_AMOUNT amount)
+                  (assert-statute
+                    statutes_puzzle_hash
+                    STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
+                    BLOCK_HEIGHT_RELATIVE_TO_ENACT)
+                  (assert-statute
+                    statutes_puzzle_hash
+                    STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
+                    amount_needed)
+                  ; no ephemeral coins
+                  (list ASSERT_HEIGHT_RELATIVE 1)
+                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
+                  ; assert announcement from another CRT coin with higher amount than this one
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT
+                    (sha256
+                      (calculate-crt-puzzle
+                        MOD_HASH
+                        CAT_MOD_HASH
+                        TAIL_MOD_HASH
+                        STATUTES_STRUCT
+                        veto_inner_puzzle_hash
+                        ()
+                        ()
+                        ()  ; memos are null for veto
+                       )
+                      (concat ANN_PREFIX ANN_VETO (sha256tree bill) veto_amount)
                     )
-                   )
+                  )
+                )
+              )
+            )
           )
         )
-
-        (list VETO_BILL_REQUEST 
+        (list VETO_BILL_REQUEST
           (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT) bill amount)
             (assert (not BILL) bill (> amount 0) 
               (list 
@@ -333,6 +336,21 @@
           )
         )
       )
+      operation_result (a
+          (assign
+            func (get-bill-operation-lambda bill_operations bill_operation)
+            (if func
+              func
+              (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS))
+                (list
+                  (list BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS)
+                  (list )
+                )
+              )
+            )
+          )
+          args
+      )
       (
         (
           final_bill
@@ -341,22 +359,10 @@
           _
         )
         bill_conditions
-      ) (a
-        (assign func (get-bill-operation-lambda bill_operations bill_operation)
-          (if func
-            func
-            (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS))
-              (list
-                (list BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS)
-                (list )
-              )
-            )
-          )
-        )
-        args
-      )
+      )  (print "operation result:" operation_result)
+
       inner_conditions (filter-conditions
-        MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS
+        MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
         final_bill bill_operation final_block_height_relative_to_enact
         raw_inner_conditions ()
       )
