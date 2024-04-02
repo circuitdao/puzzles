@@ -7,7 +7,7 @@
           vault_parent_id
           (
             ;LATER: pass in hashed args, to avoid all this extra data cost, like in treasury coins
-            launcher_id byc_tail_hash p2_treasury_hash offer_mod_hash deposited_amount
+            launcher_id byc_tail_hash deposited_amount
             minted_amount auction_state inner_puzzle_hash
             discounted_principal
           )
@@ -43,7 +43,7 @@
   )
 
   (defun generate-coin-id (MOD_HASH parent_id cat_mod_hash statutes_struct_hash launcher_id byc_tail_hash
-                                 p2_treasury_hash offer_mod_hash oracle_price_index
+                                 oracle_price_index
                                  deposited_amount minted_amount auction_state
                                  inner_puzzle_hash discounted_principal amount)
     (calculate-coin-id
@@ -54,8 +54,6 @@
         (sha256tree launcher_id)
         statutes_struct_hash
         (sha256tree byc_tail_hash)
-        (sha256tree p2_treasury_hash)
-        (sha256tree offer_mod_hash)
         (sha256tree oracle_price_index)
         (sha256tree deposited_amount)
         (sha256tree minted_amount)
@@ -107,9 +105,7 @@
               CAT_MOD_HASH
               STATUTES_STRUCT_HASH
               launcher_id
-              p2_treasury_hash
               byc_tail_hash
-              offer_mod_hash
               deposited_amount
               minted_amount
               auction_state
@@ -130,8 +126,6 @@
               STATUTES_STRUCT_HASH
               launcher_id
               byc_tail_hash
-              p2_treasury_hash
-              offer_mod_hash
               oracle_price_index
               deposited_amount
               minted_amount
@@ -154,9 +148,7 @@
     CAT_MOD_HASH
     STATUTES_STRUCT_HASH
     launcher_id
-    p2_treasury_hash
     byc_tail_hash
-    offer_mod_hash
     deposited_amount
     minted_amount
     auction_state

@@ -1,7 +1,6 @@
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
-(mod (MOD_HASH P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
-      ; solution from here on
+(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
@@ -9,7 +8,7 @@
       my_coin_id
       inner_solution
       .
-      (@ treasury_coin_info ((treasury_coin_parent_id treasury_coin_launcher_id
+      (@ treasury_coin_info ((p2_treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
                              treasury_coin_prev_launcher_id treasury_coin_amount)))
      )
 
@@ -126,12 +125,11 @@
   )
 
   (assign
-    generate-puzzle-hash (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT P2_TREASURY_HASH)
+    generate-puzzle-hash (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT)
                                      discounted_deposit inner_puzzle_hash)
       ; only inner puzzle
       (curry_hashes MOD_HASH ; puzzle hash
         (sha256tree MOD_HASH)
-        (sha256tree P2_TREASURY_HASH)
         (sha256tree CAT_MOD_HASH)
         (sha256tree CAT_TAIL_HASH)
         (sha256tree STATUTES_STRUCT)
@@ -165,8 +163,8 @@
         (curry_hashes CAT_MOD_HASH
           (sha256tree CAT_MOD_HASH)
           (sha256tree CAT_TAIL_HASH)
-          (curry_hashes P2_TREASURY_HASH
-            (sha256tree P2_TREASURY_HASH)
+          (curry_hashes p2_treasury_hash
+            (sha256tree p2_treasury_hash)
             (sha256tree CAT_MOD_HASH)
             (sha256tree CAT_TAIL_HASH)
             (sha256tree STATUTES_STRUCT)
@@ -178,7 +176,7 @@
       ()
     )
     new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interests_amount) 0)
-    final_conditions (if lineage_proof
+    pre_final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_deposit, inner_puzzle_hash)
       (c
         (list ASSERT_MY_PARENT_ID
@@ -189,7 +187,6 @@
               (sha256tree CAT_TAIL_HASH)
               (curry_hashes MOD_HASH
                 (sha256tree MOD_HASH)
-                (sha256tree P2_TREASURY_HASH)
                 (sha256tree CAT_MOD_HASH)
                 (sha256tree CAT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
@@ -210,7 +207,6 @@
             (sha256tree CAT_TAIL_HASH)
             (curry_hashes MOD_HASH
               (sha256tree MOD_HASH)
-              (sha256tree P2_TREASURY_HASH)
               (sha256tree CAT_MOD_HASH)
               (sha256tree CAT_TAIL_HASH)
               (sha256tree STATUTES_STRUCT)
@@ -224,10 +220,20 @@
         )
       )
     )
+    final_conditions (if treasury_coin_info
+      ; check p2_treasury_hash was approved by statutes, this also verifies the cat tail hash
+      (c
+        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+        pre_final_conditions
+      )
+      pre_final_conditions
+    )
     ; TODO: there should be minimum amount to withdraw to avoid dust on treasury coins (e.g. 10 BYC)
     (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
-      (c (list ASSERT_MY_COIN_ID my_coin_id)
-        (c (list ASSERT_MY_AMOUNT current_amount)
+      (c
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (c
+          (list ASSERT_MY_AMOUNT current_amount)
           (c
             (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
               (c

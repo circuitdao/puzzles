@@ -337,7 +337,6 @@
                byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
                cumulative_stability_fee_rate)
             ; function body
-            ; check if requested amount of BYC to mint takes us over the collateralization ratio
             (assign
               (xch_price last_updated) price_info
               principal (+ BYC_MINTED_AMOUNT byc_amount_to_mint)
@@ -352,6 +351,7 @@
               ; check that total debt is larger than minted amount, not minimum mint amount
               (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_mint_amount)
                       (> byc_amount_to_mint 0)
+                      ; check if requested amount of BYC to mint takes us over the collateralization ratio
                       (> (available-to-mint DEPOSITED_AMOUNT BYC_MINTED_AMOUNT collateralization_ratio xch_price) byc_amount_to_mint)
                 (list
                   ; updated state
@@ -1026,7 +1026,6 @@
     inner_conditions (filter filter_condition conditions)
     (merge-lists
       vault_conditions
-      ; NOTE: it can't really be a singleton, since singleton amounts can only be odd numbers
       ; WARNING: we should always check that byc minted is above collateral and there is enough collateral
       ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
       ; then they would be able to liquidate that vault immediately and inflate amount of BYC, but wait!
