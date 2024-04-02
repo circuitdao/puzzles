@@ -14,4 +14,12 @@
     )
   )
 
+   (defun assert_debug_ (items)
+    (if (r items)
+      (qq (if (unquote (f items)) (unquote (assert_debug_ (r items))) (x (unquote (c 1 (f items))))))
+      (f items)
+      )
+    )
+
+  (defmac assert_debug items (assert_debug_ items))
 )

@@ -9,6 +9,7 @@
   (include sha256tree.clib)
   (include statutes_utils.clib)
   (include *standard-cl-23*)
+  (include utils.clib)
 
   (defconstant ANN_PREFIX 0x24) ; -> '$'
 
@@ -222,7 +223,7 @@
                 approver_coin_id (assert
                   ; check that this approving mod hash is allowed
                   (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
-                  (sha256  ; FIXME: this should be done with coinid!!
+                  (calculate-coin-id
                     approving_parent_id
                     ; we want to ensure that the approving puzzle is using the correct mod
                     (if (l approving_mod_curried_args_hash)
@@ -241,8 +242,6 @@
                   )
                 )
 
-                ; FIXME: if approver mod is collateral vault and it's being transferred by a keeper
-                ;  it needs to be above a minimum deposit amount, ignore if it's coming from vault owner x
                 (c
                   ; assert approver coin announcement is valid
                   (list ASSERT_COIN_ANNOUNCEMENT

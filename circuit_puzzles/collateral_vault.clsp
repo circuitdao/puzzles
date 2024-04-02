@@ -10,12 +10,12 @@
         ; - transform to bad debt
         keeper_operation)
      )
-    ; NEXT: don't curry important hashes like treasury and mod has, they should be passed in as arguments and verified by statutes
     (include *standard-cl-23*)
     (include sha256tree.clib)
     (include curry.clib)
     (include condition_codes.clib)
     (include statutes_utils.clib)
+    (include utils.clib)
 
     (defconstant ANN_PREFIX 0x56) ; chr(86) -> "V"
     (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
@@ -183,19 +183,6 @@
     )
   )
 
-  (defconstant b32 32)
-
-  (defun-inline size-b32 (var)
-    (= (strlen var) b32)
-  )
-
-  (defun-inline calculate-coin-id (parent puzzle_hash amount)
-    (if (all (size-b32 parent) (size-b32 puzzle_hash) (> amount -1))
-      (sha256 parent puzzle_hash amount)
-      (x "invalid coin info" parent puzzle_hash amount)
-    )
-  )
-
   (defun-inline calculate-stability-fee-puzzle (CAT_MOD_HASH BYC_TAIL_HASH OFFER_MOD_HASH)
     (curry_hashes CAT_MOD_HASH
                   (sha256tree CAT_MOD_HASH)
@@ -249,8 +236,7 @@
   (assign
     ; generate tail hash from curried params to avoid any malicious currying
     BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
-      (sha256 ONE (sha256tree STATUTES_STRUCT))
-      (sha256tree MOD_HASH)
+      (sha256tree STATUTES_STRUCT)
       (sha256tree CAT_MOD_HASH)
       (sha256tree ORACLE_PRICE_ID)
     )
@@ -343,6 +329,7 @@
               ; divide negative numbers to ceil
               discounted_mint_amount (* -1 (/ (* -1 byc_amount_to_mint PRECISION) cumulative_stability_fee_rate))
               discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_mint_amount)
+              ; calculate the coin id for the new BYC coin by enforcing the tail hash
               byc_issuing_coin_id (calculate-byc-coin-id
                 CAT_MOD_HASH
                 BYC_TAIL_HASH
@@ -358,18 +345,29 @@
                   (list DEPOSITED_AMOUNT principal AUCTION_STATE INNER_PUZZLE discounted_principal)
                   ; additional conditions
                   (list
-                    ;(list REMARK ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT))
+                    (list REMARK "VAULT==>" ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT) ORACLE_PRICE_ID)
                     ; signal to tail that it can issue BYC with certain amount
-                    (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT)))
+                    (list CREATE_COIN_ANNOUNCEMENT
+                      (concat
+                        ANN_PREFIX
+                        "i"
+                        byc_issuing_coin_id
+                        byc_amount_to_mint
+                        (sha256tree STATUTES_STRUCT)
+                        ORACLE_PRICE_ID
+                      )
+                    )
                     ; make sure tail has actually issued it too
-                    (list ASSERT_COIN_ANNOUNCEMENT (sha256
-                                                    byc_issuing_coin_id
-                                                    BYC_ANN_PREFIX
-                                                    'i'
-                                                    my_coin_id
-                                                    byc_amount_to_mint
-                                                    (sha256tree STATUTES_STRUCT)
-                                                  )
+                    (list ASSERT_COIN_ANNOUNCEMENT
+                      (sha256
+                        byc_issuing_coin_id
+                        BYC_ANN_PREFIX
+                        'i'
+                        my_coin_id
+                        byc_amount_to_mint
+                        (sha256tree STATUTES_STRUCT)
+                        ORACLE_PRICE_ID
+                      )
                     )
                     (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
                     (assert-statute
@@ -393,7 +391,7 @@
       )
       ; #### MELT
       (list MELT_BYC
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH ORACLE_PRICE_ID
                     statutes_puzzle_hash DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
                  ; solution
                  byc_to_repay my_coin_id cumulative_stability_fee_rate byc_melting_coin_info
@@ -469,7 +467,16 @@
                             (list )
                             (list
                               ; signal to tail that it can melt the BYC
-                              (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX 'x' byc_coin_id_to_melt negative_byc_principal_to_melt (sha256tree STATUTES_STRUCT)))
+                              (list CREATE_COIN_ANNOUNCEMENT
+                                (concat
+                                  ANN_PREFIX
+                                  'x'
+                                  byc_coin_id_to_melt
+                                  negative_byc_principal_to_melt
+                                  (sha256tree STATUTES_STRUCT)
+                                  ORACLE_PRICE_ID
+                                )
+                              )
                               ; get a melt confirmation from BYC tail
                               (list ASSERT_COIN_ANNOUNCEMENT
                                 (sha256
@@ -479,6 +486,7 @@
                                   my_coin_id
                                   negative_byc_principal_to_melt
                                   (sha256tree STATUTES_STRUCT)
+                                  ORACLE_PRICE_ID
                                 )
                               )
                             )
@@ -576,7 +584,7 @@
       )
 
       (list BID ; == 11
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash ORACLE_PRICE_ID
                DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
             ; solution to bid
             current_time byc_to_bid byc_melting_coin_info byc_treasury_coin_info
@@ -701,16 +709,27 @@
                     ; validate coin id
                     (list ASSERT_MY_COIN_ID my_coin_id)
                     ; signal to tail that it can melt the BYC
-                    (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX 'x' byc_coin_id_to_melt negative_byc_principal_to_melt (sha256tree STATUTES_STRUCT)))
+                    (list CREATE_COIN_ANNOUNCEMENT
+                      (concat
+                        ANN_PREFIX
+                        'x'
+                        byc_coin_id_to_melt
+                        negative_byc_principal_to_melt
+                        (sha256tree STATUTES_STRUCT)
+                        ORACLE_PRICE_ID
+                      )
+                    )
                     ; get a melt confirmation from BYC tail
-                    (list ASSERT_COIN_ANNOUNCEMENT (sha256
-                                                      byc_coin_id_to_melt
-                                                      BYC_ANN_PREFIX
-                                                      'x'
-                                                      my_coin_id
-                                                      negative_byc_principal_to_melt
-                                                      (sha256tree STATUTES_STRUCT)
-                                                  )
+                    (list ASSERT_COIN_ANNOUNCEMENT
+                      (sha256
+                        byc_coin_id_to_melt
+                        BYC_ANN_PREFIX
+                        'x'
+                        my_coin_id
+                        negative_byc_principal_to_melt
+                        (sha256tree STATUTES_STRUCT)
+                        ORACLE_PRICE_ID
+                      )
                     )
                     ; assert that keeper absorbed their collateral + left over mojos from melting
                     (list ASSERT_PUZZLE_ANNOUNCEMENT
@@ -783,7 +802,7 @@
       )
 
       (list TRANSFER_SF_TO_TREASURY ; == 13
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash ORACLE_PRICE_ID
                DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
             ; solution to bid
             byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
@@ -791,6 +810,7 @@
             my_coin_id
             treasury_coin_info
             p2_treasury_mod_hash
+            minimum_sf_transfer_amount
           )
           (assign
             byc_principal_to_melt BYC_MINTED_AMOUNT
@@ -828,6 +848,8 @@
             (assert
               ; only if there are fees to be paid
               (> fees 0)
+              ; to avoid keepers dusting and hogging treasury coins
+              (> fees minimum_sf_transfer_amount)
               ; only if it hasn't entered liquidation yet
               (not AUCTION_STATE)
               ; if there are byc minted, meaning there is something to run SF on
@@ -838,35 +860,47 @@
                   (- DISCOUNTED_PRINCIPAL fees))
 
                 (list
-                    (list REMARK ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount)
-                    ; signal to tail that it can issue BYC with certain amount
-                    (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX "i" byc_issuing_coin_id fees (sha256tree STATUTES_STRUCT)))
-                    ; make sure tail has actually issued it too
-                    (list ASSERT_COIN_ANNOUNCEMENT (sha256
-                                                    byc_issuing_coin_id
-                                                    BYC_ANN_PREFIX
-                                                    'i'
-                                                    my_coin_id
-                                                    fees
-                                                    (sha256tree STATUTES_STRUCT)
-                                                  )
+                  (list REMARK ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount)
+                  ; signal to tail that it can issue BYC with certain amount
+                  (list CREATE_COIN_ANNOUNCEMENT
+                    (concat
+                      ANN_PREFIX
+                      "i"
+                      byc_issuing_coin_id
+                      fees
+                      (sha256tree STATUTES_STRUCT)
+                      ORACLE_PRICE_ID
                     )
-                    ; approve treasury coin to receive a deposit
-                    (list CREATE_COIN_ANNOUNCEMENT
-                      (concat ANN_PREFIX treasury_coin_id fees new_treasury_amount)
+                  )
+                  ; make sure tail has actually issued it too
+                  (list ASSERT_COIN_ANNOUNCEMENT
+                    (sha256
+                      byc_issuing_coin_id
+                      BYC_ANN_PREFIX
+                      'i'
+                      my_coin_id
+                      fees
+                      (sha256tree STATUTES_STRUCT)
+                      ORACLE_PRICE_ID
                     )
-                    (list ASSERT_COIN_ANNOUNCEMENT
-                      (sha256
-                        treasury_coin_id
-                        TREASURY_ANN_PREFIX
-                        my_coin_id
-                        fees
-                        new_treasury_amount
-                      )
+                  )
+                  ; approve treasury coin to receive a deposit
+                  (list CREATE_COIN_ANNOUNCEMENT
+                    (concat ANN_PREFIX treasury_coin_id fees new_treasury_amount)
+                  )
+                  (list ASSERT_COIN_ANNOUNCEMENT
+                    (sha256
+                      treasury_coin_id
+                      TREASURY_ANN_PREFIX
+                      my_coin_id
+                      fees
+                      new_treasury_amount
                     )
-                    (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
-                    (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                    (list ASSERT_MY_COIN_ID my_coin_id)
+                  )
+                  (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE cumulative_stability_fee_rate)
+                  (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+                  (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_SF_TRANSFER_AMOUNT minimum_sf_transfer_amount)
+                  (list ASSERT_MY_COIN_ID my_coin_id)
                 )
               )
             )
@@ -874,7 +908,7 @@
         )
       )
       (list RECOVER_BAD_DEBT ; == 12
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash
+        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash ORACLE_PRICE_ID
                DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
             ; solution to bid
             reconcile_amount
@@ -926,16 +960,27 @@
                     (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
                     (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
                     ; signal to tail that it can issue BYC with certain amount
-                    (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX "x" treasury_coin_id (* -1 reconcile_amount) (sha256tree STATUTES_STRUCT) ))
+                    (list CREATE_COIN_ANNOUNCEMENT
+                      (concat
+                        ANN_PREFIX
+                        "x"
+                        treasury_coin_id
+                        (* -1 reconcile_amount)
+                        (sha256tree STATUTES_STRUCT)
+                        ORACLE_PRICE_ID
+                      )
+                    )
                     ; make sure tail has actually issued it too
-                    (list ASSERT_COIN_ANNOUNCEMENT (sha256
-                                                    treasury_coin_id
-                                                    BYC_ANN_PREFIX
-                                                    'x'
-                                                    my_coin_id
-                                                    (* -1 reconcile_amount)
-                                                    (sha256tree STATUTES_STRUCT)
-                                                  )
+                    (list ASSERT_COIN_ANNOUNCEMENT
+                      (sha256
+                        treasury_coin_id
+                        BYC_ANN_PREFIX
+                        'x'
+                        my_coin_id
+                        (* -1 reconcile_amount)
+                        (sha256tree STATUTES_STRUCT)
+                        ORACLE_PRICE_ID
+                      )
                     )
                     ; approve treasury coin to receive a withdrawal
                     (list CREATE_COIN_ANNOUNCEMENT

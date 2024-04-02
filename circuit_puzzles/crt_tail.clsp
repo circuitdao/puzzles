@@ -27,8 +27,8 @@
     (if (> 0 delta)
       ; melting only by surplus auction
       (assign
-        (crt_tail_hash byc_tail_hash surplus_mod_hash p2_treasury_hash offer_mod_hash
-        p2_surplus_auction_hash launcher_id byc_lot_amount last_bid
+        (crt_tail_hash byc_tail_hash surplus_mod_hash
+        launcher_id byc_lot_amount last_bid
         statutes_inner_puzzle_hash statutes_struct approved_mod_hashes) solution
         statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
         puzzle_hash (
@@ -38,9 +38,6 @@
             (curry_hashes surplus_mod_hash
               (sha256tree surplus_mod_hash)
               (sha256tree CAT_MOD_HASH)
-              (sha256tree p2_treasury_hash)
-              (sha256tree offer_mod_hash)
-              (sha256tree p2_surplus_auction_hash)
               (sha256tree statutes_struct)
               (sha256tree launcher_id)
               (sha256tree byc_lot_amount)
@@ -64,9 +61,6 @@
             (list ASSERT_MY_PUZZLEHASH puzzle_hash)
             ; we should be melting the whole coin value
             (list ASSERT_MY_AMOUNT (* -1 delta))
-            (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
           )
         )
       )
