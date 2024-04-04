@@ -55,6 +55,7 @@
           (> byc_lot_amount 0)
           ; should have a winning bid
           last_bid
+          (> (f (r last_bid)) 0)
           (= surplus_mod_hash (f (r approved_mod_hashes)))
           (list
             ; if this is a surplus auction and it called for melting, melt
@@ -69,60 +70,51 @@
     )
     (if (= (my_parent_cat_truth Truths) GENESIS_ID)
       ()
-      (if (= delta 0) ; third option is issuing by recharge auction
-        (assign
-          (
-            mod_hash
-            ann_prefix
-            parent_id
-            curried_mod_args
-            byc_tail_hash
-            amount
-            issuance_amount
-            my_coin_id
-            approved_mod_hashes
-            statutes_inner_puzzle_hash
-            statutes_struct
-          ) solution
-          statutes_struct_hash (sha256tree statutes_struct)
-          statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
-          approving_coin_id (calculate-coin-id
-            parent_id
-            (curry_hashes CAT_MOD_HASH
-              (sha256tree CAT_MOD_HASH)
-              (sha256tree byc_tail_hash)
-              (tree_hash_of_apply mod_hash curried_mod_args)
-            )
-            amount
+      ; third option is issuing by recharge auction
+      (assign
+        (
+          mod_hash
+          ann_prefix
+          parent_id
+          curried_mod_args
+          byc_tail_hash
+          amount
+          issuance_amount
+          my_coin_id
+          approved_mod_hashes
+          statutes_inner_puzzle_hash
+          statutes_struct
+        ) solution
+        statutes_struct_hash (sha256tree statutes_struct)
+        statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
+        approving_coin_id (calculate-coin-id
+          parent_id
+          (curry_hashes CAT_MOD_HASH
+            (sha256tree CAT_MOD_HASH)
+            (sha256tree byc_tail_hash)
+            (tree_hash_of_apply mod_hash curried_mod_args)
           )
-          (if (= mod_hash (f (r (r approved_mod_hashes))))
-            (list
-              (list CREATE_COIN_ANNOUNCEMENT (concat statutes_struct_hash issuance_amount))
-              (list REMARK
-                  approving_coin_id
-                  byc_tail_hash
-                  ann_prefix
-                  statutes_struct_hash
-                  my_coin_id
-                  issuance_amount
+          amount
+        )
+        (assert
+          (= mod_hash (f (r (r approved_mod_hashes))))
+          (= delta 0)
+          (list
+            (list CREATE_COIN_ANNOUNCEMENT (concat statutes_struct_hash issuance_amount))
+            (list ASSERT_COIN_ANNOUNCEMENT
+              (sha256
+                approving_coin_id
+                ann_prefix
+                statutes_struct_hash
+                my_coin_id
+                issuance_amount
               )
-              (list ASSERT_COIN_ANNOUNCEMENT
-                (sha256
-                  approving_coin_id
-                  ann_prefix
-                  statutes_struct_hash
-                  my_coin_id
-                  issuance_amount
-                )
-              )
-              (list ASSERT_MY_AMOUNT issuance_amount)
-              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
             )
-            (x)
+            (list ASSERT_MY_AMOUNT issuance_amount)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
           )
         )
-        (x)
       )
-    ) 
+    )
   )
 )

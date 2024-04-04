@@ -9,7 +9,7 @@
           cat_ann_prefix
           statutes_inner_puzzle_hash
           approved_mod_hashes
-          to_mint_amount
+          to_issue_amount
           my_coin_id
           target_puzzle_hash
         )
@@ -39,7 +39,7 @@
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert_debug
         (= vault_mod_hash (f approved_mod_hashes))
-
+        (any (all parent_is_cat (> 0 delta)) (all (not parent_is_cat) (= 0 delta)))
         (list
           (list ASSERT_MY_COIN_ID my_coin_id) ; thanks @bramv-chia
           (list
@@ -49,7 +49,7 @@
                 VAULT_ANN_PREFIX
                 (if (> 0 delta) "x" "i")
                 my_coin_id
-                (if (> 0 delta) delta to_mint_amount)
+                (if (> 0 delta) delta to_issue_amount)
                 statutes_struct_hash ; need to tie it to statutes struct
                 ORACLE_PRICE_INDEX ; ensure we're using the same price index
               )
@@ -60,7 +60,7 @@
               cat_ann_prefix
               (if (> 0 delta) "x" "i")
               vault_coin_id
-              (if (> 0 delta) delta to_mint_amount)
+              (if (> 0 delta) delta to_issue_amount)
               statutes_struct_hash
               ORACLE_PRICE_INDEX
             )
