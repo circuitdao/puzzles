@@ -418,7 +418,7 @@
               )
             )
             (if announcements
-              ; TODO: use cons, not merge-lists
+              ; FIXME: use cons, not merge-lists
               (merge-lists conditions announcements)
               conditions
             )
