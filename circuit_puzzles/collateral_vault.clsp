@@ -263,26 +263,29 @@
     ;  2. additional conditions that are returned with solution conditions
 
       (list TRANSFER
-         (lambda ((& DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE DISCOUNTED_PRINCIPAL)
+        (lambda ((& DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE DISCOUNTED_PRINCIPAL)
                    ; solution for transfer
                    inner_puzzle)
-           (list
-             (list DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE inner_puzzle DISCOUNTED_PRINCIPAL)
-             ; nothing else to assert here, just create a coin with new amount
-             (list )
-           )
-         )
+          (list
+            (list DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE inner_puzzle DISCOUNTED_PRINCIPAL)
+            ; nothing else to assert here, just create a coin with new amount
+            (list
+            )
+          )
+        )
       )
       (list DEPOSIT
-         (lambda ((& DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-                   ; solution for deposit
-                   deposit_amount)
+        (lambda ((& DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
+                  ; solution for deposit
+                  deposit_amount)
           ; deposit X collateral into this coin, not much to check apart from creating a coin with new amount
-           (list
-             (assert deposit_amount (> deposit_amount 0)
-                (list (+ deposit_amount DEPOSITED_AMOUNT) BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL))
-             ; nothing else to assert here, just create a coin with new amount
-             (list )
+          (list
+            (assert
+              deposit_amount (> deposit_amount 0)
+              (list (+ deposit_amount DEPOSITED_AMOUNT) BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL))
+              ; nothing else to assert here, just create a coin with new amount
+              (list
+              )
            )
          )
       )
@@ -292,11 +295,12 @@
           ; check that we have enough to withdraw and that we're not going under collateralization ratio
           (assign
             new_deposited_amount (- DEPOSITED_AMOUNT withdraw_amount)
-            min_collateral_amount (get-min-collateral-amount
-                                    BYC_MINTED_AMOUNT
-                                    coll_ratio
-                                    (f price_info)
-                                  )
+            min_collateral_amount (
+              get-min-collateral-amount
+                BYC_MINTED_AMOUNT
+                coll_ratio
+                (f price_info)
+            )
             (assert
               (> new_deposited_amount -1)
               (> DEPOSITED_AMOUNT new_deposited_amount)
@@ -1150,6 +1154,9 @@
           )
           ; force that every vault needs to start with zero state
           (c
+            ; TODO: we don't really need this launcher id because we can only launch by providing no lineage proof
+                   ; which asserts zero state, and after that we can use lineage but it will using the zero state
+                   ;
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
             (c 
               (list 
