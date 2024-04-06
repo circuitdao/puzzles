@@ -196,7 +196,6 @@
               (any
                 (= vault_operation_code START_AUCTION)
                 (= vault_operation_code BID)
-                (= vault_operation_code WITHDRAW_LEFTOVER_COLLATERAL)
                 (= vault_operation_code TRANSFER_SF_TO_TREASURY)
                 (= vault_operation_code RECOVER_BAD_DEBT)
               )
@@ -253,7 +252,6 @@
   (defconstant BID 11)
   (defconstant RECOVER_BAD_DEBT 12)
   (defconstant TRANSFER_SF_TO_TREASURY 13)
-  (defconstant WITHDRAW_LEFTOVER_COLLATERAL 14)
 
 
   (assign
@@ -346,7 +344,7 @@
          (lambda ((& DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
                      ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash)
                ; vault operation args
-               byc_amount_to_mint my_coin_id minimum_mint_amount collateralization_ratio price_info
+               byc_amount_to_mint my_coin_id minimum_debt_amount collateralization_ratio price_info
                byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
                statutes_cumulative_stability_fee_rate
                current_stability_fee_rate current_timestamp
@@ -372,7 +370,7 @@
                 byc_issuing_coin_info
               )
               ; check that total debt is larger than minted amount, not minimum mint amount
-              (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_mint_amount)
+              (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_debt_amount)
                       (> byc_amount_to_mint 0)
                       ; check if requested amount of BYC to mint takes us over the collateralization ratio
                       (> (available-to-mint DEPOSITED_AMOUNT BYC_MINTED_AMOUNT collateralization_ratio xch_price) byc_amount_to_mint)
@@ -412,8 +410,8 @@
                       collateralization_ratio)
                     (assert-statute
                       statutes_puzzle_hash
-                      STATUTE_MINIMUM_BYC_MINT_AMOUNT
-                      minimum_mint_amount)
+                      STATUTE_MINIMUM_VAULT_DEBT_AMOUNT
+                      minimum_debt_amount)
                     (assert-price
                       statutes_puzzle_hash
                       ORACLE_PRICE_ID
@@ -434,7 +432,7 @@
         (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH ORACLE_PRICE_ID
                     statutes_puzzle_hash DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
                  ; solution
-                 byc_to_repay my_coin_id statutes_cumulative_stability_fee_rate byc_melting_coin_info
+                 byc_to_repay my_coin_id statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_debt_amount
                  byc_treasury_coin_info p2_treasury_mod_hash price_info current_stability_fee_rate current_timestamp)
           (assign
             cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
@@ -494,7 +492,10 @@
             )
             (assert
               (> byc_to_repay 0)
-              (> new_byc_minted_amount -1)
+              ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
+              ; vault liquidation costs at healthy levels
+              (any (= new_byc_minted_amount 0) (> new_byc_minted_amount minimum_debt_amount))
+              ; current time must be at least after last oracle update
               (> current_timestamp (f (r price_info)))
               (any (> new_byc_minted_amount 0)  (all (= new_byc_minted_amount 0) (= discounted_principal 0)))
               (list
@@ -507,40 +508,42 @@
                       (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
                       (c
                         (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                        (c
-                          (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
+                        (c (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_VAULT_DEBT_AMOUNT minimum_debt_amount)
                           (c
-                            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
+                            (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
                             (c
-                              (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+                              (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
                               (c
-                                (list ASSERT_MY_COIN_ID my_coin_id)
+                                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
                                 (c
-                                  (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
-                                  (if (> negative_byc_principal_to_melt -1)
-                                    (list )
-                                    (list
-                                      ; signal to tail that it can melt the BYC
-                                      (list CREATE_COIN_ANNOUNCEMENT
-                                        (concat
-                                          ANN_PREFIX
-                                          'x'
-                                          byc_coin_id_to_melt
-                                          negative_byc_principal_to_melt
-                                          (sha256tree STATUTES_STRUCT)
-                                          ORACLE_PRICE_ID
+                                  (list ASSERT_MY_COIN_ID my_coin_id)
+                                  (c
+                                    (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
+                                    (if (> negative_byc_principal_to_melt -1)
+                                      (list )
+                                      (list
+                                        ; signal to tail that it can melt the BYC
+                                        (list CREATE_COIN_ANNOUNCEMENT
+                                          (concat
+                                            ANN_PREFIX
+                                            'x'
+                                            byc_coin_id_to_melt
+                                            negative_byc_principal_to_melt
+                                            (sha256tree STATUTES_STRUCT)
+                                            ORACLE_PRICE_ID
+                                          )
                                         )
-                                      )
-                                      ; get a melt confirmation from BYC tail
-                                      (list ASSERT_COIN_ANNOUNCEMENT
-                                        (sha256
-                                          byc_coin_id_to_melt
-                                          BYC_ANN_PREFIX
-                                          'x'
-                                          my_coin_id
-                                          negative_byc_principal_to_melt
-                                          (sha256tree STATUTES_STRUCT)
-                                          ORACLE_PRICE_ID
+                                        ; get a melt confirmation from BYC tail
+                                        (list ASSERT_COIN_ANNOUNCEMENT
+                                          (sha256
+                                            byc_coin_id_to_melt
+                                            BYC_ANN_PREFIX
+                                            'x'
+                                            my_coin_id
+                                            negative_byc_principal_to_melt
+                                            (sha256tree STATUTES_STRUCT)
+                                            ORACLE_PRICE_ID
+                                          )
                                         )
                                       )
                                     )
