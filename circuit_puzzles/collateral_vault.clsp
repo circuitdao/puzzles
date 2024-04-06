@@ -428,7 +428,6 @@
       )
       ; #### MELT
       (list MELT_BYC
-        ; FIXME: we cannot melt BYC to less than min total debt, can either be above min debt or zero
         (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH ORACLE_PRICE_ID
                     statutes_puzzle_hash DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
                  ; solution
