@@ -172,7 +172,10 @@
   )
 
   (assign
-    ; NEXT: add support for expedited votes and statutes delay before they can be applied fully
+    ; TODO: add support for expedited votes and
+    ;NEXT: statutes delay before newly enacted votes can be applied fully
+          ; should be done by adding additional time to enact the statutes, so after proposal passes
+          ; we wait for a certain amount of time before it can be enacted vs instant (as it is now)
     (op_code mutation_index mutation_value) (if mutation mutation (() () ()))
     (statutes prices cumulative_stability_fee cumulative_interest_rate)
       (if (= op_code 1)

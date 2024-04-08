@@ -49,9 +49,8 @@
             final_bill bill_operation final_block_height_relative_to_enact
             rest_of_conditions
             (c
-              ; REMARK condition to make it easy to generate puzzle reveal
+              ; REMARK condition to make it easy to generate puzzle reveal for drivers
               (list REMARK
-                ; NEXT: test that remark conditions are filtered out
                 bill_operation
                 final_bill
                 (f condition_rest) ; inner puzzle hash
@@ -110,7 +109,7 @@
                 MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
                 final_bill bill_operation final_block_height_relative_to_enact
                 rest_of_conditions
-                (print "filtered conditions from remark" filtered_conditions)
+                filtered_conditions
               )
               (filter-conditions
                 MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE

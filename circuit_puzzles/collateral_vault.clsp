@@ -1133,16 +1133,12 @@
     ; filter condition function 
     filter_condition (lambda (condition)
       ; create a new coin, filter out any cheeky announcements, and skip remarks
-      ; LATER: should this also check for puzzle announcements? (we don't use them though)
-      (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
+      (if (any (= (f condition) CREATE_COIN_ANNOUNCEMENT) (= (f condition) CREATE_PUZZLE_ANNOUNCEMENT))
         (assert
           ; not just filter out announcements with our prefix namespace
           ; but raise an error if someone is trying to be cheeky
           (not
-            (all
-              (= 2 (strlen (f (r condition))))
               (= (substr (f (r condition)) 0 1) ANN_PREFIX)
-            )
           )
           condition
         )
@@ -1236,7 +1232,7 @@
           )
           ; force that every vault needs to start with zero state
           (c
-            ; TODO: we don't really need this launcher id because we can only launch by providing no lineage proof
+            ; LATER: we don't really need this launcher id because we can only launch by providing no lineage proof
                    ; which asserts zero state, and after that we can use lineage but it will using the zero state
                    ;
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
