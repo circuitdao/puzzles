@@ -9,7 +9,7 @@
   (defconstant STATUTE_PRICE_ORACLES 0) ; a list of (curried_oracle_mod) with missing price and last updated
   (defconstant STATUTE_STABILITY_FEE_RATE 1)
   (defconstant STATUTE_INTEREST_RATE 2)
-  (defconstant STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE 3)
+  (defconstant STATUTE_CUSTOM_ANNOUNCEMENTS 3)
   (defconstant STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE 4)
   (defconstant STATUTE_COLLATERALIZATION_RATIO 5)
   (defconstant STATUTE_ORACLE_M_OF_N 6)
@@ -45,6 +45,7 @@
   (defconstant STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
   (defconstant STATUTES_MUTATION_PREFIX "m")
   (defconstant STATUTE_PREFIX "s")
+  (defconstant STATUTE_FULL_PREFIX "sf")
   (defconstant PRICE_PREFIX "p")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
@@ -61,6 +62,18 @@
         (concat
           STATUTES_ANN_PREFIX
           (sha256tree (list STATUTE_PREFIX statute_index statute_value))
+        )
+      )
+    )
+  )
+
+  (defun-inline assert-full-statute (statutes_puzzle_hash statute_index statute_full_value)
+    (list ASSERT_PUZZLE_ANNOUNCEMENT
+      (sha256
+         statutes_puzzle_hash
+        (concat
+          STATUTES_ANN_PREFIX
+          (sha256tree (list STATUTE_FULL_PREFIX statute_index statute_full_value))
         )
       )
     )

@@ -27,15 +27,10 @@
   (defun filter-ann-conditions ( (@ ann_conditions ( (condition_code . condition_rest) . rest)) filtered_announcements)
     (if ann_conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (if (not
-            (any
-              (= 2 (strlen (f condition_rest)))
-              (= (substr (f condition_rest) 0 1) ANN_PREFIX)
-            )
-           )
-          (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
+        (if  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
           ; bad announcement found, error
           (x)
+          (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
         )
         (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
       )
@@ -163,7 +158,7 @@
           (if (> withdraw_amount_pre 0)
             withdraw_amount_pre
             ; withdraw_amount_pre is negative, use it
-            (assert (x withdraw_amount_pre (- new_amount current_amount)) (* -1 withdraw_amount_pre))
+            (assert (> withdraw_amount_pre (- new_amount current_amount)) (* -1 withdraw_amount_pre))
           )
         )
         withdraw_amount_pre

@@ -4,7 +4,7 @@
   ; except for the final item which is returned
   (defmacro assert items
     (if (r items)
-        (list if (f items) (c assert (r items)) (q . (x items)))
+        (list if (f items) (c assert (r items)) (q . (x )))
         (f items)
     )
   )
