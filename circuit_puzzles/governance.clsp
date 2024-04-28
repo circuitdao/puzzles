@@ -1,11 +1,12 @@
-(mod (MOD_HASH 
+;; a governance puzzle used to propose, enact, and veto bills that change the statutes if enacted
+;; this puzzle is to be used with CRT tail
+(mod (MOD_HASH
       CAT_MOD_HASH 
       TAIL_MOD_HASH 
-      STATUTES_STRUCT 
-      INNER_PUZZLE 
-      BILL 
-      BLOCK_HEIGHT_RELATIVE_TO_ENACT 
-      MEMOS 
+      STATUTES_STRUCT
+      INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
+      BILL ; bill is a potential statute if enacted
+      inner_puzzle ; if provided, we're in owner mode
       inner_solution
       veto_conditions
      ) 
@@ -15,11 +16,12 @@
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
+  (include utils.clib)
 
 
-  (defconstant VETO_BILL_REQUEST -2)
-  (defconstant VETO_BILL -1)
-  (defconstant SET_BILL 1)
+  (defconstant CREATE_VETO_ANNOUNCEMENT -2)
+  (defconstant VETO_PROPOSED_BILL -1)
+  (defconstant RESET_BILL 1)
   (defconstant PROPOSE_BILL 2)
   (defconstant ENACT_BILL 3)
 
@@ -27,116 +29,110 @@
   (defconstant ANN_ENACTED '$')
   (defconstant ANN_VETO 'v')
   (defconstant ANN_VETOED 'x')
-  (defconstant ANN_PREFIX 0x43) ; starts with "C"
+  (defconstant ANN_PREFIX 'G')
 
 
-   (defun assert_ (items)
-      (if (r items)
-        (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
-        (f items)
-      )
-    )
-   (defmac assert items (assert_ items))
 
-
-   (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
-                              final_bill bill_operation final_block_height_relative_to_enact
-                               (@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_conditions)
+   (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                             final_bill bill_operation
+                             (@ conditions ((condition_code . condition_rest) . rest_of_conditions))
+                             found_create_coin filtered_conditions)
       (if conditions
         (if (= condition_code CREATE_COIN)
           (filter-conditions
-            MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
-            final_bill bill_operation final_block_height_relative_to_enact
+            MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+            final_bill bill_operation
             rest_of_conditions
-            (c
-              ; REMARK condition to make it easy to generate puzzle reveal
-              (list REMARK
-                ; NEXT: test that remark conditions are filtered out
-                bill_operation
-                final_bill
-                (f condition_rest) ; inner puzzle hash
-                final_block_height_relative_to_enact
-                (if (all (r (r condition_rest)) (= bill_operation PROPOSE_BILL))
-                  ; only proposal can set memos
-                  (f (r (r condition_rest)))
-                  ; if it's not a propose bill, set it to whatever was curried
-                  MEMOS
-                )
-              )
+            1 ; we found a create coin condition
+            (assert_debug
+              ; amount should be >= 0
+              (> (f (r condition_rest)) -1 )
+              ; only one create coin allowed when in governance mode
+              (= found_create_coin 0)
               (c
-                (c
-                  CREATE_COIN
-                  (c
-                    (if (f condition_rest)
-                      (curry_hashes MOD_HASH
-                        (sha256tree MOD_HASH)
-                        (sha256tree CAT_MOD_HASH)
-                        (sha256tree TAIL_MOD_HASH)
-                        (sha256tree STATUTES_STRUCT)
-                        ; this is not hashed, because it's a puzzle reveal and puzzle hash is what we need
-                        (f  condition_rest)
-                        (sha256tree final_bill)
-                        (sha256tree final_block_height_relative_to_enact)
-                        (sha256tree
-                          (if (all (r (r condition_rest)) (= bill_operation PROPOSE_BILL))
-                            ; only proposal can set memos
-                            (f (r (r condition_rest)))
-                            ; if it's not a propose bill, set it to whatever was curried
-                            MEMOS
-                          )
-                        )
-                      )
-                      ; disable the governance and use the inner puzzle if passed puzzle hash is 0
-                      (sha256tree INNER_PUZZLE)
-                    )
-                    (r condition_rest)
-                  )
+                ; REMARK condition to make it easy to generate puzzle reveal for drivers
+                (list REMARK
+                  bill_operation
+                  final_bill
+                  (f condition_rest) ; inner puzzle hash
                 )
-                filtered_conditions
+                (c
+                  (c
+                    CREATE_COIN
+                    (c
+                      (if (f condition_rest)
+                        (curry_hashes MOD_HASH
+                          (sha256tree MOD_HASH)
+                          (sha256tree CAT_MOD_HASH)
+                          (sha256tree TAIL_MOD_HASH)
+                          (sha256tree STATUTES_STRUCT)
+                          (sha256tree (f condition_rest))
+                          (sha256tree final_bill)
+                        )
+                        ; disable the governance and use the inner puzzle if passed puzzle hash is 0
+                        INNER_PUZZLE_HASH
+                      )
+                      (r condition_rest)
+                    )
+                  )
+                  filtered_conditions
+                )
               )
             )
           )
-          (if (= condition_code CREATE_COIN_ANNOUNCEMENT)
-            (assert
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+            (assert_debug
               ; not just filter out announcements with our prefix namespace
               ; but raise an error if someone is trying to be cheeky
               (not
                   (= (substr (f condition_rest) 0 1) ANN_PREFIX)
               )
-              (f conditions)
+              (filter-conditions
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                final_bill bill_operation
+                rest_of_conditions
+                found_create_coin
+                (c (f conditions) filtered_conditions)
+              )
             )
             (if (= condition_code REMARK)
+              ; filter out remarks since we use them for driver puzzle reveals
               (filter-conditions
-                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
-                final_bill bill_operation final_block_height_relative_to_enact
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                final_bill bill_operation
                 rest_of_conditions
-                (print "filtered conditions from remark" filtered_conditions)
+                found_create_coin
+                filtered_conditions
               )
-              (filter-conditions
-                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
-                final_bill bill_operation final_block_height_relative_to_enact
-                rest_of_conditions
-                (c (f conditions) filtered_conditions)
+              (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
+                (filter-conditions
+                  MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                  final_bill bill_operation
+                  rest_of_conditions
+                  found_create_coin
+                  (c (f conditions) filtered_conditions)
+                )
+                (x "off")
               )
             )
           )
         )
-        filtered_conditions
+        (assert_debug found_create_coin filtered_conditions)
       )
     )
 
 
-    (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill block_height_relative_to_enact memos )
-      (curry_hashes CAT_MOD_HASH (sha256tree CAT_MOD_HASH) (sha256tree TAIL_MOD_HASH) 
+    (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
+      (curry_hashes CAT_MOD_HASH
+        (sha256tree CAT_MOD_HASH)
+        (sha256tree TAIL_MOD_HASH)
         (curry_hashes MOD_HASH
           (sha256tree MOD_HASH)
           (sha256tree CAT_MOD_HASH)
           (sha256tree TAIL_MOD_HASH)
           (sha256tree STATUTES_STRUCT)
-          inner_puzzle_hash
-          (sha256tree bill)
-          (sha256tree block_height_relative_to_enact)
-          (sha256tree memos)
+          (sha256tree inner_puzzle_hash)
+          bill_hash
         )
       )
     )
@@ -148,11 +144,24 @@
       )
     )
   
-    (defun validate-veto-conditions (veto_conditions return_conditions)
+    (defun validate-veto-conditions ( inner_puzzle_hash (@ veto_conditions ( (condition_code . condition_body) . rest_of_conditions)) return_conditions)
       (if veto_conditions
-        (if (any (= (f (f veto_conditions)) REMARK) (= (f (f veto_conditions)) ASSERT_COIN_ANNOUNCEMENT))
-          (validate-veto-conditions (r veto_conditions) (c (f veto_conditions) return_conditions))
-          (x "not a valid veto condition:" (f (f veto_conditions)))
+        (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code REMARK))
+          (validate-veto-conditions inner_puzzle_hash rest_of_conditions (c (f veto_conditions) return_conditions))
+          (if (= condition_code CREATE_COIN)
+            (if (= (f condition_body) inner_puzzle_hash)
+              (validate-veto-conditions
+                inner_puzzle_hash
+                rest_of_conditions
+                ; if
+                (c (f veto_conditions)
+                  return_conditions
+                )
+              )
+              (x "bad veto condition" condition_body)
+            )
+            (x "wrong condition code" condition_code)
+          )
         )
         return_conditions
       )
@@ -160,17 +169,21 @@
 
     (defun print (to-show result) (if (all "$print$" to-show result) result result))
     
-   (defun find_bill_condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
+   (defun find-bill-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) bill_operation create_coin_amount)
       (if conditions
         (if (= condition_code REMARK)
           ; found REMARK
-          (if (= 'b' (f condition_body))
-            (r condition_body)
-            (find_bill_condition rest_of_conditions)
+          (if (all (= 'b' (f condition_body)) (= bill_operation ()))
+            (find-bill-condition rest_of_conditions (r condition_body) create_coin_amount)
+            (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
           )
-          (find_bill_condition rest_of_conditions)
+          (if (all (= condition_code CREATE_COIN) (= create_coin_amount -1))
+            ; found CREATE_COIN
+            (find-bill-condition rest_of_conditions bill_operation (f (r condition_body)))
+            (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
+          )
         )
-        (list () () ())
+        (c (if bill_operation bill_operation (list () ())) create_coin_amount)
       )
    )
    (defun get-bill-operation-lambda (bill_operations bill_operation)
@@ -179,6 +192,7 @@
          (f (r (f bill_operations)))
          (get-bill-operation-lambda (r bill_operations) bill_operation)
        )
+       ; it's ok to not find bill condition since we also want to do transfers
        ()
      )
    )
@@ -186,131 +200,74 @@
     ; ###################  MAIN ENTRY POINT  ######################## 
     (assign
       raw_inner_conditions (if inner_solution
-        (a INNER_PUZZLE (print "inner solution" inner_solution))
-        ; someone is trying to veto this bill, there are no CREATE_COIN conditions in the solution, so we're good
-        (assign my_amount (f (r (r (r (r (r (f (print "veto solution: " veto_conditions))))))))
-          (c
-            ; we can't run inner puzzle as we don't control it, but we still need to run it to veto it
-            ; recreate coin to the same inner puzzle
-            (list CREATE_COIN (sha256tree INNER_PUZZLE) my_amount MEMOS)
-            (validate-veto-conditions veto_conditions ())
-          )
-        )
+        (a (assert_debug (sha256tree inner_puzzle INNER_PUZZLE_HASH) inner_puzzle) inner_solution)
+        ; someone is trying to veto
+        ; there should be specific create_coin in the conditions and only one, announcements are allowed too
+        (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions ())
       )
-      (statutes_inner_puzzle_hash bill_operation . args) (find_bill_condition raw_inner_conditions)
+
+      ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () -1)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-      bill_operations (list 
-        (list SET_BILL  
-          (lambda (bill)
-            (list
-              ; new state 
-              (list bill () () )
-              ; conditions required for this state to apply 
-              ()
-            )
-          )
-        )
-
-        (list PROPOSE_BILL
-          (lambda ((& statutes_puzzle_hash) bill relative_height_needed amount amount_needed)
-            (assert (> amount amount_needed) (> (print "propose height needed" relative_height_needed) 0) 
-                    (> amount_needed 0)
-              (list 
-              (list bill relative_height_needed ())
-                (list
-                  (list ASSERT_MY_AMOUNT (print "my amount" amount))
-                  (assert-statute
-                    statutes_puzzle_hash
-                    STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
-                    relative_height_needed)
-                  (assert-statute
-                    statutes_puzzle_hash
-                    STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
-                    amount_needed)
-                  ; no ephemeral coins, thanks 
-                  (list ASSERT_HEIGHT_RELATIVE 1)
-                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_PROPOSED))
-                )
-              )
-            )
-          )
-        )
-
-        (list ENACT_BILL 
-          (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT statutes_puzzle_hash) bill amount amount_needed) 
-          
-            (assert (> amount amount_needed) (= (sha256tree BILL) (sha256tree bill))
-              (list 
-                ; if enactment passes, reset this coins bill state 
-                (list () () ())
-                (list 
-                  (list ASSERT_HEIGHT_RELATIVE BLOCK_HEIGHT_RELATIVE_TO_ENACT)
-                  (list ASSERT_MY_AMOUNT amount)
-                  (assert-statute
-                    statutes_puzzle_hash
-                    STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
-                    BLOCK_HEIGHT_RELATIVE_TO_ENACT)
-                  (assert-statute
-                    statutes_puzzle_hash
-                    STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
-                    amount_needed)
-                  (list ASSERT_PUZZLE_ANNOUNCEMENT
-                    (sha256 statutes_puzzle_hash STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree BILL))
-                  )
-                  (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX (sha256tree BILL)))
-                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_ENACTED))
-                )
-              )
-            )
-          )
-        )
-        
-        (list VETO_BILL
-          (lambda ((& MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH
-                      STATUTES_STRUCT BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS
-                      statutes_puzzle_hash) 
-                    bill 
-                    amount
-                    amount_needed
-                    veto_amount
-                    veto_inner_puzzle_hash
-                  )
-            (assert
+      ; TODO: change these into op programs so we save on space
+      bill_operations (list
+        (list RESET_BILL
+          ; when we done with voting
+          (lambda ((& BILL) amount)
+            (assert_debug
+              ; can only reset if in proposal mode (BILL is not empty)
               BILL
-              (> amount amount_needed)
-              (> veto_amount amount)
-              (> BLOCK_HEIGHT_RELATIVE_TO_ENACT 0)
-              (= (sha256tree BILL) (sha256tree bill))
               (list
-                (list () () MEMOS)
+                ()
                 (list
-                  (list ASSERT_BEFORE_HEIGHT_RELATIVE BLOCK_HEIGHT_RELATIVE_TO_ENACT)
-                  (list ASSERT_MY_AMOUNT amount)
-                  (assert-statute
-                    statutes_puzzle_hash
-                    STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE
-                    BLOCK_HEIGHT_RELATIVE_TO_ENACT)
-                  (assert-statute
-                    statutes_puzzle_hash
-                    STATUTE_AMOUNT_NEEDED_TO_PROPOSE_VOTE
-                    amount_needed)
                   ; no ephemeral coins
                   (list ASSERT_HEIGHT_RELATIVE 1)
-                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
-                  ; assert announcement from another CRT coin with higher amount than this one
-                  (list ASSERT_PUZZLE_ANNOUNCEMENT
-                    (sha256
-                      (calculate-crt-puzzle
-                        MOD_HASH
-                        CAT_MOD_HASH
-                        TAIL_MOD_HASH
-                        STATUTES_STRUCT
-                        veto_inner_puzzle_hash
-                        ()
-                        ()
-                        ()  ; memos are null for veto
-                       )
-                      (concat ANN_PREFIX ANN_VETO (sha256tree bill) veto_amount)
+                )
+              )
+            )
+          )
+        )
+        (list PROPOSE_BILL
+          ; this starts enactment process, after veto_seconds it can be enacted after delay_seconds pass
+          ; delay_seconds are used to give users time to exit the protocol if new statute is not to their liking
+          (lambda ((& MOD_HASH TAIL_MOD_HASH CAT_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash)
+                   amount
+                   (@ new_bill (statute_index new_statute_value new_threshold_amount_to_propose new_veto_seconds new_delay_seconds new_max_delta))
+                   (@ current_statute (statute_value threshold_amount_to_propose veto_seconds delay_seconds max_delta))
+                   )
+            (assert_debug
+              (> amount threshold_amount_to_propose)
+              (> new_threshold_amount_to_propose 0) (> new_veto_seconds 0) (> new_delay_seconds 0)
+              ; if we have a max_delta, make sure new value doesn't exceed it
+              (if (= max_delta 0)
+                (= max_delta 0)
+                ; or new value must be within max_delta of current value
+                (if (> new_statute_value statute_value)
+                  (> max_delta (- new_statute_value statute_value))
+                  (> max_delta (- statute_value new_statute_value))
+                )
+              )
+              (list
+                (c
+                  ; we want coins that are in the proposal process to be able to veto too
+                  ; this means we need to update time required to pass proposal when spending
+                  ; this is the parameter that holds those values and will be updated on veto
+                  (c veto_seconds (+ veto_seconds delay_seconds))
+                  new_bill
+                )
+                (c
+                  ; avoid ephemeral coins so people can't reuse CRT to issue multiple proposals or veto
+                  (list ASSERT_HEIGHT_RELATIVE 1)
+                  (c
+                    (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_PROPOSED))
+                    ; assert that passed statute index correlates to correct statute
+                    ; and that passed statute values are correct
+                    (list
+                      (assert-full-statute
+                        statutes_puzzle_hash
+                        ; we use special statute to use for custom announcements limits
+                        (if (= statute_index -1) STATUTE_CUSTOM_ANNOUNCEMENTS statute_index)
+                        current_statute
+                      )
                     )
                   )
                 )
@@ -318,54 +275,201 @@
             )
           )
         )
-        (list VETO_BILL_REQUEST
-          (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT) bill amount)
-            (assert (not BILL) bill (> amount 0) 
-              (list 
-                (list () () ())
-                (list 
-                  (list ASSERT_MY_AMOUNT amount)
+        (list ENACT_BILL
+          ; resets bill state and updates statutes (by creating announcement) with a new statute value
+          (lambda ((& BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+                    amount
+                    grandparent_id
+                  )
+            (assign
+              (
+                (veto_seconds . enact_seconds)
+                new_statute_index
+                new_statute_value
+                new_threshold_amount_to_propose
+                new_veto_seconds
+                new_delay_seconds
+                new_max_delta
+              ) BILL
+              (list
+                ; if enactment passes, reset this coins bill state
+                ()
+                (list
+                  (list ASSERT_MY_PARENT_ID
+                    (calculate-coin-id
+                      grandparent_id
+                      (curry_hashes CAT_MOD_HASH
+                        (sha256tree CAT_MOD_HASH)
+                        (sha256tree TAIL_MOD_HASH)
+                        (curry_hashes MOD_HASH
+                          (sha256tree MOD_HASH)
+                          (sha256tree CAT_MOD_HASH)
+                          (sha256tree TAIL_MOD_HASH)
+                          (sha256tree STATUTES_STRUCT)
+                          (sha256tree INNER_PUZZLE_HASH)
+                          (sha256tree ())
+                        )
+                      )
+                      amount
+                    )
+                  )
+                  (list ASSERT_HEIGHT_RELATIVE 1)
+                  ; has enough time passed since this coin was last spent (veto included)
+                  (list ASSERT_SECONDS_RELATIVE enact_seconds)
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT
+                    ; we skip the first two elements that are used for voting process, they're not stored in statutes
+                    (sha256 statutes_puzzle_hash STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r BILL)))
+                  )
+                  (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX (sha256tree (r BILL))))
+                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_ENACTED))
+                )
+              )
+            )
+          )
+        )
+        (list VETO_PROPOSED_BILL
+          ; veto a bill that is in proposal mode and hasn't passed veto_seconds yet
+          ; coin that is vetoing must have higher amount than the one being vetoed
+          ; vetoing coin can be in proposal mode or not
+          (lambda
+            (
+              (& MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH
+                STATUTES_STRUCT BILL
+                )
+              amount
+              grandparent_veto_id
+              veto_amount
+              veto_inner_puzzle_hash
+              veto_bill_hash
+            )
+            (assign
+              (
+                (veto_seconds . enact_seconds)
+                new_statute_index
+                new_statute_value
+                new_threshold_amount_to_propose
+                new_veto_seconds
+                new_delay_seconds
+                new_max_delta
+              ) BILL
+              (assert_debug
+                ; can only veto if in proposal mode (BILL is not empty)
+                BILL
+                (> veto_amount amount)
+                (> veto_seconds 0)
+                (list
+                  ()
+                  (list
+                    (if (> veto_seconds 1)
+                      (list ASSERT_BEFORE_SECONDS_RELATIVE veto_seconds)
+                      ; noop
+                      (list ASSERT_SECONDS_RELATIVE veto_seconds)
+                    )
+                    ; no ephemeral coins
+                    (list ASSERT_HEIGHT_RELATIVE 1)
+                    (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
+                    ; assert announcement from another CRT coin with higher amount than this one
+                    (list ASSERT_COIN_ANNOUNCEMENT
+                      (sha256
+                        (calculate-coin-id
+                          grandparent_veto_id
+                          (calculate-crt-puzzle
+                            MOD_HASH
+                            CAT_MOD_HASH
+                            TAIL_MOD_HASH
+                            STATUTES_STRUCT
+                            veto_inner_puzzle_hash
+                            veto_bill_hash
+                          )
+                          veto_amount
+                        )
+                        (concat ANN_PREFIX ANN_VETO (sha256tree BILL))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+        (list CREATE_VETO_ANNOUNCEMENT
+          (lambda ((& BILL
+                    ) amount target_bill relative_time_spent)
+            (assign
+              (
+                (veto_seconds . enact_seconds)
+                statute_index
+                statute_value
+                threshold_amount_to_propose
+                veto_seconds
+                delay_seconds
+                max_delta
+              ) (if BILL BILL (list (c 0 0) () () () () () ()))
+              (list
+                (if BILL
+                  (list
+                    ; we allow votes that are in proposed mode to veto other votes, we just need
+                    ; to update the enact seconds to whatever is passed with relative_time_spent
+                    ; it's up to the user to make this time as close to current time as possible
+                    (c
+                      (if (> relative_time_spent veto_seconds)
+                        1
+                        (- veto_seconds relative_time_spent)
+                      )
+                      (if (> relative_time_spent enact_seconds)
+                        1
+                        (- enact_seconds relative_time_spent)
+                      )
+                    )
+                    statute_index
+                    statute_value
+                    threshold_amount_to_propose
+                    veto_seconds
+                    delay_seconds
+                    max_delta
+                  )
+                  ()
+                )
+                (list
                   ; no ephemeral coins
                   (list ASSERT_HEIGHT_RELATIVE 1)
+                  (list ASSERT_SECONDS_RELATIVE relative_time_spent)
                   ; puzzle hash allows for mass vetoing too
-                  (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETO (sha256tree bill) amount))
-
+                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETO (sha256tree target_bill)))
                 )
               )
             )
           )
         )
       )
-      operation_result (a
-          (assign
-            func (get-bill-operation-lambda bill_operations bill_operation)
-            (if func
-              func
-              (lambda ((& BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS))
-                (list
-                  (list BILL BLOCK_HEIGHT_RELATIVE_TO_ENACT MEMOS)
-                  (list )
-                )
-              )
-            )
+      ; find the bill operation lambda and execute it, with new coin amount prepended
+      ; so can be used in bill operation while we later assert it's correct
+      (final_bill bill_conditions) (assert_debug
+        ; either inner solution was provided or only veto conditions can be used
+        (any inner_solution (all (not inner_solution) (= bill_operation VETO_PROPOSED_BILL)))
+        (if bill_operation
+          (a
+            (get-bill-operation-lambda bill_operations bill_operation)
+            (c new_coin_amount args)
           )
-          args
-      )
-      (
-        (
-          final_bill
-          final_block_height_relative_to_enact
-          ; LATER: remove memos here (why?)
-          _
+          ; no bill operation, just return the conditions as we're transferring
+          ; but transfer only possible when BILL not set
+          (assert_debug (not BILL) (list () ()))
         )
-        bill_conditions
-      )  (print "operation result:" operation_result)
-
+      )
+      ; iterate over all conditions and filter out the ones we don't need (REMARK)
+      ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
+      ; add a REMARK for driver assistance
       inner_conditions (filter-conditions
-        MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT MEMOS INNER_PUZZLE
-        final_bill bill_operation final_block_height_relative_to_enact
-        raw_inner_conditions ()
+        MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+        final_bill bill_operation
+        raw_inner_conditions 0 ()
       )
-      (merge-lists bill_conditions inner_conditions)
+      (c
+        ; amount can't change while under governance mode
+        ; to avoid double spending coins
+        (list ASSERT_MY_AMOUNT new_coin_amount)
+        (merge-lists bill_conditions inner_conditions)
+      )
     )
 )

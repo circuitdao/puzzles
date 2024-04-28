@@ -31,7 +31,7 @@
 
   (defconstant ONE 1)
 
-  (defconstant CRT_ANN_PREFIX 0x43) ; starts with "C"
+  (defconstant CRT_ANN_PREFIX 'G')
 
   (defun announce-statutes (statutes prefix start_index rest)
     (if statutes
@@ -39,11 +39,24 @@
         (list CREATE_PUZZLE_ANNOUNCEMENT
           (concat STATUTES_ANN_PREFIX
             (sha256tree
-              (list prefix start_index (f statutes))
+              (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
             )
           )
         )
-        (announce-statutes (r statutes) prefix (+ start_index 1) rest)
+        (if (= prefix 's')
+          ; add a full statutes when announcing statutes
+          (c
+            (list CREATE_PUZZLE_ANNOUNCEMENT
+              (concat STATUTES_ANN_PREFIX
+                (sha256tree
+                  (list (concat prefix 'f') start_index (f statutes))
+                )
+              )
+            )
+            (announce-statutes (r statutes) prefix (+ start_index 1) rest)
+          )
+          (announce-statutes (r statutes) prefix (+ start_index 1) rest)
+        )
       )
       rest
     )
@@ -74,27 +87,21 @@
         (sha256tree cumulative_interest_rate)
       )
       ; amount, 1 mojo for singletons or any odd number
-      1
+      ONE
     )
   )
 
 
   (defun mutate-list (mutation_index new_value statutes index)
-    (if (l statutes)
+    (if statutes
       (c
         (if (= index mutation_index) new_value (f statutes))
-        (mutate-list mutation_index new_value (r statutes) (+ index 1))
+        (mutate-list mutation_index new_value (r statutes) (+ index ONE))
       )
-      (if (= mutation_index index) ; no more statutes left and index is same as end of list
-        ; means we want to append to the end of the list
-        (list new_value)
-        (if (> mutation_index index)
-          (x)
-          ()
-        )
-      )
+      () ;x "can't mutate") ; no more statutes left and index is same as end of list
     )
   )
+
   (defconstant PRECISION 10000000000)
 
   (defun calculate-cumulative-stability-fee-rate
@@ -116,41 +123,48 @@
   )
 
   (defun get-list-item-at-index (index a_list counter_index)
-    (if (l a_list)
+    (if a_list
       (if (= counter_index index)
         (f a_list)
-        (get-list-item-at-index index (r a_list) (+ counter_index 1))
+        (get-list-item-at-index index (r a_list) (+ counter_index ONE))
       )
       ; fail if you don't find an item
-      (x)
+      () ; x "index out of bounds" counter_index index a_list)
     )
   )
 
   (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL_HASH INNER_PUZZLE_HASH)
-    (curry_hashes CAT_MOD_HASH (sha256 ONE CAT_MOD_HASH) (sha256 ONE CRT_TAIL_HASH) INNER_PUZZLE_HASH)
+    (curry_hashes CAT_MOD_HASH
+      (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE CRT_TAIL_HASH)
+      INNER_PUZZLE_HASH
+    )
   )
 
 
-  (defun filter-ann-conditions ((@ ann_conditions
-                                  (
-                                    (@ condition
-                                      (condition_code . condition_body)) . rest)
-                                ) filtered_announcements)
+  (defun filter-ann-conditions (
+    (@ ann_conditions
+      (
+        (@ condition
+          (condition_code . condition_body)
+        )
+        . rest
+      )
+    ) filtered_announcements)
     (if ann_conditions
       (if
         (any
             (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT)
-            (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT)
         )
-        (if
-          (not
-            (= (substr (f condition_body) 0 1) STATUTES_ANN_PREFIX)
-          )
+        (if (= (substr (f condition_body) 0 1) STATUTES_ANN_PREFIX)
+          ; bad announcement, error
+          (x "bad announcement")
           (filter-ann-conditions rest (c condition filtered_announcements))
-          ; no announcements, skip
+        )
+        (if (any (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+          (filter-ann-conditions rest (c condition filtered_announcements))
           (filter-ann-conditions rest filtered_announcements)
         )
-        (filter-ann-conditions rest filtered_announcements)
       )
       filtered_announcements
     )
@@ -172,9 +186,9 @@
   )
 
   (assign
-    ; NEXT: add support for expedited votes and statutes delay before they can be applied fully
     (op_code mutation_index mutation_value) (if mutation mutation (() () ()))
     (statutes prices cumulative_stability_fee cumulative_interest_rate)
+      ; TODO: move op_code to op_program, that is revealed only when mutation is needed, saving space
       (if (= op_code 1)
         (list
           ; we're maybe updating, if indexes match and it's not announcements
@@ -201,7 +215,7 @@
             ; - last timestamp of calculation previously
             (calculate-cumulative-stability-fee-rate
               PAST_CUMULATIVE_STABILITY_FEE_RATE
-              (f (r STATUTES))
+              (f (f (r STATUTES)))
               (f (r (r mutation_value))) ; current timestamp
               ; get previous timestamp when price was last updated
               ; NOTE: this assumes that at least one oracle is always present and active at position 0
@@ -210,7 +224,7 @@
             (calculate-cumulative-stability-fee-rate
               PAST_CUMULATIVE_INTEREST_RATE
               ; current interest rate
-              (f (r (r STATUTES)))
+              (f (f (r (r STATUTES))))
               (f (r (r mutation_value)))
               ; get previous timestamp when price was last updated
               ; NOTE: this assumes that at least one oracle is always present and active at position 0
@@ -238,7 +252,7 @@
     ; add announcements if any
     announcements (if (all (= op_code 1) (= mutation_index -1))
       ; filter announcements
-      (filter-ann-conditions mutation_value ())
+      (filter-ann-conditions (f mutation_value) ())
       ; no announcements
       ()
     )
@@ -286,14 +300,17 @@
         (c
           ; confirm to CRT voting coin that mutation was applied
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r mutation)))
+            (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
           )
           ; assert from CRT vote that mutation was indeed voted for and confirmed
           (c
             (list ASSERT_PUZZLE_ANNOUNCEMENT
               (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-                                           CRT_ANN_PREFIX (sha256tree (r mutation))))
-            conditions
+                                           CRT_ANN_PREFIX (sha256tree (c mutation_index mutation_value))))
+            (c
+              (list REMARK "mutation ann" (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash) mutation_index mutation_value)
+              conditions
+            )
           )
         )
         (if (= op_code 2)
@@ -301,13 +318,13 @@
           (assign
             (oracle_index price last_updated ) mutation_value
             ; first item is price oracle info on statues
-            oracle_info (f STATUTES)
+            oracle_info (f (f STATUTES))
             (oracle_mod_hash statutes_struct atom_announcer_puzhash) (f oracle_info)
             ;oracle_launcher_id (x (r oracle_info))
             oracle_launcher_id (get-list-item-at-index oracle_index (r oracle_info) 0)
             ; we need prev price to assert that latest one is fresher
             (prev_price prev_last_updated) (get-list-item-at-index oracle_index PRICES 0)
-            (if (> (- last_updated prev_last_updated) (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0))
+            (if (> (- last_updated prev_last_updated) (f (get-list-item-at-index STATUTE_MIN_PRICE_UPDATE_DELAY STATUTES 0)))
                 ; confirm to oracle price announcement to update the price
                 (c
                   (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (get-oracle-puzzle-hash
@@ -319,10 +336,10 @@
                                                               last_updated)
                                                             price))
                   conditions)
-                (x)
+                (x "price not old enough")
             )
           )
-          (x) ; should never happen since we only allow 1 or 2 as op_code
+          (x "boop") ; should never happen since we only allow 1 or 2 as op_code
         )
       )
       conditions

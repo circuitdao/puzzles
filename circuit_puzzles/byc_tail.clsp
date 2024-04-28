@@ -39,7 +39,10 @@
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert_debug
         (= vault_mod_hash (f approved_mod_hashes))
-        (any (all parent_is_cat (> 0 delta)) (all (not parent_is_cat) (= 0 delta)))
+        (if (any (all parent_is_cat (> 0 delta)) (all (not parent_is_cat) (= 0 delta)))
+          1
+          (x "parent_is_cat and delta must be consistent" parent_is_cat delta)
+        )
         (list
           (list ASSERT_MY_COIN_ID my_coin_id) ; thanks @bramv-chia
           (list
@@ -69,6 +72,6 @@
         )
       )
     )
-    (x)  ; no minting
+    (x "no minting")  ; no minting
   )
 )

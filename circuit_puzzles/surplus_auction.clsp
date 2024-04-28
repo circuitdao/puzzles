@@ -372,55 +372,67 @@
                 p2_surplus_puzzle_hash
                 CAT_LOT_AMOUNT
             )
-            conditions (assert
+            (assert
               ; ensure correct tail reveal is passed
               (= crt_tail_hash CRT_TAIL_HASH)
               ; ttl should've expired
               (> (- current_timestamp timestamp) ttl)
               ; check lot matches
               (= lot_amount CAT_LOT_AMOUNT)
-              (list
+              (c
                 (list ASSERT_MY_AMOUNT my_amount)
-                ; no recreate here, we create melting condition
-                (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
-                (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
-                (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_hash)
-                ; current_time minus one tx block time should already be in the past
-                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
-                ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
-                ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
-                (list CREATE_COIN_ANNOUNCEMENT (concat LAUNCHER_ID lot_amount target_puzzle_hash))
-                (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id LAUNCHER_ID lot_amount target_puzzle_hash))
-                ; ensure lineage so nobody can fake the winning bid
-                (list ASSERT_MY_PARENT_ID
-                  (sha256
-                    (f lineage_proof)
-                    (curry_hashes
-                      CAT_MOD_HASH
-                      (sha256tree CAT_MOD_HASH)
-                      (sha256tree CRT_TAIL_HASH)
-                      (curry_hashes MOD_HASH
-                        (sha256tree MOD_HASH)
-                        (sha256tree CAT_MOD_HASH)
-                        (sha256tree STATUTES_STRUCT)
-                        (sha256tree (f (r (r lineage_proof))))
-                        (sha256tree (f (r (r (r lineage_proof)))))
-                        (sha256tree CAT_TAIL_HASH)
-                        (sha256tree CRT_TAIL_HASH)
-                        (sha256tree (f (r (r (r (r lineage_proof))))))
+                (c
+                  ; no recreate here, we create melting condition
+                  (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
+                  (c
+                    (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
+                    (c
+                      (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_hash)
+                      (c
+                        ; current_time minus one tx block time should already be in the past
+                        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                        (c
+                          ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                          (c
+                            ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
+                            (list CREATE_COIN_ANNOUNCEMENT (concat LAUNCHER_ID lot_amount target_puzzle_hash))
+                            (c
+                              (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id LAUNCHER_ID lot_amount target_puzzle_hash))
+                              (c
+                                ; ensure lineage so nobody can fake the winning bid
+                                (list ASSERT_MY_PARENT_ID
+                                  (calculate-coin-id
+                                    (f lineage_proof)
+                                    (curry_hashes
+                                      CAT_MOD_HASH
+                                      (sha256tree CAT_MOD_HASH)
+                                      (sha256tree CRT_TAIL_HASH)
+                                      (curry_hashes MOD_HASH
+                                        (sha256tree MOD_HASH)
+                                        (sha256tree CAT_MOD_HASH)
+                                        (sha256tree STATUTES_STRUCT)
+                                        (sha256tree (f (r (r lineage_proof))))
+                                        (sha256tree (f (r (r (r lineage_proof)))))
+                                        (sha256tree CAT_TAIL_HASH)
+                                        (sha256tree CRT_TAIL_HASH)
+                                        (sha256tree (f (r (r (r (r lineage_proof))))))
+                                      )
+                                    )
+                                    ; parent bid amount
+                                    (f (r lineage_proof))
+                                  )
+                                )
+                                announcements
+                              )
+                            )
+                          )
+                        )
                       )
                     )
-                    ; parent bid amount
-                    (f (r lineage_proof))
                   )
                 )
               )
-            )
-            (if announcements
-              ; FIXME: use cons, not merge-lists
-              (merge-lists conditions announcements)
-              conditions
             )
           )
           (x "unknown op_code" op_code)
