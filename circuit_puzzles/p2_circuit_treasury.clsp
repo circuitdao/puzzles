@@ -1,8 +1,6 @@
 (mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
-  ; anyone can crete these coins, but only the owner can spend them
-  ; this can wrap any coin and make it a treasury coin
 
   (include curry.clib)
   (include condition_codes.clib)
@@ -265,7 +263,7 @@
                         (c
                           ; assert my new balance so someone can check whole ring balance
                           (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
-                          (c (list REMARK approver_coin_id my_coin_id new_amount)
+                          (c (list REMARK my_coin_id new_amount LAUNCHER_ID)
                             conditions
                           )
                         )

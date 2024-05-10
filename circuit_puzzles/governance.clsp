@@ -104,15 +104,12 @@
                 found_create_coin
                 filtered_conditions
               )
-              (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
-                (filter-conditions
-                  MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
-                  final_bill bill_operation
-                  rest_of_conditions
-                  found_create_coin
-                  (c (f conditions) filtered_conditions)
-                )
-                (x "off")
+              (filter-conditions
+                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                final_bill bill_operation
+                rest_of_conditions
+                found_create_coin
+                (c (f conditions) filtered_conditions)
               )
             )
           )
@@ -280,6 +277,7 @@
           (lambda ((& BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
                     amount
                     grandparent_id
+                    prev_bill_hash
                   )
             (assign
               (
@@ -295,6 +293,7 @@
                 ; if enactment passes, reset this coins bill state
                 ()
                 (list
+                  ; proposed coin must have a parent with empty bill to avoid currying bills
                   (list ASSERT_MY_PARENT_ID
                     (calculate-coin-id
                       grandparent_id
@@ -307,7 +306,7 @@
                           (sha256tree TAIL_MOD_HASH)
                           (sha256tree STATUTES_STRUCT)
                           (sha256tree INNER_PUZZLE_HASH)
-                          (sha256tree ())
+                          prev_bill_hash
                         )
                       )
                       amount
@@ -401,7 +400,7 @@
                 statute_index
                 statute_value
                 threshold_amount_to_propose
-                veto_seconds
+                new_veto_seconds
                 delay_seconds
                 max_delta
               ) (if BILL BILL (list (c 0 0) () () () () () ()))
@@ -424,7 +423,7 @@
                     statute_index
                     statute_value
                     threshold_amount_to_propose
-                    veto_seconds
+                    new_veto_seconds
                     delay_seconds
                     max_delta
                   )

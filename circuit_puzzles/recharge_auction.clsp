@@ -92,29 +92,39 @@
               )
             )
             (c
-              ; check that whole ring is deposited
-              (list ASSERT_COIN_ANNOUNCEMENT
-                (sha256
+              (list REMARK
                   prev_treasury_coin_id
                   TREASURY_COIN_ANN_PREFIX
                   '=' ; as in '$=amount', to avoid collisions
                   new_prev_amount
                   ; link the coins, this previous coin to treasury_coin_id
-                  next_prev_launcher_id
-                )
+                  launcher_id
               )
-              (deposit-to-treasury
-                P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
-                treasury_minimum
-                statutes_puzzle_hash
-                final_treasury_amount
-                (+ amount_deposited new_amount)
-                deposit_amount
-                potential_remainder
-                first_treasury_coin
-                (r treasury_coins)
-                my_coin_id
-                announcements
+              (c
+                ; check that whole ring is deposited
+                (list ASSERT_COIN_ANNOUNCEMENT
+                  (sha256
+                    prev_treasury_coin_id
+                    TREASURY_COIN_ANN_PREFIX
+                    '=' ; as in '$=amount', to avoid collisions
+                    new_prev_amount
+                    ; link the coins, this previous coin to treasury_coin_id
+                    launcher_id
+                  )
+                )
+                (deposit-to-treasury
+                  P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                  treasury_minimum
+                  statutes_puzzle_hash
+                  final_treasury_amount
+                  (+ amount_deposited new_amount)
+                  deposit_amount
+                  potential_remainder
+                  first_treasury_coin
+                  (r treasury_coins)
+                  my_coin_id
+                  announcements
+                )
               )
             )
           )
