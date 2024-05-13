@@ -1,0 +1,57 @@
+(mod
+  (
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (
+      amount
+      (@ new_bill (statute_index new_statute_value new_threshold_amount_to_propose new_veto_seconds new_delay_seconds new_max_delta))
+      (@ current_statute (statute_value threshold_amount_to_propose veto_seconds delay_seconds max_delta))
+    )
+  )
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (defconst ANN_PREFIX 'G')
+  (defconstant ANN_PROPOSED '^')
+  (assert
+    (> amount threshold_amount_to_propose)
+    (> new_threshold_amount_to_propose 0) (> new_veto_seconds 0) (> new_delay_seconds 0)
+    ; if we have a max_delta, make sure new value doesn't exceed it
+    (if (= max_delta 0)
+      (= max_delta 0)
+      ; or new value must be within max_delta of current value
+      (if (> new_statute_value statute_value)
+        (> max_delta (- new_statute_value statute_value))
+        (> max_delta (- statute_value new_statute_value))
+      )
+    )
+    (list
+      (c
+        ; we want coins that are in the proposal process to be able to veto too
+        ; this means we need to update time required to pass proposal when spending
+        ; this is the parameter that holds those values and will be updated on veto
+        (c veto_seconds (+ veto_seconds delay_seconds))
+        new_bill
+      )
+      (c
+        ; avoid ephemeral coins so people can't reuse CRT to issue multiple proposals or veto
+        (list ASSERT_HEIGHT_RELATIVE 1)
+        (c
+          (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_PROPOSED))
+          ; assert that passed statute index correlates to correct statute
+          ; and that passed statute values are correct
+          (list
+            (assert-full-statute
+              statutes_puzzle_hash
+              ; we use special statute to use for custom announcements limits
+              (if (= statute_index -1) STATUTE_CUSTOM_ANNOUNCEMENTS statute_index)
+              current_statute
+            )
+          )
+        )
+      )
+    )
+  )
+
+)

@@ -1,0 +1,68 @@
+(mod (
+    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
+    statutes_puzzle_hash lineage_proof announcements
+    (my_coin_id)
+  )
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (include recharge_auction.clib)
+  (assign
+    (assert
+      ; can't run if LAST_BID is set
+      (= LAST_BID ())
+      (= LAUNCHER_ID 0)
+      (= START_TIME 0)
+      (c
+        (list
+          CREATE_COIN
+          (curry_hashes
+            MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE my_coin_id)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE 0)
+            (sha256 ONE ())
+            (sha256 ONE 0)
+          )
+          0
+        )
+        (c
+          (list REMARK
+            my_coin_id
+            0
+            () ; no bids
+            0
+            0
+          )
+          (c
+            (list ASSERT_MY_AMOUNT 0)
+            (c
+              (list ASSERT_MY_COIN_ID my_coin_id)
+              ; not LAUNCHER set, this is a launch, we need to get approval from statutes
+              (c
+                (list ASSERT_PUZZLE_ANNOUNCEMENT
+                  ; get approval from statutes to launch this auction coin
+                  (sha256
+                    statutes_puzzle_hash
+                    ANN_PREFIX
+                    my_coin_id
+                  )
+                )
+                (c
+                  ; confirm back to statutes that we indeed updated the curried args
+                  (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX my_coin_id))
+                  announcements
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

@@ -7,12 +7,10 @@
   (include *standard-cl-23*)
   (include condition_codes.clib)
   (include cat_truths.clib)
-  (include sha256tree.clib)
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
 
-  (defconstant ONE 1)
 
   (defun assert_ (items)
     (if (r items)

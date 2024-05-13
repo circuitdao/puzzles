@@ -22,7 +22,6 @@
 
   (include condition_codes.clib)
   (include cat_truths.clib)
-  (include sha256tree.clib)
   (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)

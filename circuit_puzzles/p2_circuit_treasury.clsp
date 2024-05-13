@@ -2,11 +2,10 @@
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
 
+  (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
-  (include sha256tree.clib)
   (include statutes_utils.clib)
-  (include *standard-cl-23*)
   (include utils.clib)
 
   (defconstant ANN_PREFIX 0x24) ; -> '$'

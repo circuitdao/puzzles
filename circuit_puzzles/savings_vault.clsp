@@ -13,7 +13,6 @@
      )
 
   (include *standard-cl-23*)
-  (include sha256tree.clib)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)

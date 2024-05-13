@@ -1,11 +1,15 @@
 
 (
 
-  (defconstant b32 32)
+  (defconst ONE 1)
+  (defconst b32 32)
+  (defconstant MOJOS 1000000000000)
+  (defconstant PERCENT_PRECISION 10000)
 
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
   )
+
 
   (defun-inline calculate-coin-id (parent puzzle_hash amount)
     (if (all (size_b32 parent) (size_b32 puzzle_hash) (> amount -1))
@@ -31,5 +35,19 @@
     )
 
   (defmac assert items (assert_ items))
+
+  (defun sha256tree (TREE)
+    (if (l TREE)
+      (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+      (sha256 1 TREE)
+    )
+  )
+
+  (defun merge-lists (list_a list_b)
+    (if list_a
+        (c (f list_a) (merge-lists (r list_a) list_b))
+        list_b
+    )
+  )
 
 )

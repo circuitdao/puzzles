@@ -1,0 +1,77 @@
+(mod
+  (
+    (@ VAULT_STATE
+      (
+       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+      )
+    )
+    (@ args
+      (
+        auction_start_time step_time_interval step_price_decrease_factor
+        initiator_incentive_flat_fee initiator_incentive_relative_fee_percent
+        coll_ratio price_info starting_price_factor initiator_puzzle_hash auction_timeout
+      )
+    )
+  )
+  (include *standard-cl-23*)
+  (include vault.clib)
+  (include statutes_utils.clib)
+  (include condition_codes.clib)
+  (include utils.clib)
+  (assign
+    min_collateral_amount (get-min-collateral-amount
+                            BYC_MINTED_AMOUNT
+                            coll_ratio
+                            (f price_info)
+                          )
+    ; start_price -> last_price * starting_price_factor
+    start_price (/ (* (f price_info) starting_price_factor) PERCENT_PRECISION)
+    prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
+    initiator_incentive_relative (/ (* BYC_MINTED_AMOUNT initiator_incentive_relative_fee_percent) PERCENT_PRECISION)
+    initiator_incentive_balance (+ initiator_incentive_flat_fee initiator_incentive_relative)
+    auction_state (list
+      ; current auction start time, we need this to figure out if auction has timed out
+      ; so we can restart it
+      auction_start_time
+      start_price
+      step_price_decrease_factor
+      step_time_interval
+      initiator_puzzle_hash
+      initiator_incentive_balance
+    )
+    (list
+      ; auction_state -> (start_time start_price last_auction_price)
+      (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT auction_state INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
+      (assert_debug
+        ; is previous auction still running by checking if auction_start_time hasn't timed out
+        (any
+          (> (- auction_start_time prev_auction_start_time) auction_timeout)
+          (not AUCTION_STATE)
+        )
+        ; we should be below min collateral ratio to start an auction
+        (if (> min_collateral_amount DEPOSITED_AMOUNT)
+          1
+          (x min_collateral_amount DEPOSITED_AMOUNT)
+        )
+        ; there should be deposit to auction off
+        (> DEPOSITED_AMOUNT 0)
+        (list
+          (list REMARK 'starting auction->' 'auction_state=' auction_state 'min_collateral_amount=' min_collateral_amount ' deposited_amount=' DEPOSITED_AMOUNT )
+          (list ASSERT_SECONDS_ABSOLUTE (- auction_start_time 60))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ auction_start_time 120))
+          ; assert collateralization ratio
+          (assert-statute statutes_puzzle_hash STATUTE_COLLATERALIZATION_RATIO coll_ratio)
+          ; assert collateral price
+          (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_TIME_INTERVAL step_time_interval)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR step_price_decrease_factor)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_RELATIVE_INCENTIVE_PERCENT initiator_incentive_relative_fee_percent)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_FLAT_INCENTIVE initiator_incentive_flat_fee)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR starting_price_factor)
+        )
+      )
+    )
+  )
+)

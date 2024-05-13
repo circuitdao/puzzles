@@ -1,0 +1,98 @@
+(mod
+  (
+    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
+    statutes_puzzle_hash lineage_proof announcements
+    (ttl current_timestamp my_amount crt_tail_puzzle p2_surplus_auction_coin_parent_id
+             my_coin_id p2_surplus_auction_hash lot_amount limitation_solution)
+  )
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (include surplus_auction.clib)
+  (assign
+    (target_puzzle_hash timestamp) LAST_BID
+    crt_tail_hash (sha256tree crt_tail_puzzle)
+    p2_surplus_puzzle_hash (
+      curry_hashes CAT_MOD_HASH
+        (sha256tree CAT_MOD_HASH)
+        (sha256tree CAT_TAIL_HASH)
+        (curry_hashes p2_surplus_auction_hash
+          (sha256tree p2_surplus_auction_hash)
+          (sha256tree CAT_MOD_HASH)
+          (sha256tree CAT_TAIL_HASH)
+          (sha256tree CRT_TAIL_HASH)
+          (sha256tree MOD_HASH)
+          (sha256tree LAUNCHER_ID)
+        )
+    )
+    p2_surplus_auction_coin_id (calculate-coin-id
+        p2_surplus_auction_coin_parent_id
+        p2_surplus_puzzle_hash
+        CAT_LOT_AMOUNT
+    )
+    (assert
+      ; ensure correct tail reveal is passed
+      (= crt_tail_hash CRT_TAIL_HASH)
+      ; ttl should've expired
+      (> (- current_timestamp timestamp) ttl)
+      ; check lot matches
+      (= lot_amount CAT_LOT_AMOUNT)
+      (c
+        (list ASSERT_MY_AMOUNT my_amount)
+        (c
+          ; no recreate here, we create melting condition
+          (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
+          (c
+            (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
+            (c
+              (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_hash)
+              (c
+                ; current_time minus one tx block time should already be in the past
+                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                (c
+                  ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                  (c
+                    ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
+                    (list CREATE_COIN_ANNOUNCEMENT (concat LAUNCHER_ID lot_amount target_puzzle_hash))
+                    (c
+                      (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id LAUNCHER_ID lot_amount target_puzzle_hash))
+                      (c
+                        ; ensure lineage so nobody can fake the winning bid
+                        (list ASSERT_MY_PARENT_ID
+                          (calculate-coin-id
+                            (f lineage_proof)
+                            (curry_hashes
+                              CAT_MOD_HASH
+                              (sha256tree CAT_MOD_HASH)
+                              (sha256tree CRT_TAIL_HASH)
+                              (curry_hashes MOD_HASH
+                                (sha256tree MOD_HASH)
+                                (sha256tree CAT_MOD_HASH)
+                                (sha256tree STATUTES_STRUCT)
+                                (sha256tree (f (r (r lineage_proof))))
+                                (sha256tree (f (r (r (r lineage_proof)))))
+                                (sha256tree CAT_TAIL_HASH)
+                                (sha256tree CRT_TAIL_HASH)
+                                (sha256tree (f (r (r (r (r lineage_proof))))))
+                              )
+                            )
+                            ; parent bid amount
+                            (f (r lineage_proof))
+                          )
+                        )
+                        announcements
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)
