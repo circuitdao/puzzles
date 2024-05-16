@@ -1,1322 +1,244 @@
-(mod (MOD_HASH CAT_MOD_HASH LAUNCHER_ID STATUTES_STRUCT BYC_TAIL_MOD_HASH ORACLE_PRICE_ID
-      ; TODO: change INNER_PUZZLE to puzzle hash and require owner to provide puzzle reveal
-      ; this way keepers don't have to pay for inner puzzle reveal
-      TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL
+(mod (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH ORACLE_PRICE_ID
+      TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
         ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
+        inner_puzzle
         solution
         ; a keeper operation can be run only if vault is under-collateralized
         ; - start auction
         ; - take collateral
         ; - transform to bad debt
-        keeper_operation)
+        keeper_operation_info
+      )
      )
     (include *standard-cl-23*)
-    (include sha256tree.clib)
     (include curry.clib)
     (include condition_codes.clib)
     (include statutes_utils.clib)
     (include utils.clib)
 
-    (defconstant ANN_PREFIX 0x56) ; chr(86) -> "V"
-    (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
-    (defconstant TREASURY_ANN_PREFIX 0x24) ; -> "$"
-    (defconstant MOJOS 1000000000000)
-    (defconstant PERCENT_PRECISION 10000)
+    (defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
 
-   (defun assert_ (items)
-    (if (r items)
-      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
-      (f items)
-      )
-    )
-
-  (defmac assert items (assert_ items))
-
-    (defun filter (pred (@ lst (first . rest)))
-      (if lst
-        (assign item (a pred (list first))
-          (if item
-            (c item (filter pred rest))
-            (filter pred rest)
-          )
-        )
-        ()
-      )
-    )
-
-    (defun merge-lists (list_a list_b)
-      (if list_a
-          (c (f list_a) (merge-lists (r list_a) list_b))
-          list_b
-      )
-    )
-
-    (defun print (to-show result) (if (all "$print$" to-show result) result result))
-    (defun get-vault-operation-lambda (vault_operations vault_operation)
-      (if vault_operations
-        (if (= (f (f vault_operations)) vault_operation)
-          (f (r (f vault_operations)))
-          (get-vault-operation-lambda (r vault_operations) vault_operation)
-        )
-        ()
-      )
-    )
-
-
-  (defun-inline available-to-mint (xch_deposited byc_minted coll_ratio xch_price)
-    (assign
-      max_to_mint (/ (/ (* xch_deposited xch_price 1000) coll_ratio) MOJOS)
-      (assert (> (- max_to_mint byc_minted) -1)
-        ; reduce max to mint by what we already have
-        (- max_to_mint byc_minted)
+  (defun-inline is-valid-ann-cond (cond_body)
+    (not
+      (=
+        (substr (f cond_body) 0 1)
+        ANN_PREFIX
       )
     )
   )
 
-  (defun-inline percent-value (value percent)
-    (assign percent_value (* (/ value 100) percent)
-      (if percent_value
-        percent_value
-        ; value is smaller than 100, just return percent of what we want
-        (if (> value 0)
-          percent
-          ; return zero if we're working with zero amounts
-          value
-        )
-      )
-    )
-  )
-  ; 100000 / 2400 * 150 / 1000
-  (defun-inline get-min-collateral-amount (byc_minted coll_ratio xch_price)
-        ; returns min collateral value for threshold coll ratio, multiplying with -1 to ceil the division
-        ;(/ (* (* (/ (* byc_minted 100) xch_price) coll_ratio) MOJOS) 100000)
-        (/ (* -1 (* (/ (* -1 byc_minted 100) xch_price) coll_ratio) MOJOS) 100000)
-  )
-
-  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark final_conditions)
-  ; restricts conditions to only allow vault operations and remarks
+  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)
   ; RETURNS (conditions vault_operation_condition)
     (if conditions
       (if (= condition_code REMARK)
         (if found_remark
-          (x "duplicate remark")
+          (x)
           (if (= 'v' (f condition_body))
-            (restrict-conditions rest_of_conditions (r condition_body) final_conditions)
-            (x "invalid remark body")
+            (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
+            (x)
           )
         )
-        (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
-      )
-      (if found_remark
-        (list final_conditions found_remark)
-        ;(x "invalid conditions")
-        (list final_conditions ())
-      )
-    )
-  )
-
-  (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
-    (- discounted_principal
-      (* 1 (/
-        (* (* -1 negative_byc_principal_to_melt) PRECISION)
-        cumulative_stability_fee_rate
-      ))
-    )
-  )
-
-  (defun calculate-cumulative-stability-fee-rate
-      (past_cumulative_stability_fee
-       current_stability_fee
-       current_timestamp
-       previous_timestamp
-      )
-    (if (> previous_timestamp current_timestamp)
-      past_cumulative_stability_fee
-      (calculate-cumulative-stability-fee-rate
-        (/ (* past_cumulative_stability_fee current_stability_fee) PRECISION)
-        current_stability_fee
-        current_timestamp
-        ; per minute calculation
-        (+ previous_timestamp 60)
-      )
-    )
-  )
-
-  (defun calculate-fees (byc_amount cumulative_stability_fee_rate
-                         discounted_principal
-                         principal liquidation_penalty_percent)
-    (assign
-      undiscounted_principal (* 1 (/ (* 1 discounted_principal cumulative_stability_fee_rate) PRECISION))
-      calculated_outstanding_fees (if (> undiscounted_principal principal) (- undiscounted_principal principal) 0)
-      liquidation_penalty (/ (* (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION)
-      total_debt (+ principal liquidation_penalty calculated_outstanding_fees)
-      total_repayment_percentage (/ (* byc_amount PRECISION) total_debt)
-      (if (= total_repayment_percentage PRECISION)
-        (c (+ calculated_outstanding_fees liquidation_penalty) liquidation_penalty)
-       ; (x "rpp=" total_repayment_percentage "amount=" byc_amount "td=" total_debt "cof=" calculated_outstanding_fees "lp=" liquidation_penalty "principal=" principal "up=" undiscounted_principal
-        ;  "calcs==>"
-        (c
-          (* -1
-            (/
-              (* -1 total_repayment_percentage (+ calculated_outstanding_fees liquidation_penalty))
-              PRECISION
+        (if via_solution
+          (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
+          ; keeper mode, only coin announcements are allowed
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+            (if (is-valid-ann-cond condition_body)
+              (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
+              (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
             )
+            ; ignore other conditions if in keeper mode
+            (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
           )
-          (/ (* liquidation_penalty total_repayment_percentage) PRECISION)
         )
       )
+      (list final_conditions found_remark)
     )
   )
 
-  (defun-inline validate-keeper-operation (keeper_operation)
-    (assign
-      ; keeper_operation -> (operation_code vault_operation_code . vault_operation_args)
-      condition_op_code (f keeper_operation)
-      vault_operation_code (f (r (r (r keeper_operation))))
-      (assert (= condition_op_code REMARK)
-              (any
-                (= vault_operation_code START_AUCTION)
-                (= vault_operation_code BID)
-                (= vault_operation_code TRANSFER_SF_TO_TREASURY)
-                (= vault_operation_code RECOVER_BAD_DEBT)
-              )
-        ; all good, return
-        keeper_operation
+  ; filter condition function
+  (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
+    ; filter out any cheeky announcements, and skip remarks/create coin
+    (if conditions
+      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+        (if (is-valid-ann-cond condition_body)
+          (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+          (filter-conditions rest_of_conditions filtered_conditions)
+        )
+        (if (any (= condition_code REMARK) (= condition_code CREATE_COIN))
+          (filter-conditions rest_of_conditions filtered_conditions)
+          (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+        )
       )
+      filtered_conditions
     )
   )
+  (defconst OPERATIONS (list ))
 
-  (defun-inline calculate-stability-fee-puzzle (CAT_MOD_HASH BYC_TAIL_HASH OFFER_MOD_HASH)
-    (curry_hashes CAT_MOD_HASH
-                  (sha256tree CAT_MOD_HASH)
-                  (sha256tree BYC_TAIL_HASH)
-                  OFFER_MOD_HASH
-    )
+  (defun-inline operation-program (operation)
+    (f (r operation))
   )
-
-  (defun-inline calculate-byc-coin-id (CAT_MOD_HASH BYC_TAIL_HASH (parent_id amount inner_puzzle_hash))
-    (calculate-coin-id
-      parent_id
-      (curry_hashes CAT_MOD_HASH
-                    (sha256tree CAT_MOD_HASH)
-                    (sha256tree BYC_TAIL_HASH)
-                    ; inner puzzle for cat coin
-                    inner_puzzle_hash
-      )
-      amount
-    )
+  (defun-inline operation-treearg (operation)
+    (f (r (r operation)))
   )
-
-  (defconstant PRECISION 10000000000)
-
-  (defun rpow_percent (base exponent)
-    ; Raise a number to a power with fixed-point arithmetic, using recursion.
-    (if (= exponent 0)
-      PERCENT_PRECISION
-      (if (all (l (divmod exponent 2)) (= (r (divmod exponent 2)) 1))
-        (/ (* base (rpow_percent base (- exponent 1))) PERCENT_PRECISION)
-        (rpow_percent (/ (* base base) PERCENT_PRECISION) (/ exponent 2))
-      )
-    )
-  )
-  (defconstant ONE 1)
-  ; OWNER OPERATIONS
-  (defconstant LAUNCH 0)
-  (defconstant MINT_BYC 1)
-  (defconstant MELT_BYC 2)
-  (defconstant WITHDRAW 3)
-  (defconstant DEPOSIT 4)
-  (defconstant TRANSFER 5)
-
-  ; KEEPER OPERATIONS
-  (defconstant START_AUCTION 10)
-  (defconstant BID 11)
-  (defconstant RECOVER_BAD_DEBT 12)
-  (defconstant TRANSFER_SF_TO_TREASURY 13)
-
 
   (assign
     ; generate tail hash from curried params to avoid any malicious currying
     BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
       (sha256tree STATUTES_STRUCT)
-      (sha256tree CAT_MOD_HASH)
-      (sha256tree ORACLE_PRICE_ID)
+      (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE ORACLE_PRICE_ID)
     )
-    raw_conditions (if keeper_operation
-      ; we return only conditions that are allowed for keeper operations
-      (list (validate-keeper-operation keeper_operation))
-      ; owner can provide other conditions too so normal inner puzzle operation
-      (assert (not AUCTION_STATE)
-        ; but only if AUCTION_STATE is empty, ie liquidation hasn't started yet
-        (a INNER_PUZZLE solution)
+
+    raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
+    (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
+    valid_solution
+      (if (all solution (not keeper_operation_info))
+        ; owner mode if AUCTION_STATE is empty, ie liquidation hasn't started yet
+        (if (all (not AUCTION_STATE) (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH))
+          1
+          (x)
+        )
+        ; keeper mode
+        (assert keeper_operation_info
+          1
+        )
       )
-    )
-    (conditions vault_operation_condition) (restrict-conditions raw_conditions 0 0 ())
-    (statutes_inner_puzzle_hash vault_operation . args) (if vault_operation_condition vault_operation_condition (list () ()))
+    (conditions vault_operation_condition)
+      (if (all valid_solution OPERATIONS)
+        (assert
+          (=
+            (sha256tree (operation-program vault_operation_condition_pre))
+            (a (operation-treearg vault_operation_condition_pre) OPERATIONS)
+          )
+          (list conditions_pre vault_operation_condition_pre)
+        )
+        (list conditions_pre vault_operation_condition_pre)
+      )
+
+    (statutes_inner_puzzle_hash vault_operation _ . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-
-    vault_operations (list
-    ; every operation returns a list of 2 lists:
-    ;  1. updated state
-    ;    - final_xch_deposited_amount
-    ;    - final_byc_deposited_amount
-    ;    - final_bids
-    ;    - final_inner_puzzle
-    ;  2. additional conditions that are returned with solution conditions
-
-      (list TRANSFER
-        (lambda ((& TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE DISCOUNTED_PRINCIPAL)
-                   ; solution for transfer
-                   inner_puzzle)
-          (list
-            (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE inner_puzzle DISCOUNTED_PRINCIPAL)
-            ; nothing else to assert here, just create a coin with new amount
-            (list
-            )
-          )
-        )
-      )
-      (list DEPOSIT
-        (lambda ((& DEPOSITED_AMOUNT TRANSFERRED_FEES BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-                  ; solution for deposit
-                  deposit_amount)
-          ; deposit X collateral into this coin, not much to check apart from creating a coin with new amount
-          (list
-            (assert
-              deposit_amount (> deposit_amount 0)
-              (list TRANSFERRED_FEES (+ deposit_amount DEPOSITED_AMOUNT) BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL))
-              ; nothing else to assert here, just create a coin with new amount
-              (list
-              )
-           )
-         )
-      )
-      (list WITHDRAW
-        (lambda ((& DEPOSITED_AMOUNT TRANSFERRED_FEES BYC_MINTED_AMOUNT ORACLE_PRICE_ID DISCOUNTED_PRINCIPAL statutes_puzzle_hash AUCTION_STATE INNER_PUZZLE)
-                    withdraw_amount price_info coll_ratio)
-          ; check that we have enough to withdraw and that we're not going under collateralization ratio
-          (assign
-            new_deposited_amount (- DEPOSITED_AMOUNT withdraw_amount)
-            min_collateral_amount (
-              get-min-collateral-amount
-                BYC_MINTED_AMOUNT
-                coll_ratio
-                (f price_info)
-            )
-            (assert
-              (> new_deposited_amount -1)
-              (> DEPOSITED_AMOUNT new_deposited_amount)
-              (> new_deposited_amount (- min_collateral_amount 1))
-              (list
-                (list TRANSFERRED_FEES new_deposited_amount BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-                (list
-                  ; assert collateralization ratio
-                  (assert-statute statutes_puzzle_hash STATUTE_COLLATERALIZATION_RATIO coll_ratio)
-                  ; assert collateral price
-                  (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
-
-                )
-              )
-            )
-          )
-        )
-      )
-      (list MINT_BYC
-         (lambda ((& DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
-                     ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
-               ; vault operation args
-               byc_amount_to_mint my_coin_id minimum_debt_amount collateralization_ratio price_info
-               byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
-               statutes_cumulative_stability_fee_rate
-               current_stability_fee_rate current_timestamp
-               )
-            ; function body
-            (assign
-              ; calculate the latest cumulative stability fee rate
-              cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
-                statutes_cumulative_stability_fee_rate
-                current_stability_fee_rate
-                current_timestamp
-                (f (r price_info))
-              )
-              (xch_price last_updated) price_info
-              principal (+ BYC_MINTED_AMOUNT byc_amount_to_mint)
-              ; divide negative numbers to ceil
-              discounted_mint_amount (* -1 (/ (* -1 byc_amount_to_mint PRECISION) cumulative_stability_fee_rate))
-              discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_mint_amount)
-              ; calculate the coin id for the new BYC coin by enforcing the tail hash
-              byc_issuing_coin_id (calculate-byc-coin-id
-                CAT_MOD_HASH
-                BYC_TAIL_HASH
-                byc_issuing_coin_info
-              )
-              ; check that total debt is larger than minted amount, not minimum mint amount
-              (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_debt_amount)
-                      (> byc_amount_to_mint 0)
-                      ; check if requested amount of BYC to mint takes us over the collateralization ratio
-                      (> (available-to-mint DEPOSITED_AMOUNT BYC_MINTED_AMOUNT collateralization_ratio xch_price) byc_amount_to_mint)
-                (list
-                  ; updated state
-                  (list TRANSFERRED_FEES DEPOSITED_AMOUNT principal AUCTION_STATE INNER_PUZZLE discounted_principal)
-                  ; additional conditions
-                  (list
-                    (list REMARK "VAULT==>" discounted_principal ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT) ORACLE_PRICE_ID)
-                    ; signal to tail that it can issue BYC with certain amount
-                    (list CREATE_COIN_ANNOUNCEMENT
-                      (concat
-                        ANN_PREFIX
-                        "i"
-                        byc_issuing_coin_id
-                        byc_amount_to_mint
-                        (sha256tree STATUTES_STRUCT)
-                        ORACLE_PRICE_ID
-                      )
-                    )
-                    ; make sure tail has actually issued it too
-                    (list ASSERT_COIN_ANNOUNCEMENT
-                      (sha256
-                        byc_issuing_coin_id
-                        BYC_ANN_PREFIX
-                        'i'
-                        my_coin_id
-                        byc_amount_to_mint
-                        (sha256tree STATUTES_STRUCT)
-                        ORACLE_PRICE_ID
-                      )
-                    )
-                    (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
-                    (assert-statute
-                      statutes_puzzle_hash
-                      STATUTE_COLLATERALIZATION_RATIO
-                      collateralization_ratio)
-                    (assert-statute
-                      statutes_puzzle_hash
-                      STATUTE_MINIMUM_VAULT_DEBT_AMOUNT
-                      minimum_debt_amount)
-                    (assert-price
-                      statutes_puzzle_hash
-                      ORACLE_PRICE_ID
-                      price_info)
-                    (list ASSERT_MY_COIN_ID my_coin_id)
-                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-                    (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
-                  )
-                )
-              )
-            )
-         )
-      )
-      ; #### MELT
-      (list MELT_BYC
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH ORACLE_PRICE_ID TRANSFERRED_FEES
-                    statutes_puzzle_hash DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-                 ; solution
-                 byc_to_repay my_coin_id statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_debt_amount
-                 byc_treasury_coin_info p2_treasury_mod_hash price_info current_stability_fee_rate current_timestamp)
-          (assign
-            cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
-              statutes_cumulative_stability_fee_rate
-              current_stability_fee_rate
-              current_timestamp
-              (f (r price_info))
-            )
-            (calculated_stability_fee . liquidity_penalty) (calculate-fees
-              byc_to_repay
-              cumulative_stability_fee_rate
-              DISCOUNTED_PRINCIPAL
-              BYC_MINTED_AMOUNT
-              0 ; no liquidation penalty for melting
-            )
-            fees_to_pay (if (> TRANSFERRED_FEES calculated_stability_fee)
-              0
-              (- calculated_stability_fee TRANSFERRED_FEES)
-            )
-            fees_to_not_pay (- calculated_stability_fee fees_to_pay)
-            ; burn the byc that's left after fees are paid
-            negative_byc_principal_to_melt (* -1 (- byc_to_repay calculated_stability_fee))
-            new_byc_minted_amount (+
-              BYC_MINTED_AMOUNT
-              negative_byc_principal_to_melt
-            )
-            undiscounted_principal (* 1 (/ (* 1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
-            discounted_principal (if (= byc_to_repay undiscounted_principal)
-              0
-              (discount-principal-for-melt
-                DISCOUNTED_PRINCIPAL
-                (* -1 byc_to_repay)
-                cumulative_stability_fee_rate
-              )
-            )
-            (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
-            treasury_coin_id (if byc_treasury_coin_info
-              (calculate-byc-coin-id
-                CAT_MOD_HASH
-                BYC_TAIL_HASH
-                (list
-                  treasury_parent
-                  treasury_amount
-                  (curry_hashes
-                    p2_treasury_mod_hash
-                    (sha256tree p2_treasury_mod_hash)
-                    (sha256tree CAT_MOD_HASH)
-                    (sha256tree BYC_TAIL_HASH)
-                    (sha256tree STATUTES_STRUCT)
-                    (sha256tree treasury_prev_launcher_id)
-                    (sha256tree treasury_launcher_id)
-                  )
-                )
-              )
-              ()
-            )
-            new_treasury_amount (+ fees_to_pay treasury_amount)
-            byc_coin_id_to_melt (calculate-byc-coin-id
-              CAT_MOD_HASH
-              BYC_TAIL_HASH
-              byc_melting_coin_info
-            )
-            (assert
-              (> byc_to_repay 0)
-              ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
-              ; vault liquidation costs at healthy levels
-              (if (any (= new_byc_minted_amount 0) (> new_byc_minted_amount minimum_debt_amount))
-                1
-                (x BYC_MINTED_AMOUNT TRANSFERRED_FEES new_byc_minted_amount minimum_debt_amount fees_to_pay negative_byc_principal_to_melt
-                   (+ fees_to_pay negative_byc_principal_to_melt)
-                   byc_to_repay calculated_stability_fee)
-              )
-              ; current time must be at least after last oracle update
-              (> current_timestamp (f (r price_info)))
-              (if (any (> new_byc_minted_amount 0)  (all (= new_byc_minted_amount 0) (= discounted_principal 0)))
-                1
-                (x  "byc minted issue" byc_to_repay (- byc_to_repay fees_to_pay) undiscounted_principal new_byc_minted_amount discounted_principal)
-              )
-              (list
-                (list
-                  (if (> TRANSFERRED_FEES calculated_stability_fee)
-                    (- TRANSFERRED_FEES calculated_stability_fee)
-                    0
-                  )
-                  DEPOSITED_AMOUNT new_byc_minted_amount AUCTION_STATE INNER_PUZZLE discounted_principal)
-                (assign
-                  conditions (c
-                    (list REMARK "melting ann->" fees_to_pay fees_to_not_pay TRANSFERRED_FEES byc_to_repay negative_byc_principal_to_melt cumulative_stability_fee_rate calculated_stability_fee
-                                               new_treasury_amount new_byc_minted_amount undiscounted_principal DISCOUNTED_PRINCIPAL discounted_principal)
-                    (c
-                      (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
-                      (c
-                        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                        (c (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_VAULT_DEBT_AMOUNT minimum_debt_amount)
-                          (c
-                            (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
-                            (c
-                              (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-                              (c
-                                (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-                                (c
-                                  (list ASSERT_MY_COIN_ID my_coin_id)
-                                  (c
-                                    (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
-                                    (if (> negative_byc_principal_to_melt -1)
-                                      (list )
-                                      (list
-                                        ; signal to tail that it can melt the BYC
-                                        (list CREATE_COIN_ANNOUNCEMENT
-                                          (concat
-                                            ANN_PREFIX
-                                            'x'
-                                            byc_coin_id_to_melt
-                                            (- negative_byc_principal_to_melt fees_to_not_pay)
-                                            (sha256tree STATUTES_STRUCT)
-                                            ORACLE_PRICE_ID
-                                          )
-                                        )
-                                        ; get a melt confirmation from BYC tail
-                                        (list ASSERT_COIN_ANNOUNCEMENT
-                                          (sha256
-                                            byc_coin_id_to_melt
-                                            BYC_ANN_PREFIX
-                                            'x'
-                                            my_coin_id
-                                            (- negative_byc_principal_to_melt fees_to_not_pay)
-                                            (sha256tree STATUTES_STRUCT)
-                                            ORACLE_PRICE_ID
-                                          )
-                                        )
-                                      )
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                  (if (> fees_to_pay 0)
-                    ; get an announcement from offer module that BYC was paid into treasury
-                    ; approve treasury coin to receive a deposit
-                    (c
-                      (list CREATE_COIN_ANNOUNCEMENT
-                        (concat ANN_PREFIX treasury_coin_id fees_to_pay new_treasury_amount)
-                      )
-                      (c
-                        (list ASSERT_COIN_ANNOUNCEMENT
-                          (sha256
-                            treasury_coin_id
-                            TREASURY_ANN_PREFIX
-                            my_coin_id
-                            fees_to_pay
-                            new_treasury_amount
-                          )
-                        )
-                        conditions
-                      )
-                    )
-                    ; else no approvals needed
-                    conditions
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-
-      (list START_AUCTION
-        (lambda ((& DEPOSITED_AMOUNT BYC_MINTED_AMOUNT INNER_PUZZLE AUCTION_STATE TRANSFERRED_FEES
-                    DISCOUNTED_PRINCIPAL ORACLE_PRICE_ID statutes_puzzle_hash)
-                   ; solution to start liquidation auction
-                   auction_start_time step_time_interval step_price_decrease_factor
-                   initiator_incentive_flat_fee initiator_incentive_relative_fee_percent
-                   coll_ratio price_info starting_price_factor initiator_puzzle_hash auction_timeout
-                )
-          (assign
-            min_collateral_amount (get-min-collateral-amount
-                                    BYC_MINTED_AMOUNT
-                                    coll_ratio
-                                    (f price_info)
-                                  )
-            ; start_price -> last_price * starting_price_factor
-            start_price (/ (* (f price_info) starting_price_factor) PERCENT_PRECISION)
-            prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
-            initiator_incentive_relative (/ (* BYC_MINTED_AMOUNT initiator_incentive_relative_fee_percent) PERCENT_PRECISION)
-            initiator_incentive_balance (+ initiator_incentive_flat_fee initiator_incentive_relative)
-            auction_state (list
-              ; current auction start time, we need this to figure out if auction has timed out
-              ; so we can restart it
-              auction_start_time
-              start_price
-              step_price_decrease_factor
-              step_time_interval
-              initiator_puzzle_hash
-              initiator_incentive_balance
-            )
-            (list
-              ; auction_state -> (start_time start_price last_auction_price)
-              (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT auction_state INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-              (assert_debug
-                ; is previous auction still running by checking if auction_start_time hasn't timed out
-                (any
-                  (> (- auction_start_time prev_auction_start_time) auction_timeout)
-                  (not AUCTION_STATE)
-                )
-                ; we should be below min collateral ratio to start an auction
-                (if (> min_collateral_amount DEPOSITED_AMOUNT)
-                  1
-                  (x min_collateral_amount DEPOSITED_AMOUNT)
-                )
-                (list
-                  (list REMARK 'starting auction->' 'auction_state=' auction_state 'min_collateral_amount=' min_collateral_amount ' deposited_amount=' DEPOSITED_AMOUNT )
-                  (list ASSERT_SECONDS_ABSOLUTE (- auction_start_time 60))
-                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ auction_start_time 120))
-                  ; assert collateralization ratio
-                  (assert-statute statutes_puzzle_hash STATUTE_COLLATERALIZATION_RATIO coll_ratio)
-                  ; assert collateral price
-                  (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
-                  (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_TIME_INTERVAL step_time_interval)
-                  (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR step_price_decrease_factor)
-                  (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
-                  (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_RELATIVE_INCENTIVE_PERCENT initiator_incentive_relative_fee_percent)
-                  (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_FLAT_INCENTIVE initiator_incentive_flat_fee)
-                  (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR starting_price_factor)
-                )
-              )
-            )
-          )
-        )
-      )
-
-      (list BID ; == 11
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash ORACLE_PRICE_ID
-               DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL TRANSFERRED_FEES)
-            ; solution to bid
-            current_timestamp byc_to_bid byc_melting_coin_info byc_treasury_coin_info
-            liquidation_penalty_percent statutes_cumulative_stability_fee_rate target_puzzle_hash
-            step_price_decrease_factor my_coin_id auction_timeout offer_mod_hash p2_treasury_mod_hash
-            price_info current_stability_fee_rate
-          )
-          (assign
-            cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
-              statutes_cumulative_stability_fee_rate
-              current_stability_fee_rate
-              current_timestamp
-              (f (r price_info))
-            )
-            (fees . liquidation_penalty) (assert (> liquidation_penalty_percent 0) (calculate-fees
-              byc_to_bid
-              cumulative_stability_fee_rate
-              DISCOUNTED_PRINCIPAL
-              BYC_MINTED_AMOUNT
-              liquidation_penalty_percent
-            ))
-            ; parse auction state as we'll need to verify it's still running and hasn't timed out
-            (auction_start_time
-             start_price
-             step_price_decrease_factor
-             step_time_interval
-             initiator_puzzle_hash
-             initiator_incentive_balance) (assert AUCTION_STATE AUCTION_STATE)
-
-            fees_to_pay (if (> TRANSFERRED_FEES fees)
-              0
-              (- fees TRANSFERRED_FEES)
-            )
-            fees_to_not_pay (- fees fees_to_pay)
-            initiator_incentive (
-              if (> initiator_incentive_balance 0)
-                (if (> initiator_incentive_balance fees_to_pay)
-                  fees_to_pay ; all fees go to keeper that initiated the auction
-                  initiator_incentive_balance ; fees are more than incentive, so we pay the incentive and the rest goes to treasury
-                )
-                0 ; no incentive
-            )
-            fees_for_treasury (- fees_to_pay initiator_incentive)
-            byc_principal_to_melt (- byc_to_bid fees)
-            negative_byc_principal_to_melt (* -1 byc_principal_to_melt)
-            undiscounted_principal (* 1 (/ (* 1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
-            discounted_principal (if (= (- byc_to_bid liquidation_penalty) undiscounted_principal)
-              0
-              (discount-principal-for-melt
-                DISCOUNTED_PRINCIPAL
-                (* -1 (- byc_to_bid liquidation_penalty))
-                cumulative_stability_fee_rate
-              )
-            )
-            current_price_factor (
-              assert_debug (> current_timestamp auction_start_time)
-                (rpow_percent
-                  step_price_decrease_factor
-                  (/ (- current_timestamp auction_start_time) step_time_interval)
-                )
-            )
-            current_price (/ (* current_price_factor start_price) PERCENT_PRECISION)
-            ; use all byc provided from keeper to get a piece of collateral
-            bid_xch_collateral_amount_pre (/ (* (/ (* byc_to_bid PRECISION) (* current_price 10)) MOJOS) PRECISION)
-            bid_xch_collateral_amount (
-              if (> bid_xch_collateral_amount_pre DEPOSITED_AMOUNT)
-                DEPOSITED_AMOUNT
-                ;(x bid_xch_collateral_amount_pre DEPOSITED_AMOUNT)
-                bid_xch_collateral_amount_pre
-            )
-            leftover_deposit (- DEPOSITED_AMOUNT bid_xch_collateral_amount)
-            leftover_byc_minted_amount (
-              if (> byc_principal_to_melt BYC_MINTED_AMOUNT)
-                0
-                (- BYC_MINTED_AMOUNT byc_principal_to_melt)
-            )
-            byc_coin_id_to_melt (calculate-byc-coin-id
-              CAT_MOD_HASH
-              BYC_TAIL_HASH
-              byc_melting_coin_info
-            )
-            (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) byc_treasury_coin_info
-            treasury_coin_id (calculate-byc-coin-id
-              CAT_MOD_HASH
-              BYC_TAIL_HASH
-              (list
-                treasury_parent
-                treasury_amount
-                (curry_hashes
-                  p2_treasury_mod_hash
-                  (sha256tree p2_treasury_mod_hash)
-                  (sha256tree CAT_MOD_HASH)
-                  (sha256tree BYC_TAIL_HASH)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256tree treasury_prev_launcher_id)
-                  (sha256tree treasury_launcher_id)
-                )
-              )
-            )
-            new_treasury_amount (+ fees_for_treasury treasury_amount)
-            auction_state (
-              ; update auction state based on the bid, which mostly means to set it to null if all debt was paid off
-              ; which will push the vault back into usable state for owner of inner puzzle
-              if (= leftover_byc_minted_amount 0)
-                ()
-                (list
-                  auction_start_time
-                  start_price
-                  step_price_decrease_factor
-                  step_time_interval
-                  initiator_puzzle_hash
-                  (- initiator_incentive_balance initiator_incentive)
-                )
-            )
-            (assert_debug
-              ; needs to be more than zero
-              (> byc_principal_to_melt 0)
-              (> BYC_MINTED_AMOUNT (- byc_principal_to_melt 1))
-              ; check that we haven't passed liquidation timeout
-              ; is previous auction still running by checking if auction_start_time hasn't timed out
-              (> auction_timeout (- current_timestamp auction_start_time))
-              ; sanity check for time
-              (> current_timestamp (- auction_start_time 1))
-              (list
-                ; auction_state -> (start_time start_price last_auction_price)
-                (list
-                  (if (> TRANSFERRED_FEES fees)
-                    (- TRANSFERRED_FEES fees)
-                    0
-                  )
-                  leftover_deposit leftover_byc_minted_amount auction_state INNER_PUZZLE discounted_principal
-                )
-                (assign
-                  conditions (list
-                    ;(list REMARK "melting ann->" ANN_PREFIX "x" byc_coin_id_to_melt negative_byc_principal_to_melt (sha256tree STATUTES_STRUCT))
-                    ;(list REMARK "new state ->" leftover_deposit leftover_byc_minted_amount auction_state discounted_principal_no_fee)
-                    ; verify current time is actually current
-                    ; check that we current time was within the last 60 seconds
-                    (list REMARK 'updated state->' 'DISCOUNTED PRINCIPAL=' DISCOUNTED_PRINCIPAL 'MINTED AMOUNT=' BYC_MINTED_AMOUNT
-                                  'fees=' fees
-                                  ' fees_for_treasury=' fees_for_treasury " byc principal=" byc_principal_to_melt " fees_to_not_pay=" fees_to_not_pay
-                                  " bid xch=" bid_xch_collateral_amount " liquidation penalty=" liquidation_penalty
-                                  " leftover deposit=" leftover_deposit " leftover byc=" leftover_byc_minted_amount
-                                  " auction=" auction_state " discounted principal=" discounted_principal " current price=" current_price)
-                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-                    ; validate coin id
-                    (list ASSERT_MY_COIN_ID my_coin_id)
-                    ; signal to tail that it can melt the BYC
-                    (list CREATE_COIN_ANNOUNCEMENT
-                      (concat
-                        ANN_PREFIX
-                        'x'
-                        byc_coin_id_to_melt
-                        (- negative_byc_principal_to_melt fees_to_not_pay)
-                        (sha256tree STATUTES_STRUCT)
-                        ORACLE_PRICE_ID
-                      )
-                    )
-                    ; get a melt confirmation from BYC tail
-                    (list ASSERT_COIN_ANNOUNCEMENT
-                      (sha256
-                        byc_coin_id_to_melt
-                        BYC_ANN_PREFIX
-                        'x'
-                        my_coin_id
-                        (- negative_byc_principal_to_melt fees_to_not_pay)
-                        (sha256tree STATUTES_STRUCT)
-                        ORACLE_PRICE_ID
-                      )
-                    )
-                    ; assert that keeper absorbed their collateral + left over mojos from melting
-                    (list ASSERT_PUZZLE_ANNOUNCEMENT
-                      (sha256
-                        offer_mod_hash
-                        (sha256tree
-                          (c
-                            my_coin_id
-                            (list
-                              (list
-                                target_puzzle_hash
-                                (+ bid_xch_collateral_amount
-                                  (+ byc_principal_to_melt
-                                    ; we already minted these, so return them to keeper
-                                    fees_to_not_pay
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                    ; announce that we transferred collateral to target puzzle hash
-                    ;(list REMARK ANN_PREFIX "$" target_puzzle_hash bid_xch_collateral_amount)
-                    (if (> initiator_incentive 0)
-                      ; get an announcement from offer module that BYC was paid to initiator
-                      (list ASSERT_PUZZLE_ANNOUNCEMENT
-                        (sha256
-                          (calculate-stability-fee-puzzle
-                            CAT_MOD_HASH
-                            BYC_TAIL_HASH
-                            offer_mod_hash
-                          )
-                          ; nonce = my_coin_id, payments = (initiator puzzle hash, initiator incentive fee)
-                          (sha256tree
-                            (c my_coin_id
-                            (list
-                              (list initiator_puzzle_hash initiator_incentive))))
-                        )
-                      )
-                      ; else NOOP as we don't need to pay the negative fee
-                      (list REMARK)
-                    )
-                    (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_TIME_INTERVAL step_time_interval)
-                    (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR step_price_decrease_factor)
-                    (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
-                    ; assert cumulative stability fee rate
-                    (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
-                    ; assert liquidation penalty percent
-                    (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_PERCENT liquidation_penalty_percent)
-                    (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                    (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-                    (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
-                    (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
-                  )
-                  (if (> fees_for_treasury 0)
-                    ; get an announcement that BYC was paid into treasury
-                    (c
-                      (list CREATE_COIN_ANNOUNCEMENT
-                        (concat ANN_PREFIX treasury_coin_id fees_for_treasury new_treasury_amount)
-                      )
-                      (c
-                        (list ASSERT_COIN_ANNOUNCEMENT
-                          (sha256
-                            treasury_coin_id
-                            TREASURY_ANN_PREFIX
-                            my_coin_id
-                            fees_for_treasury
-                            new_treasury_amount
-                          )
-                        )
-                        conditions
-                      )
-                    )
-                    ; maybe we set fees to zero for some reason, so don't charge anything
-                    conditions
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-
-      (list TRANSFER_SF_TO_TREASURY ; == 13
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash ORACLE_PRICE_ID
-               DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL TRANSFERRED_FEES)
-            ; solution to bid
-            byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
-            statutes_cumulative_stability_fee_rate
-            my_coin_id
-            treasury_coin_info
-            p2_treasury_mod_hash
-            minimum_sf_transfer_amount
-            current_timestamp
-            current_stability_fee_rate
-            price_info
-          )
-          (assign
-            byc_principal_to_melt BYC_MINTED_AMOUNT
-            cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
-              statutes_cumulative_stability_fee_rate
-              current_stability_fee_rate
-              current_timestamp
-              (f (r price_info))
-            )
-            (full_fees . liquidation_penalty) (calculate-fees
-              byc_principal_to_melt
-              cumulative_stability_fee_rate
-              DISCOUNTED_PRINCIPAL
-              BYC_MINTED_AMOUNT
-              0 ; no liquidity penalty
-            )
-            fees (- full_fees TRANSFERRED_FEES)
-            (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
-            new_treasury_amount (+ fees treasury_amount)
-            byc_issuing_coin_id (calculate-byc-coin-id
-              CAT_MOD_HASH
-              BYC_TAIL_HASH
-              byc_issuing_coin_info
-            )
-            treasury_coin_id (calculate-byc-coin-id
-              CAT_MOD_HASH
-              BYC_TAIL_HASH
-              (list
-                treasury_parent
-                treasury_amount
-                (curry_hashes
-                  p2_treasury_mod_hash
-                  (sha256tree p2_treasury_mod_hash)
-                  (sha256tree CAT_MOD_HASH)
-                  (sha256tree BYC_TAIL_HASH)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256tree treasury_prev_launcher_id)
-                  (sha256tree treasury_launcher_id)
-                )
-              )
-            )
-            (assert
-              ; only if there are fees to be paid
-              (> fees 0)
-              ; to avoid keepers dusting and hogging treasury coins
-              (> fees minimum_sf_transfer_amount)
-              ; only if it hasn't entered liquidation yet
-              (not AUCTION_STATE)
-              ; if there are byc minted, meaning there is something to run SF on
-              (> BYC_MINTED_AMOUNT 0)
-              (list
-                (list
-                  (+ TRANSFERRED_FEES fees)
-                  DEPOSITED_AMOUNT
-                  BYC_MINTED_AMOUNT ; fees still need to be paid, just not to treasury
-                  AUCTION_STATE
-                  INNER_PUZZLE
-                  DISCOUNTED_PRINCIPAL
-                )
-                (list
-                  (list REMARK ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount)
-                  ; signal to tail that it can issue BYC with certain amount
-                  (list CREATE_COIN_ANNOUNCEMENT
-                    (concat
-                      ANN_PREFIX
-                      "i"
-                      byc_issuing_coin_id
-                      fees
-                      (sha256tree STATUTES_STRUCT)
-                      ORACLE_PRICE_ID
-                    )
-                  )
-                  ; make sure tail has actually issued it too
-                  (list ASSERT_COIN_ANNOUNCEMENT
-                    (sha256
-                      byc_issuing_coin_id
-                      BYC_ANN_PREFIX
-                      'i'
-                      my_coin_id
-                      fees
-                      (sha256tree STATUTES_STRUCT)
-                      ORACLE_PRICE_ID
-                    )
-                  )
-                  ; approve treasury coin to receive a deposit
-                  (list CREATE_COIN_ANNOUNCEMENT
-                    (concat ANN_PREFIX treasury_coin_id fees new_treasury_amount)
-                  )
-                  (list ASSERT_COIN_ANNOUNCEMENT
-                    (sha256
-                      treasury_coin_id
-                      TREASURY_ANN_PREFIX
-                      my_coin_id
-                      fees
-                      new_treasury_amount
-                    )
-                  )
-                  (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
-                  (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                  (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_SF_TRANSFER_AMOUNT minimum_sf_transfer_amount)
-                  (list ASSERT_MY_COIN_ID my_coin_id)
-                  (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
-                  (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-                  (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
-                )
-              )
-            )
-          )
-        )
-      )
-      (list RECOVER_BAD_DEBT ; == 12
-        (lambda ((& BYC_TAIL_HASH STATUTES_STRUCT CAT_MOD_HASH statutes_puzzle_hash ORACLE_PRICE_ID
-               DEPOSITED_AMOUNT TRANSFERRED_FEES BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-            ; solution to bid
-            reconcile_amount
-            current_timestamp
-            my_coin_id
-            treasury_coin_info
-            auction_timeout
-            p2_treasury_mod_hash
-          )
-          ; NOTE: in a real-life loan agreement, if the lender seizes collateral, there’s no further interest being
-          ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
-          ; that does not allow the lender to seize collateral)
-          (assign
-            (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
-            new_treasury_amount (- treasury_amount reconcile_amount)
-            treasury_coin_id (calculate-byc-coin-id
-              CAT_MOD_HASH
-              BYC_TAIL_HASH
-              (list
-                treasury_parent
-                treasury_amount
-                (curry_hashes
-                  p2_treasury_mod_hash
-                  (sha256tree p2_treasury_mod_hash)
-                  (sha256tree CAT_MOD_HASH)
-                  (sha256tree BYC_TAIL_HASH)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256tree treasury_prev_launcher_id)
-                  (sha256tree treasury_launcher_id)
-                )
-              )
-            )
-            (auction_start_time
-             start_price step_price_decrease_factor
-             step_time_interval initiator_puzzle_hash initiator_incentive_balance) (assert AUCTION_STATE AUCTION_STATE)
-            updated_auction_state (if (= BYC_MINTED_AMOUNT reconcile_amount)
-              ()
-              AUCTION_STATE
-            )
-            (assert
-              ; check that this auction has finished, and that there is no collateral left
-              (= DEPOSITED_AMOUNT 0)
-              ; time should be in the future and auction should be finished
-              (> current_timestamp (+ auction_start_time auction_timeout))
-              ; if there are byc minted, so we can't reconcile
-              (> BYC_MINTED_AMOUNT (- reconcile_amount 1))
-              (> reconcile_amount 0)
-              (list
-                (list TRANSFERRED_FEES DEPOSITED_AMOUNT (- BYC_MINTED_AMOUNT reconcile_amount) updated_auction_state INNER_PUZZLE ())
-                (list
-                    (list REMARK (list 'updated state->'  " byc principal=" (- BYC_MINTED_AMOUNT reconcile_amount)
-                                 'inner_puzzle=' INNER_PUZZLE)
-                                                    )
-                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-                    (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
-                    (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                    ; signal to tail that it can issue BYC with certain amount
-                    (list CREATE_COIN_ANNOUNCEMENT
-                      (concat
-                        ANN_PREFIX
-                        "x"
-                        treasury_coin_id
-                        (* -1 reconcile_amount)
-                        (sha256tree STATUTES_STRUCT)
-                        ORACLE_PRICE_ID
-                      )
-                    )
-                    ; make sure tail has actually issued it too
-                    (list ASSERT_COIN_ANNOUNCEMENT
-                      (sha256
-                        treasury_coin_id
-                        BYC_ANN_PREFIX
-                        'x'
-                        my_coin_id
-                        (* -1 reconcile_amount)
-                        (sha256tree STATUTES_STRUCT)
-                        ORACLE_PRICE_ID
-                      )
-                    )
-                    ; approve treasury coin to receive a withdrawal
-                    (list CREATE_COIN_ANNOUNCEMENT
-                      (concat
-                        ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
-                    )
-                    (list ASSERT_COIN_ANNOUNCEMENT
-                      (sha256
-                        treasury_coin_id
-                        TREASURY_ANN_PREFIX
-                        my_coin_id
-                        (* -1 reconcile_amount)
-                        new_treasury_amount
-                      )
-                    )
-                    (list ASSERT_MY_COIN_ID my_coin_id)
-                )
-              )
-            )
-          )
-        )
-      )
-
-      ; KEEPER OPERATIONS
-      ; Keeper operations are only allowed if vault is under-collateralized:
-      ; - starting an auction
-      ;   - liquidity penalty includes flat fee that's paid to the keeper that started the auction
-      ;   - flat fee is to pay keepers tx costs
-      ;   - outstanding debt then lowers the effective collateral ratio
-      ; - taking collateral
-      ; - transforming to recharge auction
-
-      ;  after that it's eligible for bad debt coin
-      ;  this will be a dutch auction with some linear price decrease with time
-
-      ; #### BID
-      ; bid args: (tail_hash . amount) (tail_hash . amount) inner_puzzle_hash 
-
-
-
-    ; ### END OF OPERATIONS 
-    )
     (
       (
         final_transferred_fees
         final_xch_deposited_amount
         final_byc_deposited_amount
         final_bids
-        final_inner_puzzle
+        final_inner_puzzle_hash
         final_discounted_principal
       )
       vault_conditions
-    ) (
-    assign
-      calc_func (get-vault-operation-lambda vault_operations vault_operation)
-      value (if calc_func
-        (a calc_func args)
-        (list
-          (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
-          (list )
-        )
-      )
-;      (if
-;         (r (r (r (r (r (f value))))))
-;         ;(x (r (r (r (r (r (f value)))))))
-;        ; returned value has transferred fees
-;        value
-;        ; default to transferred fees
-;       (c (c TRANSFERRED_FEES (f value)) (r value))
-;      )
-      (print "got value" value)
-    )
-    final_inner_puzzle_hash (sha256tree final_inner_puzzle)
-    ; filter condition function 
-    filter_condition (lambda (condition)
-      ; create a new coin, filter out any cheeky announcements, and skip remarks
-      (if (any (= (f condition) CREATE_COIN_ANNOUNCEMENT) (= (f condition) CREATE_PUZZLE_ANNOUNCEMENT))
-        (assert
-          ; not just filter out announcements with our prefix namespace
-          ; but raise an error if someone is trying to be cheeky
-          (not
-              (= (substr (f (r condition)) 0 1) ANN_PREFIX)
-          )
-          condition
-        )
-        (if (any (= (f condition) REMARK) (= (f condition) CREATE_COIN))
-          ()
-          condition
-        )
+    ) (a
+      vault_operation
+      (list
+        (list DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+          ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
+        args
       )
     )
-    
 
-    inner_conditions (filter filter_condition conditions)
-    (merge-lists
-      vault_conditions
-      ; WARNING: we should always check that byc minted is above collateral and there is enough collateral
-      ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
-      ; then they would be able to liquidate that vault immediately and inflate amount of BYC, but wait!
-      ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place
-      ; bu this still messes up with our accounting and creates under collateralized vaults that messes with our metrics overall
-      ; assert lineage
+    inner_conditions (filter-conditions conditions vault_conditions)
+    ; WARNING: we should always check that byc minted is above collateral and there is enough collateral
+    ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
+    ; then they would be able to liquidate that vault immediately and inflate amount of BYC, but wait!
+    ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place
+    ; bu this still messes up with our accounting and creates under collateralized vaults that messes with our metrics overall
+    ; assert lineage
+    (c
       (c
+        CREATE_COIN ; op code
         (c
-          CREATE_COIN ; op code
-          (c
+          (curry_hashes
+            MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE BYC_TAIL_MOD_HASH)
+            (sha256 ONE ORACLE_PRICE_ID)
+            (sha256 ONE final_transferred_fees)
+            (sha256 ONE final_xch_deposited_amount)
+            (sha256 ONE final_byc_deposited_amount)
+            (sha256tree final_bids)
+            (sha256 ONE final_inner_puzzle_hash)
+            (sha256 ONE final_discounted_principal)
+          ) ; puzzle hash
+          (c  final_xch_deposited_amount ; amount
+            ; this is a list that forms the create coin condition (using cons), hence double list operator
+            (list (list final_inner_puzzle_hash)) ; memos
+          )
+        )
+      )
+      (if lineage_proof
+        ; verify lineage by calculating parent coin id based on lineage proof
+        (c
+          (list
+            ASSERT_MY_PARENT_ID
+              (assign
+                deposited_amount (f (r lineage_proof))
+                byc_minted_amount (f (r (r lineage_proof)))
+                auction_state (f (r (r (r lineage_proof))))
+                inner_puzzle_hash (f (r (r (r (r lineage_proof)))))
+                discounted_principal (f (r (r (r (r (r lineage_proof))))))
+                transferred_fees (f (r (r (r (r (r (r lineage_proof)))))))
+                (calculate-coin-id
+                  (f lineage_proof)
+                  (curry_hashes
+                    MOD_HASH
+                    (sha256 ONE MOD_HASH)
+                    (sha256 ONE CAT_MOD_HASH)
+                    (sha256tree STATUTES_STRUCT)
+                    (sha256 ONE BYC_TAIL_MOD_HASH)
+                    (sha256 ONE ORACLE_PRICE_ID)
+                    (sha256 ONE transferred_fees)
+                    (sha256 ONE deposited_amount)
+                    (sha256 ONE byc_minted_amount)
+                    (sha256tree auction_state)
+                    (sha256 ONE inner_puzzle_hash)
+                    (sha256 ONE discounted_principal)
+                  )
+                  deposited_amount
+                )
+              )
+          )
+          (c (list ASSERT_MY_AMOUNT DEPOSITED_AMOUNT)
+            (c
+              (list
+                ; this is for driver code to make it easy to generate puzzle reveal
+                REMARK
+                final_transferred_fees
+                final_xch_deposited_amount
+                final_byc_deposited_amount
+                final_bids
+                final_inner_puzzle_hash
+                final_discounted_principal
+              )
+              inner_conditions
+            )
+          )
+        )
+        ; force that every vault needs to start with zero state
+        (c
+          (list
+            ASSERT_MY_PUZZLEHASH
             (curry_hashes
               MOD_HASH
-              (sha256tree MOD_HASH)
-              (sha256tree CAT_MOD_HASH)
-              (sha256tree LAUNCHER_ID)
+              (sha256 ONE MOD_HASH)
+              (sha256 ONE CAT_MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256tree BYC_TAIL_MOD_HASH)
-              (sha256tree ORACLE_PRICE_ID)
-              (sha256tree final_transferred_fees)
-              (sha256tree final_xch_deposited_amount)
-              (sha256tree final_byc_deposited_amount)
-              (sha256tree final_bids)
-              ; this is not hashed, because it's a puzzle reveal and puzzle hash is what we need
-              final_inner_puzzle_hash
-              (sha256tree final_discounted_principal)
-            ) ; puzzle hash
-            (c  final_xch_deposited_amount ; amount
-              ; this is a list that forms the create coin condition (using cons), hence double list operator
-              (list (list final_inner_puzzle_hash)) ; memos
+              (sha256 ONE BYC_TAIL_MOD_HASH)
+              (sha256 ONE ORACLE_PRICE_ID)
+              (sha256 ONE 0)
+              (sha256 ONE 0)
+              (sha256 ONE 0)
+              (sha256 ONE  ())
+              (sha256 ONE INNER_PUZZLE_HASH)
+              (sha256 ONE 0)
             )
           )
-        )
-        (if lineage_proof
-          ; verify lineage by calculating parent coin id based on lineage proof
-          ; which consists of parent_id and amount ?
-          (c (list
-              ASSERT_MY_PARENT_ID
-                (assign
-                  deposited_amount (f (r lineage_proof))
-                  byc_minted_amount (f (r (r lineage_proof)))
-                  auction_state (f (r (r (r lineage_proof))))
-                  inner_puzzle_hash (f (r (r (r (r lineage_proof)))))
-                  discounted_principal (f (r (r (r (r (r lineage_proof))))))
-                  transferred_fees (f (r (r (r (r (r (r lineage_proof)))))))
-                  (calculate-coin-id
-                    (f lineage_proof)
-                    (curry_hashes
-                      MOD_HASH
-                      (sha256tree MOD_HASH)
-                      (sha256tree CAT_MOD_HASH)
-                      (sha256tree LAUNCHER_ID)
-                      (sha256tree STATUTES_STRUCT)
-                      (sha256tree BYC_TAIL_MOD_HASH)
-                      (sha256tree ORACLE_PRICE_ID)
-                      (sha256tree transferred_fees)
-                      (sha256tree deposited_amount)
-                      (sha256tree byc_minted_amount)
-                      (sha256tree auction_state)
-                      inner_puzzle_hash
-                      (sha256tree discounted_principal)
-                    )
-                    deposited_amount
-                  )
-                )
-            )
-            (c (list ASSERT_MY_AMOUNT DEPOSITED_AMOUNT)
-              (c
-                (list
-                  ; this is for driver code to make it easy to generate puzzle reveal
-                  REMARK
-                  final_transferred_fees
-                  final_xch_deposited_amount
-                  final_byc_deposited_amount
-                  final_bids
-                  final_inner_puzzle_hash
-                  final_discounted_principal
-                )
-                inner_conditions
-              )
-            )
-          )
-          ; force that every vault needs to start with zero state
           (c
-            ; LATER: we don't really need this launcher id because we can only launch by providing no lineage proof
-                   ; which asserts zero state, and after that we can use lineage but it will using the zero state
-                   ;
-            (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
-            (c 
-              (list 
-                ASSERT_MY_PUZZLEHASH
-                (curry_hashes
-                  MOD_HASH
-                  (sha256tree MOD_HASH)
-                  (sha256tree CAT_MOD_HASH)
-                  (sha256tree LAUNCHER_ID)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256tree BYC_TAIL_MOD_HASH)
-                  (sha256tree ORACLE_PRICE_ID)
-                  (sha256tree 0)
-                  (sha256tree 0)
-                  (sha256tree 0)
-                  (sha256tree ())
-                  (sha256tree INNER_PUZZLE)
-                  (sha256tree 0)
-                )
-              )
-              ; ignore any other conditions
-              (list (list ASSERT_MY_AMOUNT 0))
-            )
+            (list ASSERT_MY_AMOUNT 0)
+            inner_conditions
           )
         )
       )

@@ -1,0 +1,116 @@
+(mod
+  (
+    (@ VAULT_STATE
+      (
+       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
+       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+      )
+    )
+    (@ args
+      (
+        reconcile_amount
+        current_timestamp
+        my_coin_id
+        treasury_coin_info
+        auction_timeout
+        p2_treasury_mod_hash
+      )
+    )
+  )
+  (include *standard-cl-23*)
+  (include utils.clib)
+  (include vault.clib)
+  (include statutes_utils.clib)
+  (include condition_codes.clib)
+  (include curry.clib)
+  ; NOTE: in a real-life loan agreement, if the lender seizes collateral, there’s no further interest being
+  ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
+  ; that does not allow the lender to seize collateral)
+  (assign
+    (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
+    new_treasury_amount (- treasury_amount reconcile_amount)
+    treasury_coin_id (calculate-byc-coin-id
+      CAT_MOD_HASH
+      BYC_TAIL_HASH
+      (list
+        treasury_parent
+        treasury_amount
+        (curry_hashes
+          p2_treasury_mod_hash
+          (sha256 ONE p2_treasury_mod_hash)
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256 ONE treasury_prev_launcher_id)
+          (sha256 ONE treasury_launcher_id)
+        )
+      )
+    )
+    (auction_start_time
+     start_price step_price_decrease_factor
+     step_time_interval initiator_puzzle_hash initiator_incentive_balance) (assert AUCTION_STATE AUCTION_STATE)
+    updated_auction_state (if (= BYC_MINTED_AMOUNT reconcile_amount)
+      ()
+      AUCTION_STATE
+    )
+    (assert
+      ; check that this auction has finished, and that there is no collateral left
+      (= DEPOSITED_AMOUNT 0)
+      ; time should be in the future and auction should be finished
+      (> current_timestamp (+ auction_start_time auction_timeout))
+      ; if there are byc minted, so we can't reconcile
+      (> BYC_MINTED_AMOUNT (- reconcile_amount 1))
+      (> reconcile_amount 0)
+      (list
+        (list TRANSFERRED_FEES DEPOSITED_AMOUNT (- BYC_MINTED_AMOUNT reconcile_amount) updated_auction_state INNER_PUZZLE ())
+        (list
+            (list REMARK (list 'updated state->'  " byc principal=" (- BYC_MINTED_AMOUNT reconcile_amount)
+                         'inner_puzzle=' INNER_PUZZLE)
+                                            )
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
+            (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+            ; signal to tail that it can issue BYC with certain amount
+            (list CREATE_COIN_ANNOUNCEMENT
+              (concat
+                ANN_PREFIX
+                "x"
+                treasury_coin_id
+                (* -1 reconcile_amount)
+                (sha256tree STATUTES_STRUCT)
+                ORACLE_PRICE_ID
+              )
+            )
+            ; make sure tail has actually issued it too
+            (list ASSERT_COIN_ANNOUNCEMENT
+              (sha256
+                treasury_coin_id
+                BYC_ANN_PREFIX
+                'x'
+                my_coin_id
+                (* -1 reconcile_amount)
+                (sha256tree STATUTES_STRUCT)
+                ORACLE_PRICE_ID
+              )
+            )
+            ; approve treasury coin to receive a withdrawal
+            (list CREATE_COIN_ANNOUNCEMENT
+              (concat
+                ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
+            )
+            (list ASSERT_COIN_ANNOUNCEMENT
+              (sha256
+                treasury_coin_id
+                TREASURY_ANN_PREFIX
+                my_coin_id
+                (* -1 reconcile_amount)
+                new_treasury_amount
+              )
+            )
+            (list ASSERT_MY_COIN_ID my_coin_id)
+        )
+      )
+    )
+  )
+)

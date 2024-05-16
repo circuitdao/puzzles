@@ -1,0 +1,190 @@
+(mod
+  (
+    (@ VAULT_STATE
+      (
+       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+      )
+    )
+    (@ args
+      (
+         byc_to_repay my_coin_id statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_debt_amount
+         byc_treasury_coin_info p2_treasury_mod_hash price_info current_stability_fee_rate current_timestamp
+      )
+    )
+  )
+  (include *standard-cl-23*)
+  (include vault.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (include curry.clib)
+  (include condition_codes.clib)
+
+  (assign
+    cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
+      statutes_cumulative_stability_fee_rate
+      current_stability_fee_rate
+      current_timestamp
+      (f (r price_info))
+    )
+    (calculated_stability_fee . liquidity_penalty) (calculate-fees
+      byc_to_repay
+      cumulative_stability_fee_rate
+      DISCOUNTED_PRINCIPAL
+      BYC_MINTED_AMOUNT
+      0 ; no liquidation penalty for melting
+    )
+    fees_to_pay (if (> TRANSFERRED_FEES calculated_stability_fee)
+      0
+      (- calculated_stability_fee TRANSFERRED_FEES)
+    )
+    fees_to_not_pay (- calculated_stability_fee fees_to_pay)
+    ; burn the byc that's left after fees are paid
+    negative_byc_principal_to_melt (* -1 (- byc_to_repay calculated_stability_fee))
+    new_byc_minted_amount (+
+      BYC_MINTED_AMOUNT
+      negative_byc_principal_to_melt
+    )
+    undiscounted_principal (* 1 (/ (* 1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
+    discounted_principal (if (= byc_to_repay undiscounted_principal)
+      0
+      (discount-principal-for-melt
+        DISCOUNTED_PRINCIPAL
+        (* -1 byc_to_repay)
+        cumulative_stability_fee_rate
+      )
+    )
+    (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
+    treasury_coin_id (if byc_treasury_coin_info
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        BYC_TAIL_HASH
+        (list
+          treasury_parent
+          treasury_amount
+          (curry_hashes
+            p2_treasury_mod_hash
+            (sha256 ONE p2_treasury_mod_hash)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE treasury_prev_launcher_id)
+            (sha256 ONE treasury_launcher_id)
+          )
+        )
+      )
+      ()
+    )
+    new_treasury_amount (+ fees_to_pay treasury_amount)
+    byc_coin_id_to_melt (calculate-byc-coin-id
+      CAT_MOD_HASH
+      BYC_TAIL_HASH
+      byc_melting_coin_info
+    )
+    (assert
+      (> byc_to_repay 0)
+      ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
+      ; vault liquidation costs at healthy levels
+      (if (any (= new_byc_minted_amount 0) (> new_byc_minted_amount minimum_debt_amount))
+        1
+        (x BYC_MINTED_AMOUNT TRANSFERRED_FEES new_byc_minted_amount minimum_debt_amount fees_to_pay negative_byc_principal_to_melt
+           (+ fees_to_pay negative_byc_principal_to_melt)
+           byc_to_repay calculated_stability_fee)
+      )
+      ; current time must be at least after last oracle update
+      (> current_timestamp (f (r price_info)))
+      (if (any (> new_byc_minted_amount 0)  (all (= new_byc_minted_amount 0) (= discounted_principal 0)))
+        1
+        (x  "byc minted issue" byc_to_repay (- byc_to_repay fees_to_pay) undiscounted_principal new_byc_minted_amount discounted_principal)
+      )
+      (list
+        (list
+          (if (> TRANSFERRED_FEES calculated_stability_fee)
+            (- TRANSFERRED_FEES calculated_stability_fee)
+            0
+          )
+          DEPOSITED_AMOUNT new_byc_minted_amount AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
+        (assign
+          conditions (c
+            (list REMARK "melting ann->" fees_to_pay fees_to_not_pay TRANSFERRED_FEES byc_to_repay negative_byc_principal_to_melt cumulative_stability_fee_rate calculated_stability_fee
+                                       new_treasury_amount new_byc_minted_amount undiscounted_principal DISCOUNTED_PRINCIPAL discounted_principal)
+            (c
+              (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
+              (c
+                (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+                (c (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_VAULT_DEBT_AMOUNT minimum_debt_amount)
+                  (c
+                    (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
+                    (c
+                      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
+                      (c
+                        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+                        (c
+                          (list ASSERT_MY_COIN_ID my_coin_id)
+                          (c
+                            (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
+                            (if (> negative_byc_principal_to_melt -1)
+                              (list )
+                              (list
+                                ; signal to tail that it can melt the BYC
+                                (list CREATE_COIN_ANNOUNCEMENT
+                                  (concat
+                                    ANN_PREFIX
+                                    'x'
+                                    byc_coin_id_to_melt
+                                    (- negative_byc_principal_to_melt fees_to_not_pay)
+                                    (sha256tree STATUTES_STRUCT)
+                                    ORACLE_PRICE_ID
+                                  )
+                                )
+                                ; get a melt confirmation from BYC tail
+                                (list ASSERT_COIN_ANNOUNCEMENT
+                                  (sha256
+                                    byc_coin_id_to_melt
+                                    BYC_ANN_PREFIX
+                                    'x'
+                                    my_coin_id
+                                    (- negative_byc_principal_to_melt fees_to_not_pay)
+                                    (sha256tree STATUTES_STRUCT)
+                                    ORACLE_PRICE_ID
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+          (if (> fees_to_pay 0)
+            ; get an announcement from offer module that BYC was paid into treasury
+            ; approve treasury coin to receive a deposit
+            (c
+              (list CREATE_COIN_ANNOUNCEMENT
+                (concat ANN_PREFIX treasury_coin_id fees_to_pay new_treasury_amount)
+              )
+              (c
+                (list ASSERT_COIN_ANNOUNCEMENT
+                  (sha256
+                    treasury_coin_id
+                    TREASURY_ANN_PREFIX
+                    my_coin_id
+                    fees_to_pay
+                    new_treasury_amount
+                  )
+                )
+                conditions
+              )
+            )
+            ; else no approvals needed
+            conditions
+          )
+        )
+      )
+    )
+  )
+)

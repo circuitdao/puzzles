@@ -1,0 +1,62 @@
+(mod
+  (
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (
+      amount
+      grandparent_id
+      prev_bill_hash
+    )
+  )
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (defconst ANN_ENACTED '$')
+  (defconst ANN_PREFIX 'G')
+  (assign
+    (
+      (veto_seconds . enact_seconds)
+      new_statute_index
+      new_statute_value
+      new_threshold_amount_to_propose
+      new_veto_seconds
+      new_delay_seconds
+      new_max_delta
+    ) BILL
+    (list
+      ; if enactment passes, reset this coins bill state
+      ()
+      (list
+        ; proposed coin must have a parent with empty bill to avoid currying bills
+        (list ASSERT_MY_PARENT_ID
+          (calculate-coin-id
+            grandparent_id
+            (curry_hashes CAT_MOD_HASH
+              (sha256tree CAT_MOD_HASH)
+              (sha256tree TAIL_MOD_HASH)
+              (curry_hashes MOD_HASH
+                (sha256tree MOD_HASH)
+                (sha256tree CAT_MOD_HASH)
+                (sha256tree TAIL_MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256tree INNER_PUZZLE_HASH)
+                prev_bill_hash
+              )
+            )
+            amount
+          )
+        )
+        (list ASSERT_HEIGHT_RELATIVE 1)
+        ; has enough time passed since this coin was last spent (veto included)
+        (list ASSERT_SECONDS_RELATIVE enact_seconds)
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          ; we skip the first two elements that are used for voting process, they're not stored in statutes
+          (sha256 statutes_puzzle_hash STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r BILL)))
+        )
+        (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANN_PREFIX (sha256tree (r BILL))))
+        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_ENACTED))
+      )
+    )
+  )
+)

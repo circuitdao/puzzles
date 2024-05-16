@@ -7,12 +7,10 @@
   (include *standard-cl-23*)
   (include condition_codes.clib)
   (include cat_truths.clib)
-  (include sha256tree.clib)
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
 
-  (defconstant ONE 1)
 
   (defun assert_ (items)
     (if (r items)
@@ -33,16 +31,16 @@
         statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
         puzzle_hash (
           curry_hashes CAT_MOD_HASH
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree crt_tail_hash)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE crt_tail_hash)
             (curry_hashes surplus_mod_hash
-              (sha256tree surplus_mod_hash)
-              (sha256tree CAT_MOD_HASH)
+              (sha256 ONE surplus_mod_hash)
+              (sha256 ONE CAT_MOD_HASH)
               (sha256tree statutes_struct)
-              (sha256tree launcher_id)
-              (sha256tree byc_lot_amount)
-              (sha256tree byc_tail_hash)
-              (sha256tree crt_tail_hash)
+              (sha256 ONE launcher_id)
+              (sha256 ONE byc_lot_amount)
+              (sha256 ONE byc_tail_hash)
+              (sha256 ONE crt_tail_hash)
               (sha256tree last_bid)
             )
         )

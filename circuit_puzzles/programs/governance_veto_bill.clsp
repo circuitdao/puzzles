@@ -1,0 +1,84 @@
+(mod
+  (
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (
+      amount
+      grandparent_veto_id
+      veto_amount
+      veto_inner_puzzle_hash
+      veto_bill_hash
+    )
+  )
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (defconst ANN_PREFIX 'G')
+  (defconst ANN_VETO 'v')
+  (defconst ANN_VETOED 'x')
+
+  (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
+    (curry_hashes CAT_MOD_HASH
+      (sha256tree CAT_MOD_HASH)
+      (sha256tree TAIL_MOD_HASH)
+      (curry_hashes MOD_HASH
+        (sha256tree MOD_HASH)
+        (sha256tree CAT_MOD_HASH)
+        (sha256tree TAIL_MOD_HASH)
+        (sha256tree STATUTES_STRUCT)
+        (sha256tree inner_puzzle_hash)
+        bill_hash
+      )
+    )
+  )
+
+  (assign
+    (
+      (veto_seconds . enact_seconds)
+      new_statute_index
+      new_statute_value
+      new_threshold_amount_to_propose
+      new_veto_seconds
+      new_delay_seconds
+      new_max_delta
+    ) BILL
+    (assert_debug
+      ; can only veto if in proposal mode (BILL is not empty)
+      BILL
+      (> veto_amount amount)
+      (> veto_seconds 0)
+      (list
+        ()
+        (list
+          (if (> veto_seconds 1)
+            (list ASSERT_BEFORE_SECONDS_RELATIVE veto_seconds)
+            ; noop
+            (list ASSERT_SECONDS_RELATIVE veto_seconds)
+          )
+          ; no ephemeral coins
+          (list ASSERT_HEIGHT_RELATIVE 1)
+          (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
+          ; assert announcement from another CRT coin with higher amount than this one
+          (list ASSERT_COIN_ANNOUNCEMENT
+            (sha256
+              (calculate-coin-id
+                grandparent_veto_id
+                (calculate-crt-puzzle
+                  MOD_HASH
+                  CAT_MOD_HASH
+                  TAIL_MOD_HASH
+                  STATUTES_STRUCT
+                  veto_inner_puzzle_hash
+                  veto_bill_hash
+                )
+                veto_amount
+              )
+              (concat ANN_PREFIX ANN_VETO (sha256tree BILL))
+            )
+          )
+        )
+      )
+    )
+  )
+)

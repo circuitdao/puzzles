@@ -79,6 +79,16 @@
     )
   )
 
+  (defun mutate-list (mutation_index new_value statutes index)
+    (if statutes
+      (c
+        (if (= index mutation_index) new_value (f statutes))
+        (mutate-list mutation_index new_value (r statutes) (+ index ONE))
+      )
+      () ;x "can't mutate") ; no more statutes left and index is same as end of list
+    )
+  )
+
   (defun-inline assert-price (statutes_puzzle_hash oracle_id price_info)
     (list ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256 statutes_puzzle_hash

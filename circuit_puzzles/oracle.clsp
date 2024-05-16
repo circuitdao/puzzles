@@ -15,20 +15,12 @@
      )
 
   (include *standard-cl-23*)
-  (include sha256tree.clib)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
+  (include utils.clib)
   (include merkle_utils.clib)
 
-  (defun assert_ (items)
-    (if (r items)
-      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x)))
-      (f items)
-      )
-  )
-
-  (defmac assert items (assert_ items))
 
   (defun filter (pred (@ lst (first . rest)))
     (if lst
