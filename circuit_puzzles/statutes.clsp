@@ -166,33 +166,36 @@
     )
     (c create_coin_condition
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT
-          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)))
-        )
+        (list CREATE_PUZZLE_ANNOUNCEMENT (concat STATUTES_ANN_PREFIX '*'))
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -5 OFFER_MOD_HASH)))
+            (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)))
           )
           (c
             (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)))
+              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -5 OFFER_MOD_HASH)))
             )
             (c
               (list CREATE_PUZZLE_ANNOUNCEMENT
-                (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
+                (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)))
               )
               (c
                 (list CREATE_PUZZLE_ANNOUNCEMENT
-                  (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
+                  (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
                 )
                 (c
                   (list CREATE_PUZZLE_ANNOUNCEMENT
-                    (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
+                    (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
                   )
-                  (announce-statutes
-                    prices
-                    PRICE_PREFIX 0
-                    (announce-statutes statutes STATUTE_PREFIX 0 announcements)
+                  (c
+                    (list CREATE_PUZZLE_ANNOUNCEMENT
+                      (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
+                    )
+                    (announce-statutes
+                      prices
+                      PRICE_PREFIX 0
+                      (announce-statutes statutes STATUTE_PREFIX 0 announcements)
+                    )
                   )
                 )
               )

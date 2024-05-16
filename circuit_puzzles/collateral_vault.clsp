@@ -20,20 +20,38 @@
 
     (defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
 
+  (defun-inline is-valid-ann-cond (cond_body)
+    (not
+      (=
+        (substr (f cond_body) 0 1)
+        ANN_PREFIX
+      )
+    )
+  )
 
-  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark final_conditions)
-  ; restricts conditions to only allow vault operations and remarks
+  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)
   ; RETURNS (conditions vault_operation_condition)
     (if conditions
       (if (= condition_code REMARK)
         (if found_remark
-          (x "duplicate remark")
+          (x)
           (if (= 'v' (f condition_body))
-            (restrict-conditions rest_of_conditions (r condition_body) final_conditions)
-            (x "invalid remark body")
+            (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
+            (x)
           )
         )
-        (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
+        (if via_solution
+          (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
+          ; keeper mode, only coin announcements are allowed
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+            (if (is-valid-ann-cond condition_body)
+              (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
+              (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
+            )
+            ; ignore other conditions if in keeper mode
+            (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
+          )
+        )
       )
       (list final_conditions found_remark)
     )
@@ -44,25 +62,19 @@
     ; filter out any cheeky announcements, and skip remarks/create coin
     (if conditions
       (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-        (assert
-          ; not just filter out announcements with our prefix namespace
-          ; but raise an error if someone is trying to be cheeky
-          (not
-              (= (substr (f condition_body) 0 1) ANN_PREFIX)
-          )
+        (if (is-valid-ann-cond condition_body)
           (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+          (filter-conditions rest_of_conditions filtered_conditions)
         )
         (if (any (= condition_code REMARK) (= condition_code CREATE_COIN))
-          ()
+          (filter-conditions rest_of_conditions filtered_conditions)
           (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
         )
       )
       filtered_conditions
     )
   )
-
-  (defconst KEEPER_OPERATIONS (list ))
-  (defconst OWNER_OPERATIONS (list ))
+  (defconst OPERATIONS (list ))
 
   (defun-inline operation-program (operation)
     (f (r operation))
@@ -78,40 +90,33 @@
       (sha256 ONE CAT_MOD_HASH)
       (sha256 ONE ORACLE_PRICE_ID)
     )
-    (conditions vault_operation_condition) (if keeper_operation_info
-      ; we return only conditions that are allowed for keeper operations
-      (if KEEPER_OPERATIONS
+
+    raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
+    (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
+    valid_solution
+      (if (all solution (not keeper_operation_info))
+        ; owner mode if AUCTION_STATE is empty, ie liquidation hasn't started yet
+        (if (all (not AUCTION_STATE) (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH))
+          1
+          (x)
+        )
+        ; keeper mode
+        (assert keeper_operation_info
+          1
+        )
+      )
+    (conditions vault_operation_condition)
+      (if (all valid_solution OPERATIONS)
         (assert
           (=
-            (sha256tree (operation-program keeper_operation_info))
-            (a (operation-treearg keeper_operation_info) KEEPER_OPERATIONS)
+            (sha256tree (operation-program vault_operation_condition_pre))
+            (a (operation-treearg vault_operation_condition_pre) OPERATIONS)
           )
-          (list () (r (r keeper_operation_info)))
+          (list conditions_pre vault_operation_condition_pre)
         )
-        (list () (r (r keeper_operation_info)))
+        (list conditions_pre vault_operation_condition_pre)
       )
-      ; owner can provide other conditions too so normal inner puzzle operation
-      (assert
-        ; but only if AUCTION_STATE is empty, ie liquidation hasn't started yet
-        (not AUCTION_STATE)
-        ; and passed inner puzzle is correct
-        (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
-        (assign
-          raw_conditions (a inner_puzzle solution)
-          (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 0 ())
-          (if OWNER_OPERATIONS
-            (assert
-              (=
-                (sha256tree (operation-program vault_operation_condition_pre))
-                (a (operation-treearg vault_operation_condition_pre) OWNER_OPERATIONS)
-              )
-              (list conditions_pre vault_operation_condition_pre)
-            )
-            (list conditions_pre vault_operation_condition_pre)
-          )
-        )
-      )
-    )
+
     (statutes_inner_puzzle_hash vault_operation _ . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (
@@ -231,8 +236,10 @@
               (sha256 ONE 0)
             )
           )
-          ; ignore any other conditions
-          (list (list ASSERT_MY_AMOUNT 0))
+          (c
+            (list ASSERT_MY_AMOUNT 0)
+            inner_conditions
+          )
         )
       )
     )
