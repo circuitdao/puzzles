@@ -1,6 +1,6 @@
 (mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
-      mutation_index
+      _
       (@ mutation_value (oracle_inner_puz_hash statutes_struct price last_updated))
       crt_inner_puzzle_hash)
   (include *standard-cl-23*)
@@ -22,16 +22,6 @@
     )
   )
 
-  (defun get-list-item-at-index (index a_list counter_index)
-    (if a_list
-      (if (= counter_index index)
-        (f a_list)
-        (get-list-item-at-index index (r a_list) (+ counter_index ONE))
-      )
-      ; fail if you don't find an item
-      () ; x "index out of bounds" counter_index index a_list)
-    )
-  )
 
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
@@ -69,7 +59,11 @@
       oracle_launcher_id (f (f STATUTES))
       ; we need prev price to assert that latest one is fresher
       (prev_price . prev_last_updated) PRICE_INFO
-      (if (> last_updated prev_last_updated)
+      (assert_debug
+        (> last_updated prev_last_updated)
+        (size_b32 oracle_inner_puz_hash)
+        (size_b32 oracle_launcher_id)
+        (size_uint32 price)
         ; confirm to oracle price announcement to update the price
         (list
           (list ASSERT_PUZZLE_ANNOUNCEMENT
@@ -86,9 +80,7 @@
               price
             )
           )
-
         )
-        (x)
       )
     )
   )

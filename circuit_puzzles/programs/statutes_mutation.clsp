@@ -33,15 +33,20 @@
     PRICE_UPDATES
 
     ;  updating statutes, assert permission
-    (list
-      ; confirm to CRT voting coin that mutation was applied
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+    (assert
+      (size_b32 crt_inner_puzzle_hash)
+      (not (r (r (r (r (r mutation_value)))))) ; should be  a list with 5 elements
+      (not (l (f mutation_value))) ; statute values should not be a list
+      (list
+        ; confirm to CRT voting coin that mutation was applied
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+        )
+        ; assert from CRT vote that mutation was indeed voted for and confirmed
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
+                                       CRT_ANN_PREFIX (sha256tree (c mutation_index mutation_value))))
       )
-      ; assert from CRT vote that mutation was indeed voted for and confirmed
-      (list ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-                                     CRT_ANN_PREFIX (sha256tree (c mutation_index mutation_value))))
     )
   )
 )

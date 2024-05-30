@@ -1,4 +1,4 @@
-(mod (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
+(mod ((MOD_HASH . (OWNER_OPERATIONS . KEEPER_OPERATIONS)) CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
       TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
@@ -74,13 +74,9 @@
       filtered_conditions
     )
   )
-  (defconst OPERATIONS (list ))
 
   (defun-inline operation-program (operation)
     (f (r operation))
-  )
-  (defun-inline operation-treearg (operation)
-    (f (r (r operation)))
   )
 
   (assign
@@ -89,35 +85,27 @@
       (sha256tree STATUTES_STRUCT)
       (sha256 ONE CAT_MOD_HASH)
     )
-
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
     (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
-    valid_solution
+    operation_mod (operation-program vault_operation_condition_pre)
+    operation_mod_hash (sha256tree operation_mod)
+    (conditions vault_operation_condition)
       (if (all solution (not keeper_operation_info))
         ; owner mode if AUCTION_STATE is empty, ie liquidation hasn't started yet
-        (if (all (not AUCTION_STATE) (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH))
-          1
-          (x)
-        )
-        ; keeper mode
-        (assert keeper_operation_info
-          1
-        )
-      )
-    (conditions vault_operation_condition)
-      (if (all valid_solution OPERATIONS)
         (assert
-          (=
-            ; FIXME: this is not safe, iterate over all operations and verify that way
-            (sha256tree (operation-program vault_operation_condition_pre))
-            (a (operation-treearg vault_operation_condition_pre) OPERATIONS)
-          )
+          (not AUCTION_STATE)
+          (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
+          ;(contains OWNER_OPERATIONS operation_mod_hash)
           (list conditions_pre vault_operation_condition_pre)
         )
-        (list conditions_pre vault_operation_condition_pre)
+        ; keeper mode
+        (assert
+          keeper_operation_info
+          ;(contains KEEPER_OPERATIONS operation_mod_hash)
+          (list conditions_pre vault_operation_condition_pre)
+        )
       )
-
-    (statutes_inner_puzzle_hash vault_operation _ . args) vault_operation_condition
+    (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (
       (
@@ -149,9 +137,8 @@
       (c
         CREATE_COIN ; op code
         (c
-          (curry_hashes
-            MOD_HASH
-            (sha256 ONE MOD_HASH)
+          (curry_hashes MOD_HASH
+            (sha256tree (c MOD_HASH (c OWNER_OPERATIONS KEEPER_OPERATIONS)))
             (sha256 ONE CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_MOD_HASH)
@@ -184,7 +171,7 @@
                   (f lineage_proof)
                   (curry_hashes
                     MOD_HASH
-                    (sha256 ONE MOD_HASH)
+                    (sha256tree (c MOD_HASH (c OWNER_OPERATIONS KEEPER_OPERATIONS)))
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256tree STATUTES_STRUCT)
                     (sha256 ONE BYC_TAIL_MOD_HASH)
@@ -219,9 +206,8 @@
         (c
           (list
             ASSERT_MY_PUZZLEHASH
-            (curry_hashes
-              MOD_HASH
-              (sha256 ONE MOD_HASH)
+            (curry_hashes MOD_HASH
+              (sha256tree (c MOD_HASH (c OWNER_OPERATIONS KEEPER_OPERATIONS)))
               (sha256 ONE CAT_MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_MOD_HASH)

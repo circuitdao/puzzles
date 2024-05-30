@@ -17,6 +17,7 @@ PUZZLE_PATHS = [
     for x in Path(str(files(__package__))).rglob("*.clsp")
 ]
 clsp_builder = ChialispBuild([Path(str(files(__package__) / "include"))])
+
 for puzzle_path in PUZZLE_PATHS:
     try:
         clsp_builder(puzzle_path)
