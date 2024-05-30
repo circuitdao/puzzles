@@ -1,4 +1,4 @@
-(mod (STATUTES_STRUCT CAT_MOD_HASH ORACLE_PRICE_INDEX
+(mod (STATUTES_STRUCT CAT_MOD_HASH
       Truths parent_is_cat lineage_proof delta inner_conditions
       (@ solution
         (
@@ -53,7 +53,6 @@
                 my_coin_id
                 (if (> 0 delta) delta to_issue_amount)
                 statutes_struct_hash ; need to tie it to statutes struct
-                ORACLE_PRICE_INDEX ; ensure we're using the same price index
               )
           )
           (list
@@ -64,7 +63,6 @@
               vault_coin_id
               (if (> 0 delta) delta to_issue_amount)
               statutes_struct_hash
-              ORACLE_PRICE_INDEX
             )
           )
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)

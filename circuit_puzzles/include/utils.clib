@@ -2,10 +2,12 @@
 (
 
   (defconst ONE 1)
-  (defconst b32 32)
   (defconstant MOJOS 1000000000000)
   (defconstant PERCENT_PRECISION 10000)
+  (defconst MAX_TX_BLOCK_TIME 120)
+  (defconst PRECISION 10000000000)
 
+  (defconst b32 32)
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
   )
@@ -18,12 +20,23 @@
     )
   )
 
-   (defun assert_debug_ (items)
+  (defun contains (lst item)
+    (if lst
+      (if (= (f (f lst)) item)
+        1
+        (contains (r lst) item)
+      )
+      ; not found
+      (x)
+    )
+  )
+
+  (defun assert_debug_ (items)
     (if (r items)
       (qq (if (unquote (f items)) (unquote (assert_debug_ (r items))) (x (unquote (c 1 (f items))))))
       (f items)
-      )
     )
+  )
   ; this also shows which part of assert failed
   (defmac assert_debug items (assert_debug_ items))
 
@@ -49,5 +62,27 @@
         list_b
     )
   )
+
+
+
+  (defconstant TRUE 1)
+  (defconstant FALSE 0)
+
+
+  (defun filter (pred (@ lst (first . rest)))
+    (if lst
+      (assign item (a pred (list first))
+        (if item
+          (c item (filter pred rest))
+          (filter pred rest)
+        )
+      )
+      ()
+    )
+  )
+
+
+  (defun print (to-show result) (if (all "$print$" to-show result) result result))
+
 
 )

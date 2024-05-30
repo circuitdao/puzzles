@@ -30,44 +30,41 @@ importlib_resources = "*"
 
 [[package]]
 name = "clvm-rs"
-version = "0.6.1"
+version = "0.7.0"
 description = "Implementation of `clvm` for Chia Network's cryptocurrency"
 optional = false
 python-versions = "*"
 files = [
-    {file = "clvm_rs-0.6.1-cp37-abi3-macosx_10_14_x86_64.whl", hash = "sha256:79afe87edb1f088a8ec66f876784263dd81a22fa2b0dc855d3fbf6c622a0b126"},
-    {file = "clvm_rs-0.6.1-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:9549c414318ce902134ff3418df9e55b4dc044930d5d907828b8da5c7adcbcec"},
-    {file = "clvm_rs-0.6.1-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6d31194ff263185d187875c2cbacadcf248ffc71a64c2c2fe08befba7938f231"},
-    {file = "clvm_rs-0.6.1-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8339f0653b11447f1f5981862016f5a4809b7eca5d91f3c835bd4d58ac1225b3"},
-    {file = "clvm_rs-0.6.1-cp37-abi3-win_amd64.whl", hash = "sha256:64a098dd53990956a0a5647d9348dfbc1c212c63b220b69d3d28509dbeaa8367"},
-    {file = "clvm_rs-0.6.1.tar.gz", hash = "sha256:1d95905407795944c913858967c6b29fe94a43667346a3c4efae55a84fee7d86"},
+    {file = "clvm_rs-0.7.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:d2b869f03d1c1385d0e3d5d24416e7c82ebe44b307de914683b4f90e6163e79e"},
+    {file = "clvm_rs-0.7.0-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b1ec3de4d182ba9b2c1e374658141afa4bc5b746d1d939cd02dedf167a383715"},
+    {file = "clvm_rs-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d4fcfec33af1ded7931cb19d0bf25e971ad645554c7683c18e990d8c2a60e9b8"},
+    {file = "clvm_rs-0.7.0-cp38-abi3-win_amd64.whl", hash = "sha256:a723f35b4b268bfaf39bdb34cd4f3551ce55c72167e1dc64cb8f5018522644b9"},
+    {file = "clvm_rs-0.7.0.tar.gz", hash = "sha256:92bdc3ad9d180ffb78b597c21b57e8708bce4586cb69163d4b0703a0bfc46ed5"},
 ]
 
 [[package]]
 name = "clvm-tools-rs"
-version = "0.1.40"
+version = "0.1.42"
 description = "tools for working with chialisp language; compiler, repl, python and wasm bindings"
 optional = false
 python-versions = "*"
 files = [
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:742ae2667163ba365df3413a0c0394793df708043e482f1a7be775ecb6a2475d"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:1eca4f1bf8005f37666cc87c0dcd945d0d3d65ff51918f7ace86d428aab74cc6"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-macosx_11_0_x86_64.whl", hash = "sha256:7a3bdf661e4ad77f04dceb96d0f097f8a3192b7a28dc0a5a56dfa18e66617d91"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:24e3b88443e823318cbcef37161152159307e385923118c48851fcbd91e13101"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:82b4edd053f895366f0dedae6aa22c26db7fd78bad161baf4f81b76a7b824af4"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:4eba19e55054c635ac99f0ce37d6dff16f4400af065965ccee315dfebffa260f"},
-    {file = "clvm_tools_rs-0.1.40-cp38-abi3-win_amd64.whl", hash = "sha256:b7a9ee6000bd437a6898241574f37e225027c4fe1781ff9286cb71fd30d07a4b"},
+    {file = "clvm_tools_rs-0.1.42-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:07e868ecfdcd5ae263af7e6ebd97bd8cd6211dd71c0060d9ce6917b0e9ce0e81"},
+    {file = "clvm_tools_rs-0.1.42-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3abfa4f4bc7c5f90bcbd17e03ec88ebd6d9d7b1cc8cdd59d1f2d546d2b798516"},
+    {file = "clvm_tools_rs-0.1.42-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8939a7f56fce9191255c299f34f244a3713005182691b43a2eded6bc0421ca3c"},
+    {file = "clvm_tools_rs-0.1.42-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:29245cf424ea49cd2babd674a3b47433c2e4b217d1342108f97bca194bf74c3d"},
+    {file = "clvm_tools_rs-0.1.42-cp38-abi3-win_amd64.whl", hash = "sha256:c41f1489f6d1a7ad28cca61da5354ad42a616d8e5038491fcf9462e2cf5965b8"},
 ]
 
 [[package]]
 name = "importlib-resources"
-version = "6.3.0"
+version = "6.4.0"
 description = "Read resources from Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "importlib_resources-6.3.0-py3-none-any.whl", hash = "sha256:783407aa1cd05550e3aa123e8f7cfaebee35ffa9cb0242919e2d1e4172222705"},
-    {file = "importlib_resources-6.3.0.tar.gz", hash = "sha256:166072a97e86917a9025876f34286f549b9caf1d10b35a1b372bffa1600c6569"},
+    {file = "importlib_resources-6.4.0-py3-none-any.whl", hash = "sha256:50d10f043df931902d4194ea07ec57960f66a80449ff867bfe782b4c486ba78c"},
+    {file = "importlib_resources-6.4.0.tar.gz", hash = "sha256:cdb2b453b8046ca4e3798eb1d84f3cce1446a0e8e7b5ef4efb600f19fc398145"},
 ]
 
 [package.dependencies]
@@ -75,7 +72,7 @@ zipp = {version = ">=3.1.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (<7.2.5)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["jaraco.collections", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)", "zipp (>=3.17)"]
+testing = ["jaraco.test (>=5.4)", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)", "zipp (>=3.17)"]
 
 [[package]]
 name = "runtime-builder"
@@ -92,20 +89,20 @@ importlib_resources = ">=6.1.1"
 
 [[package]]
 name = "zipp"
-version = "3.18.0"
+version = "3.18.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "zipp-3.18.0-py3-none-any.whl", hash = "sha256:c1bb803ed69d2cce2373152797064f7e79bc43f0a3748eb494096a867e0ebf79"},
-    {file = "zipp-3.18.0.tar.gz", hash = "sha256:df8d042b02765029a09b157efd8e820451045890acc30f8e37dd2f94a060221f"},
+    {file = "zipp-3.18.2-py3-none-any.whl", hash = "sha256:dce197b859eb796242b0622af1b8beb0a722d52aa2f57133ead08edd5bf5374e"},
+    {file = "zipp-3.18.2.tar.gz", hash = "sha256:6278d9ddbcfb1f1089a88fde84481528b07b0e10474e09dcfe53dad4069fa059"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
+testing = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "664d3d621f46ddc2ec92bd80a3113786b40d2653f7b21c0f7f0b24cf6d7902ad"
+content-hash = "f9880230a0fb0b9b1ab43b327787a4e84d00caa0e89b52edc78b1c2c66b750e6"

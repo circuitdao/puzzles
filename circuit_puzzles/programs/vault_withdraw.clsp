@@ -3,7 +3,7 @@
     (@ VAULT_STATE
       (
        DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
-       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
@@ -35,7 +35,7 @@
           ; assert collateralization ratio
           (assert-statute statutes_puzzle_hash STATUTE_COLLATERALIZATION_RATIO coll_ratio)
           ; assert collateral price
-          (assert-price statutes_puzzle_hash ORACLE_PRICE_ID price_info)
+          (assert-price statutes_puzzle_hash price_info)
         )
       )
     )
