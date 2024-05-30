@@ -1,5 +1,6 @@
 
-(mod (STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH
+(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE
+      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       mutation_index mutation_value crt_inner_puzzle_hash)
   (include *standard-cl-23*)
   (include curry.clib)
@@ -25,10 +26,11 @@
       (mutate-list mutation_index mutation_value STATUTES 0)
     )
     ; prices staying the same
-    PRICES
+    PRICE_INFO
     ; don't change the rate
     PAST_CUMULATIVE_STABILITY_FEE_RATE
     PAST_CUMULATIVE_INTEREST_RATE
+    PRICE_UPDATES
 
     ;  updating statutes, assert permission
     (list

@@ -1,4 +1,4 @@
-(mod (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH ORACLE_PRICE_ID
+(mod (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
       TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
@@ -12,13 +12,13 @@
         keeper_operation_info
       )
      )
-    (include *standard-cl-23*)
-    (include curry.clib)
-    (include condition_codes.clib)
-    (include statutes_utils.clib)
-    (include utils.clib)
+  (include *standard-cl-23*)
+  (include curry.clib)
+  (include condition_codes.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
 
-    (defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
+  (defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
 
   (defun-inline is-valid-ann-cond (cond_body)
     (not
@@ -88,7 +88,6 @@
     BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
       (sha256tree STATUTES_STRUCT)
       (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE ORACLE_PRICE_ID)
     )
 
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
@@ -109,6 +108,7 @@
       (if (all valid_solution OPERATIONS)
         (assert
           (=
+            ; FIXME: this is not safe, iterate over all operations and verify that way
             (sha256tree (operation-program vault_operation_condition_pre))
             (a (operation-treearg vault_operation_condition_pre) OPERATIONS)
           )
@@ -133,7 +133,7 @@
       vault_operation
       (list
         (list DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
-          ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
+              STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
         args
       )
     )
@@ -155,7 +155,6 @@
             (sha256 ONE CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_MOD_HASH)
-            (sha256 ONE ORACLE_PRICE_ID)
             (sha256 ONE final_transferred_fees)
             (sha256 ONE final_xch_deposited_amount)
             (sha256 ONE final_byc_deposited_amount)
@@ -189,7 +188,6 @@
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256tree STATUTES_STRUCT)
                     (sha256 ONE BYC_TAIL_MOD_HASH)
-                    (sha256 ONE ORACLE_PRICE_ID)
                     (sha256 ONE transferred_fees)
                     (sha256 ONE deposited_amount)
                     (sha256 ONE byc_minted_amount)
@@ -227,7 +225,6 @@
               (sha256 ONE CAT_MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_MOD_HASH)
-              (sha256 ONE ORACLE_PRICE_ID)
               (sha256 ONE 0)
               (sha256 ONE 0)
               (sha256 ONE 0)

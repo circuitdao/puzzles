@@ -3,7 +3,7 @@
     (@ VAULT_STATE
       (
        DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
-       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
@@ -28,9 +28,9 @@
       statutes_cumulative_stability_fee_rate
       current_stability_fee_rate
       current_timestamp
-      (f (r price_info))
+      (r price_info)
     )
-    (xch_price last_updated) price_info
+    (xch_price . last_updated) price_info
     principal (+ BYC_MINTED_AMOUNT byc_amount_to_mint)
     ; divide negative numbers to ceil
     discounted_mint_amount (* -1 (/ (* -1 byc_amount_to_mint PRECISION) cumulative_stability_fee_rate))
@@ -51,7 +51,7 @@
         (list TRANSFERRED_FEES DEPOSITED_AMOUNT principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
         ; additional conditions
         (list
-          (list REMARK "VAULT==>" discounted_principal ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT) ORACLE_PRICE_ID)
+          (list REMARK "VAULT==>" discounted_principal ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT))
           ; signal to tail that it can issue BYC with certain amount
           (list CREATE_COIN_ANNOUNCEMENT
             (concat
@@ -60,7 +60,6 @@
               byc_issuing_coin_id
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)
-              ORACLE_PRICE_ID
             )
           )
           ; make sure tail has actually issued it too
@@ -72,7 +71,6 @@
               my_coin_id
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)
-              ORACLE_PRICE_ID
             )
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
@@ -86,7 +84,6 @@
             minimum_debt_amount)
           (assert-price
             statutes_puzzle_hash
-            ORACLE_PRICE_ID
             price_info)
           (list ASSERT_MY_COIN_ID my_coin_id)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))

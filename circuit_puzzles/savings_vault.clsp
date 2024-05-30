@@ -136,7 +136,7 @@
       statutes_cumulative_interest_rate
       current_interest_rate
       current_timestamp
-      (f (r price_info))
+      (r price_info)
     )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (create_coin_body withdraw_amount conditions) (filter-conditions
@@ -239,7 +239,7 @@
             (c
               (assert-statute statutes_puzzle_hash STATUTE_INTEREST_RATE current_interest_rate)
               (c
-                (assert-price statutes_puzzle_hash 0 price_info)
+                (assert-price statutes_puzzle_hash price_info)
                 (c
                   (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
                   (c

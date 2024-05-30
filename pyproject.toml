@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "circuit-puzzles"
 packages = [{include = "circuit_puzzles"}]
-version = "0.3.1"
+version = "0.9.0"
 description = "Puzzles used in stablecoin protocol Circuit on Chia blockchain"
 authors = ["Sebastjan Trepca <set@circuitdao.com>", "Nic Niedermowwe <nin@circuitdao.com>"]
 exclude = [
@@ -12,8 +12,8 @@ exclude = [
 [tool.poetry.dependencies]
 python = "^3.8"
 chialisp_loader = "^0.1.0"
-chialisp_builder = "^0.1.0"
-clvm_rs = "^0.6.1"
+chialisp_builder = "^0.1.2"
+clvm_rs = "^0.7"
 
 
 [build-system]

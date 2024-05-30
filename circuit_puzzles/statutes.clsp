@@ -8,15 +8,16 @@
       )
       CAT_MOD_HASH
       CRT_TAIL_HASH
-      ; statutes are (ORACLE_PRICES . statutes) where ORACLE_PRICES are a list of
-      ; ((ORACLE_MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER) (oracle_launcher_id1 oracle_launcherid2 ...))
+      ; statutes are (oracle_launcher_id . statutes) where ORACLE_PRICE_INFO are a list of
       STATUTES
-      ; PRICES -> ( (oracle_id price last_updated) ...)
-      PRICES
+      ; PRICE_INFO -> ( price . last_updated)
+      PRICE_INFO
       ; cumulative fee updated since start, updated whenever oracle prices are updated
       PAST_CUMULATIVE_STABILITY_FEE_RATE
       ; cumulative interest rate fee, same schedule as stability fee
       PAST_CUMULATIVE_INTEREST_RATE
+      ; counter of all price updates
+      PRICE_UPDATES
 
       ; solution
       crt_inner_puzzle_hash 
@@ -63,7 +64,7 @@
   (defun-inline create-coin-condition (MOD_STATUTES_HASH TREASURY_APPROVAL_MOD_HASHES
                                           P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
                                           CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
-                                          statutes prices cumulative_stability_fee cumulative_interest_rate)
+                                          statutes prices cumulative_stability_fee cumulative_interest_rate price_updates)
     (list
       CREATE_COIN
       ; puzzle
@@ -83,6 +84,7 @@
         (sha256tree prices)
         (sha256 ONE cumulative_stability_fee)
         (sha256 ONE cumulative_interest_rate)
+        (sha256 ONE price_updates)
       )
       ; amount, 1 mojo for singletons or any odd number
       ONE
@@ -119,26 +121,26 @@
 
   (assign
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
-    operation_mod_hash (if operation (sha256tree (f operation)) ())
-    (statutes prices cumulative_stability_fee cumulative_interest_rate mutation_conditions) (if (= operation_mod_hash ())
+    (operation_mod . operation_mod_hash) (if operation (c operation (sha256tree operation)) (c () ()))
+    (statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates mutation_conditions) (if (= operation_mod_hash ())
       ; default to existing values
-      (list STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE ())
+      (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE PRICE_UPDATES ())
       ; mutate statutes
       (if STATUTES_OPERATIONS
-        (if (= operation_mod_hash (a (r operation) STATUTES_OPERATIONS))
+        (if (any (= operation_mod_hash (f STATUTES_OPERATIONS)) (= operation_mod_hash (r STATUTES_OPERATIONS)))
           (a
-            (f operation)
+            operation_mod
             (list
-              STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH
+              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
               mutation_index mutation_value crt_inner_puzzle_hash
             )
           )
           (x)
         )
         (a
-          (f operation)
+          operation_mod
           (list
-            STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH
+            STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
             mutation_index mutation_value crt_inner_puzzle_hash
           )
         )
@@ -153,9 +155,10 @@
       OFFER_MOD_HASH
       CRT_TAIL_HASH
       statutes
-      prices
+      price_info
       cumulative_stability_fee
       cumulative_interest_rate
+      price_updates
     )
     ; add announcements if any
     announcements (if (all operation_mod_hash (= mutation_index -1))
@@ -166,7 +169,9 @@
     )
     (c create_coin_condition
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT (concat STATUTES_ANN_PREFIX '*'))
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -7 PRICE_UPDATES)))
+        )
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
             (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)))
@@ -191,9 +196,10 @@
                     (list CREATE_PUZZLE_ANNOUNCEMENT
                       (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
                     )
-                    (announce-statutes
-                      prices
-                      PRICE_PREFIX 0
+                    (c
+                      (list CREATE_PUZZLE_ANNOUNCEMENT
+                        (concat STATUTES_ANN_PREFIX (sha256tree (list PRICE_PREFIX price_info)))
+                      )
                       (announce-statutes statutes STATUTE_PREFIX 0 announcements)
                     )
                   )

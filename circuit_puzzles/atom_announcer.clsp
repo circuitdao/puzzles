@@ -1,72 +1,321 @@
-(mod (MOD_HASH PUB_KEY VALUE BEFORE_TIMESTAMP_EXPIRES (@ lineage (parent_id prev_value prev_timestamp)) (@ mutation (current_timestamp atom_value)))
+(mod (MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH DEPOSIT STATUTES_PRICE_UPDATES_COUNTER DELAY ATOM_VALUE TIMESTAMP_EXPIRES
+     statutes_inner_puzzle_hash
+     (@ lineage (parent_id prev_value prev_inner_puzzle_hash prev_timestamp prev_delay prev_deposit prev_price_updates))
+     inner_puzzle
+     solution_or_conditions
+     )
   (include condition_codes.clib)
   (include curry.clib)
   (include *standard-cl-23*)
-  (include sha256tree.clib)
-  (defconstant ONE 1)
-  (defconstant b32 32)
+  (include utils.clib)
+  (include statutes_utils.clib)
 
-  (defun-inline size-b32 (var)
-    (= (strlen var) b32)
-  )
+  (defconst ANN_PREFIX 'A')
 
-  (defun-inline calculate-coin-id (parent puzzle_hash amount)
-    (if (all (size-b32 parent) (size-b32 puzzle_hash) (> amount -1))
-      (sha256 parent puzzle_hash amount)
-      (x)
+  (defun-inline is-valid-ann-cond (cond_body)
+    (not
+      (=
+        (substr (f cond_body) 0 ONE)
+        ANN_PREFIX
+      )
     )
   )
-  (if mutation
-    (if (l atom_value)
-      (x) ; can't be a list/cons
-      (list 
-        ; we don't need any mojos so why waste 
-        (list ASSERT_MY_AMOUNT 0)
-        ; only pub key owner can set the value 
-        (list AGG_SIG_ME PUB_KEY (sha256tree mutation))
-        ; TODO: do we need to check that current timestamp should be somewhat current
 
-        (list CREATE_COIN
-          (curry_hashes MOD_HASH 
-              (sha256 ONE MOD_HASH)
-              (sha256 ONE PUB_KEY)
-              (sha256 ONE atom_value)
-              ; TODO: this should be a variable, not fixed
-              (sha256 ONE (+ current_timestamp 360))
+  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
+                              found_create_coin final_conditions)
+    ; RETURNS (conditions create_coin_condition)
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (if found_create_coin
+          (x)
+          (restrict-conditions rest_of_conditions condition_body final_conditions)
+        )
+        (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+          (if (is-valid-ann-cond condition_body)
+            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+            (restrict-conditions rest_of_conditions found_create_coin final_conditions)
           )
-          0
+          ; ignore other conditions
+          (restrict-conditions rest_of_conditions found_create_coin final_conditions)
         )
       )
+      (list final_conditions found_create_coin)
     )
-    ; ELSE -> no mutation, announce the price
-    (list
-      ; we don't need any mojos so why waste
-      (list ASSERT_MY_AMOUNT 0)
-      (list CREATE_PUZZLE_ANNOUNCEMENT '!')
-      (list ASSERT_BEFORE_SECONDS_ABSOLUTE BEFORE_TIMESTAMP_EXPIRES)
-      ; assert parent to ensure someone is not messing with values without approving with pubkey 
-      ; ensuring that parent was indeed spent with our puzzle and pubkey 
-      (list ASSERT_MY_PARENT_ID 
-        (calculate-coin-id
-          parent_id
-          (curry_hashes 
-            MOD_HASH 
-            (sha256 ONE MOD_HASH)
-            (sha256 ONE PUB_KEY)
-            (sha256 ONE prev_value) 
-            (sha256 ONE prev_timestamp)
-          ) 
-          0
-        )
-      )
+  )
+
+
+  (defun recreate-myself-condition (MOD_HASH STATUTES_STRUCT inner_puzzle_hash updates_counter
+                                    deposit delay atom_value timestamp_expires input_conditions)
+    (c
       (list CREATE_COIN
         (curry_hashes MOD_HASH
             (sha256 ONE MOD_HASH)
-            (sha256 ONE PUB_KEY)
-            (sha256 ONE VALUE)
-            (sha256 ONE BEFORE_TIMESTAMP_EXPIRES)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE inner_puzzle_hash)
+            (sha256 ONE deposit)
+            (sha256 ONE updates_counter)
+            (sha256 ONE delay)
+            (sha256 ONE atom_value)
+            (sha256 ONE timestamp_expires)
         )
-        0
+        deposit
+      )
+      ; driver remark to reveal the puzzle hash
+      (c
+        (list REMARK inner_puzzle_hash deposit updates_counter delay atom_value timestamp_expires)
+        input_conditions
+      )
+    )
+  )
+
+  (assign
+    inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
+    raw_conditions (if inner_puzzle_hash
+      (assert (= inner_puzzle_hash INNER_PUZZLE_HASH)
+        (a inner_puzzle solution_or_conditions)
+      )
+      ; otherwise, solution_or_conditions is conditions
+      solution_or_conditions
+    )
+    (input_conditions (new_puzzle_hash deposit . operation_data))
+      (if raw_conditions
+        (restrict-conditions raw_conditions () ())
+        (list () (list INNER_PUZZLE_HASH DEPOSIT (list 0 0)))
+      )
+    (operation_code . args ) (f operation_data)
+    (assert
+      (any inner_puzzle_hash (all (not inner_puzzle_hash) (= new_puzzle_hash INNER_PUZZLE_HASH)))
+      (c
+        ; assert parent to ensure someone is not messing with values without approving with pubkey
+        ; ensuring that parent was indeed spent with our puzzle and pubkey
+        (if lineage
+          (list ASSERT_MY_PARENT_ID
+            (calculate-coin-id
+              parent_id
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE prev_inner_puzzle_hash)
+                (sha256 ONE prev_deposit)
+                (sha256 ONE prev_price_updates)
+                (sha256 ONE prev_delay)
+                (sha256 ONE prev_value)
+                (sha256 ONE prev_timestamp)
+              )
+              prev_deposit
+            )
+          )
+          (assert
+            (= DEPOSIT 0)
+            (= STATUTES_PRICE_UPDATES_COUNTER 0)
+            (= ATOM_VALUE 0)
+            (= TIMESTAMP_EXPIRES 0)
+            (list ASSERT_MY_PUZZLEHASH
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256 ONE 0) ; zero deposit
+                (sha256 ONE 0) ; price updates -> enforce that on launch, announcers are not approved
+                (sha256 ONE DELAY)
+                (sha256 ONE 0) ; enforce value of -1 for atom value in launch
+                (sha256 ONE 0) ; expiry is not set
+              )
+            )
+          )
+        )
+        (c
+          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct
+          (if (= operation_code 1) ; GOVERNANCE backdoor
+            ; we either activate this announcer or deactivate, can happen at any time via CRT vote
+            (assign
+              (current_timestamp toggle_activation) args
+              (c
+                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+                (c
+                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+                  (c (list CREATE_COIN_ANNOUNCEMENT toggle_activation)
+                    (c (list ASSERT_PUZZLE_ANNOUNCEMENT
+                          (sha256
+                            (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+                            ANN_PREFIX
+                            INNER_PUZZLE_HASH
+                            toggle_activation
+                          )
+                      )
+                      (recreate-myself-condition MOD_HASH
+                        STATUTES_STRUCT
+                        INNER_PUZZLE_HASH
+                        toggle_activation
+                        deposit
+                        DELAY
+                        (if (= toggle_activation -1) -1 0) ; on activation, atom value must be zero
+                        ; on activation, we give the announcer some time to update the price before we penalize
+                        ; it's activated but can't be announced until it updates the price
+                        (if (= toggle_activation -1) TIMESTAMP_EXPIRES (+ current_timestamp DELAY))
+                        (if (all (= toggle_activation -1) (> STATUTES_PRICE_UPDATES_COUNTER 0))
+                          ; unallocated XCH goes to tx fee to ensure owner can't block us for long
+                          (c (list RESERVE_FEE (- DEPOSIT deposit))
+                            input_conditions
+                          )
+                          input_conditions
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+            (if (= operation_code 2) ; MUTATION
+              ; mutation of announcers curried values by owner
+              ; can mutate the atom value only, or also deactivate itself or topup deposit
+              (assign
+                (current_timestamp atom_value delay deactivate) args
+                (assert
+                  (> deposit (- DEPOSIT 1))
+                  inner_puzzle_hash ; must be owner
+                  (c
+                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+                    (c
+                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+                      (recreate-myself-condition MOD_HASH
+                        STATUTES_STRUCT
+                        new_puzzle_hash
+                        (if deactivate -1 STATUTES_PRICE_UPDATES_COUNTER)
+                        deposit
+                        delay
+                        atom_value
+                        (+ current_timestamp delay)
+                        input_conditions
+                      )
+                    )
+                  )
+                )
+              )
+              (if (= operation_code 3)  ; PENALTY
+                ; else we try to announce the atom value or penalize if expired
+                ; penalty
+                (assign
+                  (penalty_factor_per_interval penalty_interval announcer_min_deposit current_timestamp) args
+                  expired_for_minutes (/ (- current_timestamp TIMESTAMP_EXPIRES) 60)
+                  penalized_deposit (/ (* announcer_min_deposit (* (/ expired_for_minutes penalty_interval) penalty_factor_per_interval)) PERCENT_PRECISION)
+                  statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+                  (assert
+                    (> current_timestamp TIMESTAMP_EXPIRES)
+                    (> STATUTES_PRICE_UPDATES_COUNTER -1)
+                    (> DEPOSIT penalized_deposit)
+                    (> penalized_deposit 0)
+                    (c
+                      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+                      (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+                        (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval)
+                          (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL penalty_factor_per_interval)
+                            (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_min_deposit)
+                              (c (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+                                (recreate-myself-condition MOD_HASH
+                                  STATUTES_STRUCT
+                                  INNER_PUZZLE_HASH
+                                  STATUTES_PRICE_UPDATES_COUNTER
+                                  (- DEPOSIT penalized_deposit)
+                                  DELAY
+                                  ATOM_VALUE
+                                  TIMESTAMP_EXPIRES
+                                  input_conditions
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+                (if (= operation_code 4) ; CLAIM REWARD
+                  ; mint CRT reward, depending on the delta between announcers price update counter and statutes
+                  (assign
+                    ; reward must be claimed as each buffer gets filled, otherwise it's lost
+                    statutes_struct_hash (sha256tree STATUTES_STRUCT)
+                    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+                    (statutes_price_update_counter claim_interval crt_credits_per_interval current_timestamp funding_coin_id) args
+                    (assert
+                      inner_puzzle_hash
+                      (> STATUTES_PRICE_UPDATES_COUNTER -1)
+                      (> (- statutes_price_update_counter STATUTES_PRICE_UPDATES_COUNTER) claim_interval)
+                      (> TIMESTAMP_EXPIRES current_timestamp)
+                      (c
+                        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+                        (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+                          (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX statutes_struct_hash funding_coin_id crt_credits_per_interval))
+                            (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id statutes_struct_hash crt_credits_per_interval))
+                              (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CRT_CREDITS_PER_INTERVAL crt_credits_per_interval)
+                                (c (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATES statutes_price_update_counter)
+                                  ; should not be expired
+                                  (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+                                    (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CLAIM_INTERVAL claim_interval)
+                                      (recreate-myself-condition MOD_HASH
+                                        STATUTES_STRUCT
+                                        INNER_PUZZLE_HASH
+                                        ; update the counter to latest value, by at the start of our previous interval
+                                        (- statutes_price_update_counter (r (divmod STATUTES_PRICE_UPDATES_COUNTER claim_interval)))
+                                        DEPOSIT
+                                        DELAY
+                                        ATOM_VALUE
+                                        TIMESTAMP_EXPIRES
+                                        input_conditions
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                  ; ELSE -> announce the price as default
+                  (c
+                    (list CREATE_PUZZLE_ANNOUNCEMENT
+                      (sha256
+                        (sha256tree STATUTES_STRUCT)
+                        INNER_PUZZLE_HASH
+                        (if (> STATUTES_PRICE_UPDATES_COUNTER 0x00) 1 0x00)
+                        DEPOSIT
+                        DELAY
+                        ATOM_VALUE
+                      )
+                    )
+                    (c
+                      (list REMARK
+                        'announcer sending price ann =>'
+                        (sha256tree STATUTES_STRUCT)
+                        INNER_PUZZLE_HASH
+                        (if (> STATUTES_PRICE_UPDATES_COUNTER 0x00) 1 0x00)
+                        DEPOSIT
+                        DELAY
+                        ATOM_VALUE
+                      )
+                      (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+                        (c (list REMARK solution_or_conditions operation_data raw_conditions)
+                          (recreate-myself-condition MOD_HASH
+                            STATUTES_STRUCT
+                            INNER_PUZZLE_HASH
+                            STATUTES_PRICE_UPDATES_COUNTER
+                            DEPOSIT
+                            DELAY
+                            (if (all (> STATUTES_PRICE_UPDATES_COUNTER 0) (= ATOM_VALUE 0)) (x) ATOM_VALUE)
+                            TIMESTAMP_EXPIRES
+                            input_conditions
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
       )
     )
   )
