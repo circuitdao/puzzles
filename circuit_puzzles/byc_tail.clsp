@@ -1,4 +1,5 @@
-(mod (STATUTES_STRUCT CAT_MOD_HASH
+(mod (STATUTES_STRUCT
+      CAT_MOD_HASH ; TODO: CAT_MOD_HASH needed anywhere or can be removed?
       Truths parent_is_cat lineage_proof delta inner_conditions
       (@ solution
         (
@@ -18,7 +19,7 @@
 
   (include *standard-cl-23*)
 
-  (defconstant VAULT_ANN_PREFIX 0x56) ; starts with "V"
+  (defconstant VAULT_ANN_PREFIX 0x56) ; starts with "V" ; TODO: use ANN_PREFIX from vault.clib instead?
 
   (include condition_codes.clib)
   (include cat_truths.clib)
@@ -58,7 +59,7 @@
           (list
             CREATE_COIN_ANNOUNCEMENT
             (concat
-              cat_ann_prefix
+              cat_ann_prefix ; REVIEW: does not get asserted & hence can be anything. is that ok? Why not make it BYC_ANN_PREFIX?
               (if (> 0 delta) "x" "i")
               vault_coin_id
               (if (> 0 delta) delta to_issue_amount)

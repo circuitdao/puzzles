@@ -9,7 +9,7 @@
       inner_solution
       .
       (@ treasury_coin_info ((p2_treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
-                             treasury_coin_prev_launcher_id treasury_coin_amount minimum_interest_amount)))
+                             treasury_coin_prev_launcher_id treasury_coin_amount minimum_interest_amount))) ; REVIEW: is there a reason this is a list of a list?
      )
 
   (include *standard-cl-23*)
@@ -19,14 +19,15 @@
   (include utils.clib)
 
   (defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
-  (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
+  (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B" ; REVIEW: not used anywhere
   (defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
-  (defconstant MOJOS 1000000000000)
-  (defconstant PERCENT_PRECISION 10000)
+  (defconstant MOJOS 1000000000000) ; REVIEW: not used anywhere
+  (defconstant PERCENT_PRECISION 10000) ; REVIEW: not used in this mod, but encountered elsewhere (collateral vault?)
   (defconstant PRECISION 10000000000)
 
 
-
+  ; REVIEW: rename rate -> discount factor (in function & variable names) throughout
+  ; REVIEW: move to a .clib file and use for both savings interest and stability fee calculations
   (defun calculate-cumulative-interest-rate
       (past_cumulative_interest_rate
        current_interest_rate
@@ -45,6 +46,7 @@
     )
   )
 
+  ; REVIEW: remove generate-puzzle-hash argument. not used by filter-conditions
   (defun filter-conditions (generate-puzzle-hash
                             (@ conditions ( (condition_code . condition_rest) . rest_of_conditions))
                             found_first_create_coin
@@ -79,7 +81,7 @@
               generate-puzzle-hash
               rest_of_conditions
               condition_rest ; first create coin condition
-              0 ;(+ delta_amount (f (r condition_rest))) ; passed in delta amount, in case there's a deposit, this is > 0
+              0 ;(+ delta_amount (f (r condition_rest))) ; passed in delta amount, in case there's a deposit, this is > 0; REVIEW: delete comment to left as no longer valid? delta_amount is used solely for internal accounting purposes, and should always be set to 0 when calling filter-conditions externally.
               ; skip this condition so we can add it later
               filtered_conditions
             )
@@ -120,6 +122,8 @@
   )
 
   (assign
+    ; REVIEW: no need to define generate-puzzle-hash function as it's only used once further below where we have access to state variables
+    ;  Note: it's an unnecessary argument to filter-conditions and can be removed from that function signature
     generate-puzzle-hash (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT)
                                      discounted_deposit inner_puzzle_hash)
       ; only inner puzzle
@@ -139,7 +143,7 @@
       (r price_info)
     )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (create_coin_body withdraw_amount conditions) (filter-conditions
+    (create_coin_body withdraw_amount conditions) (filter-conditions ; REVIEW: withdraw_amount not used anywhere. remove or assert vs delta_amount?
       generate-puzzle-hash
       (a INNER_PUZZLE inner_solution)
       0 ; found first coin
@@ -158,6 +162,7 @@
       (+ (/ (* delta_amount PRECISION) cumulative_interest_rate) DISCOUNTED_DEPOSIT)
     )
 
+    ; REVIEW: do we need the individual state variables or would a (partial) hash do?
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
@@ -173,7 +178,8 @@
             (sha256tree treasury_coin_launcher_id)
           )
         )
-        treasury_coin_amount)
+        treasury_coin_amount
+      )
       ()
     )
     new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interests_amount) 0)
@@ -201,6 +207,7 @@
         conditions
       )
       ; this is a launch, verify we're starting with zero amounts
+      ; REVIEW: do we want to make eve state unattainable?
       (c
         (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
@@ -229,7 +236,7 @@
       )
       pre_final_conditions
     )
-    (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
+    (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body))) ; REVIEW: is this condition needed?
       (c
         (list ASSERT_MY_COIN_ID my_coin_id)
         (c
@@ -247,6 +254,7 @@
                     (c
                       (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
                         (c
+                          ; REVIEW: no need for generate-puzzle-hash function. can construct puzzle hash directly
                           (a generate-puzzle-hash
                             (list
                               new_discounted_deposit
@@ -261,7 +269,7 @@
                       )
                       (if treasury_coin_id
                         (assert
-                          ; treasury coin should hae enough amount to cover interests
+                          ; treasury coin should have enough amount to cover interest
                           (> new_treasury_amount 0)
                           ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins
                           (> interests_amount minimum_interest_amount)

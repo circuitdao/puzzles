@@ -12,16 +12,18 @@
       )
     )
   )
+
   (include *standard-cl-23*)
   (include utils.clib)
   (include vault.clib)
   (include statutes_utils.clib)
   (include condition_codes.clib)
+
   (assign
     new_deposited_amount (- DEPOSITED_AMOUNT withdraw_amount)
     min_collateral_amount (
       get-min-collateral-amount
-        BYC_MINTED_AMOUNT
+        BYC_MINTED_AMOUNT ; REVIEW: collateral amount should be checked vs debt rather than byc minted
         coll_ratio
         (f price_info)
     )
@@ -33,7 +35,7 @@
         (list TRANSFERRED_FEES new_deposited_amount BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
         (list
           ; assert collateralization ratio
-          (assert-statute statutes_puzzle_hash STATUTE_COLLATERALIZATION_RATIO coll_ratio)
+          (assert-statute statutes_puzzle_hash STATUTE_COLLATERALIZATION_RATIO coll_ratio) ; REVIEW: rename collateralization ratio to liquidation ratio, also in Statutes
           ; assert collateral price
           (assert-price statutes_puzzle_hash price_info)
         )

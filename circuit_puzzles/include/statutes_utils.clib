@@ -8,8 +8,8 @@
   (defconst STATUTE_CUMULATIVE_INTEREST_RATE -2)
   (defconst STATUTE_CUMULATIVE_STABILITY_FEE_RATE -1)
   (defconst STATUTE_PRICE_ORACLES 0) ; a list of (curried_oracle_mod) with missing price and last updated
-  (defconst STATUTE_STABILITY_FEE_RATE 1)
-  (defconst STATUTE_INTEREST_RATE 2)
+  (defconst STATUTE_STABILITY_FEE_RATE 1)  ; REVIEW: rename to ..._DF as this is a (per-minute) discount factor
+  (defconst STATUTE_INTEREST_RATE 2) ; REVIEW: rename to ..._DF as this is a (per-minute) discount factor
   (defconst STATUTE_CUSTOM_ANNOUNCEMENTS 3)
   (defconst STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE 4)
   (defconst STATUTE_COLLATERALIZATION_RATIO 5)
@@ -53,7 +53,7 @@
   (defconst STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
   (defconst STATUTES_MUTATION_PREFIX "m")
   (defconst STATUTE_PREFIX "s")
-  (defconst STATUTE_FULL_PREFIX "sf")
+  (defconst STATUTE_FULL_PREFIX "sf")  ; REVIEW: shorten to just one character
   (defconst PRICE_PREFIX "p")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
@@ -98,6 +98,7 @@
   )
 
   (defun-inline assert-price (statutes_puzzle_hash price_info)
+  ; REVIEW: Rename to assert-price-info?
     (list ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256 statutes_puzzle_hash
         (concat

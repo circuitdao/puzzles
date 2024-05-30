@@ -1,5 +1,5 @@
 (mod (
-      (
+      (  ; REVIEW: governance.clsp assumes this to be a struct of MOD_HASH and some rest
         MOD_HASH .
         OPERATIONS
       )

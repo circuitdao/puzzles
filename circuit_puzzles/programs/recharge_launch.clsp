@@ -1,14 +1,18 @@
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
-    statutes_puzzle_hash lineage_proof announcements
+    statutes_puzzle_hash
+    lineage_proof ; REVIEW: not used anywhere. rename to _?
+    announcements ; REVIEW: not asserted. safe for it to be anything?
     (my_coin_id)
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     (assert
       ; can't run if LAST_BID is set

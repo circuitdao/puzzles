@@ -20,12 +20,14 @@
       )
     )
   )
+
   (include *standard-cl-23*)
   (include vault.clib)
   (include statutes_utils.clib)
   (include condition_codes.clib)
   (include utils.clib)
   (include curry.clib)
+
   (assign
     byc_principal_to_melt BYC_MINTED_AMOUNT
     cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
@@ -34,12 +36,12 @@
       current_timestamp
       (r price_info)
     )
-    (full_fees . liquidation_penalty) (calculate-fees
+    (full_fees . liquidation_penalty) (calculate-fees ; REVIEW: calculate conservatively wrt to current_timestamp, so that full_fees never bigger than actual?
       byc_principal_to_melt
       cumulative_stability_fee_rate
       DISCOUNTED_PRINCIPAL
       BYC_MINTED_AMOUNT
-      0 ; no liquidity penalty
+      0 ; no liquidation penalty
     )
     fees (- full_fees TRANSFERRED_FEES)
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
@@ -85,7 +87,7 @@
           DISCOUNTED_PRINCIPAL
         )
         (list
-          (list REMARK ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount TRANSFERRED_FEES)
+          (list REMARK ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount TRANSFERRED_FEES) ; REVIEW: needed?
           ; signal to tail that it can issue BYC with certain amount
           (list CREATE_COIN_ANNOUNCEMENT
             (concat

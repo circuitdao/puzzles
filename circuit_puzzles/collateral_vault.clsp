@@ -1,5 +1,8 @@
 (mod ((MOD_HASH . (OWNER_OPERATIONS . KEEPER_OPERATIONS)) CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
-      TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
+      TRANSFERRED_FEES
+      DEPOSITED_AMOUNT ; REVIEW: rename to COLLATERAL(_AMOUNT)?
+      BYC_MINTED_AMOUNT ; REVIEW: rename to PRINCIPAL(_AMOUNT)?
+      AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
         ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
@@ -35,7 +38,7 @@
       (if (= condition_code REMARK)
         (if found_remark
           (x)
-          (if (= 'v' (f condition_body))
+          (if (= 'v' (f condition_body)) ; REVIEW: Do we need to use substr here? Deliberately different from ANN_PREFIX ("v" vs "V")? O/w use is-valid-ann-cond?
             (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
             (x)
           )
@@ -111,8 +114,8 @@
       (
         final_transferred_fees
         final_xch_deposited_amount
-        final_byc_deposited_amount
-        final_bids
+        final_byc_deposited_amount ; REVIEW: rename to final_byc_minted_amount? or even better final_byc_principal and rename BYC_MINTED_AMOUNT accordingly
+        final_bids ; REVIEW: rename to final_auction_state?
         final_inner_puzzle_hash
         final_discounted_principal
       )
@@ -143,8 +146,8 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_MOD_HASH)
             (sha256 ONE final_transferred_fees)
-            (sha256 ONE final_xch_deposited_amount)
-            (sha256 ONE final_byc_deposited_amount)
+            (sha256 ONE final_xch_deposited_amount) ; REVIEW: Why keep this as curried arg in state if it's also the amount?
+            (sha256 ONE final_byc_deposited_amount) ; REVIEW: rename to final_byc_minted_amount (or final_principal) throughout to match curried arg name?
             (sha256tree final_bids)
             (sha256 ONE final_inner_puzzle_hash)
             (sha256 ONE final_discounted_principal)
@@ -161,6 +164,7 @@
           (list
             ASSERT_MY_PARENT_ID
               (assign
+                ; REVIEW: why include all these state variables in lineage proof instead of just their hash?
                 deposited_amount (f (r lineage_proof))
                 byc_minted_amount (f (r (r lineage_proof)))
                 auction_state (f (r (r (r lineage_proof))))
@@ -203,6 +207,7 @@
           )
         )
         ; force that every vault needs to start with zero state
+        ; REVIEW: do we want an unattainable eve state, or are we fine with a vault possibly returning to its eve state?
         (c
           (list
             ASSERT_MY_PUZZLEHASH

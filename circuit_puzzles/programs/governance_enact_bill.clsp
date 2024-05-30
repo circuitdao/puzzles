@@ -7,6 +7,7 @@
       prev_bill_hash
     )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -14,6 +15,7 @@
   (include utils.clib)
   (defconst ANN_ENACTED '$')
   (defconst ANN_PREFIX 'G')
+
   (assign
     (
       (veto_seconds . enact_seconds)
