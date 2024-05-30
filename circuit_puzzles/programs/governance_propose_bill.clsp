@@ -1,25 +1,42 @@
-(mod
-  (
+(mod (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
-      (@ new_bill (statute_index new_statute_value new_threshold_amount_to_propose new_veto_seconds new_delay_seconds new_max_delta))
-      (@ current_statute (statute_value threshold_amount_to_propose veto_seconds delay_seconds max_delta))
+      (@ new_bill (
+        statute_index
+        new_statute_value
+        new_threshold_amount_to_propose
+        new_veto_seconds
+        new_delay_seconds
+        new_max_delta
+      ))
+      (@ current_statute (
+        statute_value
+        threshold_amount_to_propose
+        veto_seconds
+        delay_seconds
+        max_delta
+      ))
     )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
   (defconst ANN_PREFIX 'G')
   (defconstant ANN_PROPOSED '^')
+
   (assert
     (> amount threshold_amount_to_propose)
-    (> new_threshold_amount_to_propose 0) (> new_veto_seconds 0) (> new_delay_seconds 0)
+    (> new_threshold_amount_to_propose 0)
+    (> new_veto_seconds 0) ; REVIEW: hardcode a minimum >> 0?
+    (> new_delay_seconds 0) ; REVIEW: hardcode a minimum >> 0?
     ; if we have a max_delta, make sure new value doesn't exceed it
     (if (= max_delta 0)
-      (= max_delta 0)
+      (= max_delta 0) ; REVIEW: unnecessary code, why not just 1?
       ; or new value must be within max_delta of current value
       (if (> new_statute_value statute_value)
         (> max_delta (- new_statute_value statute_value))

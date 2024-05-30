@@ -3,18 +3,20 @@
     (@ VAULT_STATE
       (
        DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
-       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash ; REVIEW: ORACLE_PRICE_ID no longer needed. remove
       )
     )
     (@ args
       (
-         byc_amount_to_mint my_coin_id minimum_debt_amount collateralization_ratio price_info
+         byc_amount_to_mint my_coin_id minimum_debt_amount collateralization_ratio ; REVIEW: rename collateralization_ratio to liquidation_ratio
+         price_info
          byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
          statutes_cumulative_stability_fee_rate
          current_stability_fee_rate current_timestamp
       )
     )
   )
+
   (include *standard-cl-23*)
   (include utils.clib)
   (include vault.clib)
@@ -42,20 +44,21 @@
       byc_issuing_coin_info
     )
     ; check that total debt is larger than minted amount, not minimum mint amount
-    (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_debt_amount)
+    (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_debt_amount) ; REVIEW: need to ensure that debt, not principal, is > min debt amount
             (> byc_amount_to_mint 0)
             ; check if requested amount of BYC to mint takes us over the collateralization ratio
-            (> (available-to-mint DEPOSITED_AMOUNT BYC_MINTED_AMOUNT collateralization_ratio xch_price) byc_amount_to_mint)
+            (> (available-to-mint DEPOSITED_AMOUNT BYC_MINTED_AMOUNT collateralization_ratio xch_price) byc_amount_to_mint) ; REVIEW: debt, not BYC minted, is relevant
       (list
         ; updated state
         (list TRANSFERRED_FEES DEPOSITED_AMOUNT principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
         ; additional conditions
         (list
+          ; REVIEW: is this remark needed, or remove?
           (list REMARK "VAULT==>" discounted_principal ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT) ORACLE_PRICE_ID)
           ; signal to tail that it can issue BYC with certain amount
           (list CREATE_COIN_ANNOUNCEMENT
             (concat
-              ANN_PREFIX
+              ANN_PREFIX; REVIEW: rename to VAULT_ANN_PREFIX if we rename it in vault.clib
               "i"
               byc_issuing_coin_id
               byc_amount_to_mint

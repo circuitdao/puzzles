@@ -3,20 +3,23 @@
     (@ VAULT_STATE
       (
        DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
-       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       ORACLE_PRICE_ID ; REVIEW: no longer needed
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
       (
-         inner_puzzle
+         inner_puzzle ; REVIEW: why not just pass inner puzzle hash in?
       )
     )
   )
+
   (include *standard-cl-23*)
   (include utils.clib)
+
   (list
     (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE (sha256tree inner_puzzle) DISCOUNTED_PRINCIPAL)
-    ; nothing else to assert here, just create a coin with new amount
+    ; nothing else to assert here, just create a coin with new inner puzzle
     (list )
   )
 )

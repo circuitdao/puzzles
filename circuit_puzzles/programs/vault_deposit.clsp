@@ -3,7 +3,7 @@
     (@ VAULT_STATE
       (
        DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
-       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash ; REVIEW: ORACLE_PRICE_ID no longer needed. remove
       )
     )
     (@ args
@@ -12,7 +12,7 @@
       )
     )
   )
-  (if (all deposit_amount (> deposit_amount 0))
+  (if (all deposit_amount (> deposit_amount 0)) ; REVIEW: sufficient to check that deposit_amount > 0
     (list
       (list TRANSFERRED_FEES (+ deposit_amount DEPOSITED_AMOUNT) BYC_MINTED_AMOUNT
              AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)

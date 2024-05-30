@@ -1,4 +1,4 @@
-(mod (MOD_STATUTES_HASH
+(mod (MOD_STATUTES_HASH ; REVIEW: governance.clsp assumes this to be a struct of MOD_HASH and some rest
       (
         ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
         TREASURY_APPROVAL_MOD_HASHES

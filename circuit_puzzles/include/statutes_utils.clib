@@ -7,11 +7,11 @@
   (defconstant STATUTE_CUMULATIVE_INTEREST_RATE -2)
   (defconstant STATUTE_CUMULATIVE_STABILITY_FEE_RATE -1)
   (defconstant STATUTE_PRICE_ORACLES 0) ; a list of (curried_oracle_mod) with missing price and last updated
-  (defconstant STATUTE_STABILITY_FEE_RATE 1)
-  (defconstant STATUTE_INTEREST_RATE 2)
+  (defconstant STATUTE_STABILITY_FEE_RATE 1) ; REVIEW: rename to ..._DF as this is a (per-minute) discount factor
+  (defconstant STATUTE_INTEREST_RATE 2) ; REVIEW: rename to ..._DF as this is a (per-minute) discount factor
   (defconstant STATUTE_CUSTOM_ANNOUNCEMENTS 3)
   (defconstant STATUTE_BLOCKS_NEEDED_TO_ENACT_VOTE 4)
-  (defconstant STATUTE_COLLATERALIZATION_RATIO 5)
+  (defconstant STATUTE_COLLATERALIZATION_RATIO 5) ; rename to liquidation ratio
   (defconstant STATUTE_ORACLE_M_OF_N 6)
   (defconstant STATUTE_ORACLE_ALLOWED_PUB_KEYS_ROOT 7)
   (defconstant STATUTE_ORACLE_PRICE_UPDATABLE_AFTER_SECONDS 8)
@@ -45,7 +45,7 @@
   (defconstant STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
   (defconstant STATUTES_MUTATION_PREFIX "m")
   (defconstant STATUTE_PREFIX "s")
-  (defconstant STATUTE_FULL_PREFIX "sf")
+  (defconstant STATUTE_FULL_PREFIX "sf") ; REVIEW: shorten to just one character
   (defconstant PRICE_PREFIX "p")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
@@ -89,6 +89,8 @@
     )
   )
 
+  ; REVIEW: Remove oracle_id arg from function. no longer needed
+  ; REVIEW: Rename to assert-price-info?
   (defun-inline assert-price (statutes_puzzle_hash oracle_id price_info)
     (list ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256 statutes_puzzle_hash

@@ -2,25 +2,38 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
+       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE
+       INNER_PUZZLE ; REVIEW: rename to INNER_PUZZLE_HASH as this is what gets passed in
        ORACLE_PRICE_ID STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
       (
-        current_timestamp byc_to_bid byc_melting_coin_info byc_treasury_coin_info
-        liquidation_penalty_percent statutes_cumulative_stability_fee_rate target_puzzle_hash
-        step_price_decrease_factor my_coin_id auction_timeout offer_mod_hash p2_treasury_mod_hash
-        price_info current_stability_fee_rate
+        current_timestamp
+        byc_to_bid
+        byc_melting_coin_info
+        byc_treasury_coin_info
+        liquidation_penalty_percent
+        statutes_cumulative_stability_fee_rate
+        target_puzzle_hash
+        step_price_decrease_factor
+        my_coin_id
+        auction_timeout
+        offer_mod_hash
+        p2_treasury_mod_hash
+        price_info
+        current_stability_fee_rate
       )
     )
   )
+
   (include *standard-cl-23*)
   (include utils.clib)
   (include vault.clib)
   (include statutes_utils.clib)
   (include condition_codes.clib)
   (include curry.clib)
+
   (assign
     cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
       statutes_cumulative_stability_fee_rate
@@ -68,6 +81,7 @@
         cumulative_stability_fee_rate
       )
     )
+    ; REVIEW: do we want to reduce auction price by fixed steps rather than percentage ones? should make calculations easier too.
     current_price_factor (
       assert_debug (> current_timestamp auction_start_time)
         (rpow_percent
