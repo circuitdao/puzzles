@@ -30,13 +30,12 @@
           (x)
           (restrict-conditions rest_of_conditions condition_body final_conditions)
         )
-        (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+        (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
           (if (is-valid-ann-cond condition_body)
             (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-            (restrict-conditions rest_of_conditions found_create_coin final_conditions)
+            (x)
           )
-          ; ignore other conditions
-          (restrict-conditions rest_of_conditions found_create_coin final_conditions)
+          (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
         )
       )
       (list final_conditions found_create_coin)
@@ -171,7 +170,7 @@
               ; can mutate the atom value only, or also deactivate itself or topup deposit
               (assign
                 (current_timestamp atom_value delay deactivate) args
-                (assert
+                (assert_debug
                   (> deposit (- DEPOSIT 1))
                   inner_puzzle_hash ; must be owner
                   (c

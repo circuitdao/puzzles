@@ -13,8 +13,6 @@
     (list
       ()
       (list
-        ; no ephemeral coins
-        (list ASSERT_HEIGHT_RELATIVE 1)
       )
     )
     (x)

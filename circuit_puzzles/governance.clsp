@@ -1,9 +1,10 @@
 ;; a governance puzzle used to propose, enact, and veto bills that change the statutes if enacted
 ;; this puzzle is to be used with CRT tail
-(mod (MOD_HASH
+(mod (OPERATIONS
+      MOD_HASH
       CAT_MOD_HASH 
       TAIL_MOD_HASH 
-      STATUTES_STRUCT; REVIEW: what is STATUTES_STRUCT here? statutes.clsp only has a MOD_STATUTES_HASH curried arg, but calculate-statutes-puzzle-hash needs this to be a struct
+      STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
       BILL ; bill is a potential statute if enacted
       inner_puzzle ; if provided, we're in owner mode
@@ -17,9 +18,8 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant VETO_PROPOSED_BILL -1)
-  (defconstant ANN_PREFIX 'G')
-  (defconst BILL_OPERATIONS ())
+  (defconst VETO_PROPOSED_BILL -1)
+  (defconst ANN_PREFIX 'G')
 
   (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
                             final_bill bill_operation
@@ -162,67 +162,42 @@
      )
    )
 
-   ; REVIEW: this function isn't used anywhere. remove
-   (defun get-bill-operation-lambda (bill_operations bill_operation)
-     (if bill_operations
-       (if (= (f (f bill_operations)) bill_operation)
-         (f (r (f bill_operations)))
-         (get-bill-operation-lambda (r bill_operations) bill_operation)
-       )
-       ; it's ok to not find bill condition since we also want to do transfers
-       ()
-     )
-   )
-
-   ; ###################  MAIN ENTRY POINT  ######################## 
+   ; ###################  MAIN ENTRY POINT  ########################
    (assign
      raw_inner_conditions (if inner_solution
        (a (assert_debug (sha256tree inner_puzzle INNER_PUZZLE_HASH) inner_puzzle) inner_solution)
        ; someone is trying to veto
-       ; there should be specific create_coin in the conditions and only one, announcements are allowed too
-       ; REVIEW: contrary to the comment above that there should only be one create_coin in the conditions, validate-veto-conditions doesn't ensure this.
+       ; there should be specific create_coin in the conditions with same puzzle hash as curried in, announcements are allowed too
        (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions ())
      )
      ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () -1)
      statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
      ; find the bill operation lambda and execute it, with new coin amount prepended
      ; so can be used in bill operation while we later assert it's correct
-     (final_bill bill_conditions) (if bill_operation
-       (if BILL_OPERATIONS ; REVIEW: remove this if-statement once bill operations tree hashes are final
-         (if inner_solution
-           (assert (= (sha256tree (f bill_operation)) (a (r bill_operation) BILL_OPERATIONS)) ; REVIEW: Not secure as bill_operation is passed in by user and can by anything
-             (a
-               (f bill_operation)
-               (list
-                 (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
-                 (c new_coin_amount args)
-               )
-             )
-           )
-           ; REVIEW: (f bill_operation) can be anything below. instead create VETO_OPERATIONS for veto_bill and veto_announcement, analogous to BILL_OPERATIONS:
-           ;   (assert (= (sha256tree (f bill_operation)) (get-list-item-at-index (r bill_operation) VETO_OPERATIONS))
-           (if (= (r bill_operation) VETO_PROPOSED_BILL) 
-             (a
-               (f bill_operation)
-               (list
-                 (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
-                 (c new_coin_amount args)
-               )
-             )
-             (x)
-           )
+     operation_mod_hash (if bill_operation (sha256tree bill_operation) ())
+     operation (if operation_mod_hash
+       (if inner_solution
+         (assert_debug (contains OPERATIONS operation_mod_hash)
+           bill_operation
          )
-         (a
-           (f bill_operation)
-           (list
-             (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
-             (c new_coin_amount args)
-           )
+         ; first operation is veto operation, but only if inner_solution is null
+         (assert_debug (= operation_mod_hash (f OPERATIONS))
+           bill_operation
+         )
+       )
+       ()
+     )
+     (final_bill bill_conditions) (if operation
+       (a
+         operation
+         (list
+           (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+           (c new_coin_amount args)
          )
        )
        ; no bill operation, just return the conditions as we're transferring
        ; but transfer only possible when BILL not set
-       (assert (not BILL) (list () ()))
+       (assert_debug inner_solution (if (not BILL) 1 (x raw_inner_conditions)) (list () ()))
      )
      ; iterate over all conditions and filter out the ones we don't need (REMARK)
      ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer

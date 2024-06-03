@@ -1,5 +1,4 @@
 (mod (STATUTES_STRUCT
-      CAT_MOD_HASH ; TODO: CAT_MOD_HASH needed anywhere or can be removed?
       Truths parent_is_cat lineage_proof delta inner_conditions
       (@ solution
         (
@@ -18,14 +17,12 @@
      )
 
   (include *standard-cl-23*)
-
-  (defconstant VAULT_ANN_PREFIX 0x56) ; starts with "V" ; TODO: use ANN_PREFIX from vault.clib instead?
-
   (include condition_codes.clib)
   (include cat_truths.clib)
   (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+  (include vault.clib)
 
   (if (any (= delta 0) (> 0 delta))
     ; we're issuing or melting
@@ -38,6 +35,8 @@
       statutes_struct_hash (sha256tree STATUTES_STRUCT)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert_debug
+        (= (strlen cat_ann_prefix) 1)
+        (size_b32 vault_curried_args)
         (= vault_mod_hash (f approved_mod_hashes))
         (if (any (all parent_is_cat (> 0 delta)) (all (not parent_is_cat) (= 0 delta)))
           1
@@ -49,17 +48,26 @@
               ASSERT_COIN_ANNOUNCEMENT
               (sha256
                 vault_coin_id
-                VAULT_ANN_PREFIX
+                cat_ann_prefix
                 (if (> 0 delta) "x" "i")
                 my_coin_id
                 (if (> 0 delta) delta to_issue_amount)
                 statutes_struct_hash ; need to tie it to statutes struct
               )
           )
+          (list REMARK
+            (list
+              cat_ann_prefix
+              (if (> 0 delta) "x" "i")
+              vault_coin_id
+              (if (> 0 delta) delta to_issue_amount)
+              statutes_struct_hash
+            )
+          )
           (list
             CREATE_COIN_ANNOUNCEMENT
             (concat
-              cat_ann_prefix ; REVIEW: does not get asserted & hence can be anything. is that ok? Why not make it BYC_ANN_PREFIX?
+              BYC_ANN_PREFIX
               (if (> 0 delta) "x" "i")
               vault_coin_id
               (if (> 0 delta) delta to_issue_amount)

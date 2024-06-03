@@ -2,21 +2,19 @@
   (
     (@ VAULT_STATE
       (
-      ; REVIEW: rename to INNER_PUZZLE_HASH as this is what gets passed in
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
+       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
       (
-        current_timestamp
+        tx_current_timestamp
         byc_to_bid
         byc_melting_coin_info
         byc_treasury_coin_info
         liquidation_penalty_percent
         statutes_cumulative_stability_fee_rate
         target_puzzle_hash
-        step_price_decrease_factor
         my_coin_id
         auction_timeout
         offer_mod_hash
@@ -35,7 +33,8 @@
   (include curry.clib)
 
   (assign
-    cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
+    current_timestamp (+ tx_current_timestamp (* 3 MAX_TX_BLOCK_TIME))
+    cumulative_stability_fee_rate (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_rate
       current_stability_fee_rate
       current_timestamp
@@ -71,8 +70,9 @@
     )
     fees_for_treasury (- fees_to_pay initiator_incentive)
     byc_principal_to_melt (- byc_to_bid fees)
+    ; negative because we need negative value in the coin announcements later on
     negative_byc_principal_to_melt (* -1 byc_principal_to_melt)
-    undiscounted_principal (* 1 (/ (* 1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
+    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
     discounted_principal (if (= (- byc_to_bid liquidation_penalty) undiscounted_principal)
       0
       (discount-principal-for-melt
@@ -81,15 +81,20 @@
         cumulative_stability_fee_rate
       )
     )
-    ; REVIEW: do we want to reduce auction price by fixed steps rather than percentage ones? should make calculations easier too.
     current_price_factor (
       assert_debug (> current_timestamp auction_start_time)
-        (rpow_percent
-          step_price_decrease_factor
+        (*
+          (/
+            (*
+              start_price
+              step_price_decrease_factor
+            )
+            PERCENT_PRECISION
+          )
           (/ (- current_timestamp auction_start_time) step_time_interval)
         )
     )
-    current_price (/ (* current_price_factor start_price) PERCENT_PRECISION)
+    current_price (- start_price (/ (* current_price_factor start_price) PERCENT_PRECISION))
     ; use all byc provided from keeper to get a piece of collateral
     bid_xch_collateral_amount_pre (/ (* (/ (* byc_to_bid PRECISION) (* current_price 10)) MOJOS) PRECISION)
     bid_xch_collateral_amount (
@@ -154,7 +159,10 @@
       ; sanity check for time
       (> current_timestamp (- auction_start_time 1))
       ; check that there is a deposit to bid for
-      (> DEPOSITED_AMOUNT 0)
+      (if (> DEPOSITED_AMOUNT 0)
+        1
+        (x current_price_factor current_price)
+      )
       (> leftover_deposit -1)
       (list
         ; auction_state -> (start_time start_price last_auction_price)
@@ -163,7 +171,7 @@
             (- TRANSFERRED_FEES fees)
             0
           )
-          leftover_deposit leftover_byc_minted_amount auction_state INNER_PUZZLE discounted_principal
+          leftover_deposit leftover_byc_minted_amount auction_state INNER_PUZZLE_HASH discounted_principal
         )
         (assign
           conditions (list
@@ -178,14 +186,14 @@
                           " bid xch=" bid_xch_collateral_amount " liquidation penalty=" liquidation_penalty
                           " leftover deposit=" leftover_deposit " leftover byc=" leftover_byc_minted_amount
                           " auction=" auction_state " discounted principal=" discounted_principal " current price=" current_price)
-            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+            (list ASSERT_SECONDS_ABSOLUTE (- tx_current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ tx_current_timestamp MAX_TX_BLOCK_TIME))
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
             (list CREATE_COIN_ANNOUNCEMENT
               (concat
-                ANN_PREFIX
+                VAULT_ANN_PREFIX
                 'x'
                 byc_coin_id_to_melt
                 (- negative_byc_principal_to_melt fees_to_not_pay)
@@ -250,19 +258,19 @@
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR step_price_decrease_factor)
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
             ; assert cumulative stability fee rate
-            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
+            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
             ; assert liquidation penalty percent
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_PERCENT liquidation_penalty_percent)
             (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-            (assert-price statutes_puzzle_hash price_info)
-            (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
+            (assert-price-info statutes_puzzle_hash price_info)
+            (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
           )
           (if (> fees_for_treasury 0)
             ; get an announcement that BYC was paid into treasury
             (c
               (list CREATE_COIN_ANNOUNCEMENT
-                (concat ANN_PREFIX treasury_coin_id fees_for_treasury new_treasury_amount)
+                (concat VAULT_ANN_PREFIX treasury_coin_id fees_for_treasury new_treasury_amount)
               )
               (c
                 (list ASSERT_COIN_ANNOUNCEMENT

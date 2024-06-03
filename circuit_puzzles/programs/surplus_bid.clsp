@@ -13,7 +13,7 @@
   (include surplus_auction.clib)
   (assign
     (last_target_puzzle_hash last_bid_timestamp) (if LAST_BID LAST_BID (list 0 0))
-    bid_conditions ( assert
+    bid_conditions (assert
       ; we need lineage proof to ensure that a CAT lot is associated with this surplus auction
       (l lineage_proof)
       ; ensure bidder is aware what they bidding for, this might be different if lot amount changes while auction

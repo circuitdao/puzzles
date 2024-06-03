@@ -1,7 +1,7 @@
-(mod ((MOD_HASH . (OWNER_OPERATIONS . KEEPER_OPERATIONS)) CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
+(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
       TRANSFERRED_FEES
-      DEPOSITED_AMOUNT ; REVIEW: rename to COLLATERAL(_AMOUNT)?
-      BYC_MINTED_AMOUNT ; REVIEW: rename to PRINCIPAL(_AMOUNT)?
+      COLLATERAL_AMOUNT
+      PRINCIPAL_AMOUNT
       AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
@@ -38,7 +38,7 @@
       (if (= condition_code REMARK)
         (if found_remark
           (x)
-          (if (= 'v' (f condition_body)) ; REVIEW: Do we need to use substr here? Deliberately different from ANN_PREFIX ("v" vs "V")? O/w use is-valid-ann-cond?
+          (if (= 'v' (f condition_body))
             (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
             (x)
           )
@@ -86,7 +86,6 @@
     ; generate tail hash from curried params to avoid any malicious currying
     BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
       (sha256tree STATUTES_STRUCT)
-      (sha256 ONE CAT_MOD_HASH)
     )
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
     (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
@@ -113,9 +112,9 @@
     (
       (
         final_transferred_fees
-        final_xch_deposited_amount
-        final_byc_deposited_amount ; REVIEW: rename to final_byc_minted_amount? or even better final_byc_principal and rename BYC_MINTED_AMOUNT accordingly
-        final_bids ; REVIEW: rename to final_auction_state?
+        final_collateral_amount
+        final_principal_amount
+        final_auction_state
         final_inner_puzzle_hash
         final_discounted_principal
       )
@@ -123,7 +122,7 @@
     ) (a
       vault_operation
       (list
-        (list DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+        (list COLLATERAL_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
               STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
         args
       )
@@ -141,18 +140,18 @@
         CREATE_COIN ; op code
         (c
           (curry_hashes MOD_HASH
-            (sha256tree (c MOD_HASH (c OWNER_OPERATIONS KEEPER_OPERATIONS)))
+            (sha256tree MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_MOD_HASH)
             (sha256 ONE final_transferred_fees)
-            (sha256 ONE final_xch_deposited_amount) ; REVIEW: Why keep this as curried arg in state if it's also the amount?
-            (sha256 ONE final_byc_deposited_amount) ; REVIEW: rename to final_byc_minted_amount (or final_principal) throughout to match curried arg name?
-            (sha256tree final_bids)
+            (sha256 ONE final_collateral_amount)
+            (sha256 ONE final_principal_amount)
+            (sha256tree final_auction_state)
             (sha256 ONE final_inner_puzzle_hash)
             (sha256 ONE final_discounted_principal)
           ) ; puzzle hash
-          (c  final_xch_deposited_amount ; amount
+          (c  final_collateral_amount ; amount
             ; this is a list that forms the create coin condition (using cons), hence double list operator
             (list (list final_inner_puzzle_hash)) ; memos
           )
@@ -164,7 +163,7 @@
           (list
             ASSERT_MY_PARENT_ID
               (assign
-                ; REVIEW: why include all these state variables in lineage proof instead of just their hash?
+                ; TODO: why include all these state variables in lineage proof instead of just their hash?
                 deposited_amount (f (r lineage_proof))
                 byc_minted_amount (f (r (r lineage_proof)))
                 auction_state (f (r (r (r lineage_proof))))
@@ -175,7 +174,7 @@
                   (f lineage_proof)
                   (curry_hashes
                     MOD_HASH
-                    (sha256tree (c MOD_HASH (c OWNER_OPERATIONS KEEPER_OPERATIONS)))
+                    (sha256tree MOD_HASH)
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256tree STATUTES_STRUCT)
                     (sha256 ONE BYC_TAIL_MOD_HASH)
@@ -190,15 +189,15 @@
                 )
               )
           )
-          (c (list ASSERT_MY_AMOUNT DEPOSITED_AMOUNT)
+          (c (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT)
             (c
               (list
                 ; this is for driver code to make it easy to generate puzzle reveal
                 REMARK
                 final_transferred_fees
-                final_xch_deposited_amount
-                final_byc_deposited_amount
-                final_bids
+                final_collateral_amount
+                final_principal_amount
+                final_auction_state
                 final_inner_puzzle_hash
                 final_discounted_principal
               )
@@ -207,19 +206,18 @@
           )
         )
         ; force that every vault needs to start with zero state
-        ; REVIEW: do we want an unattainable eve state, or are we fine with a vault possibly returning to its eve state?
         (c
           (list
             ASSERT_MY_PUZZLEHASH
             (curry_hashes MOD_HASH
-              (sha256tree (c MOD_HASH (c OWNER_OPERATIONS KEEPER_OPERATIONS)))
+              (sha256tree MOD_HASH)
               (sha256 ONE CAT_MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_MOD_HASH)
               (sha256 ONE 0)
               (sha256 ONE 0)
               (sha256 ONE 0)
-              (sha256 ONE  ())
+              (sha256 ONE ())
               (sha256 ONE INNER_PUZZLE_HASH)
               (sha256 ONE 0)
             )

@@ -1,5 +1,5 @@
 (mod (
-      (  ; REVIEW: governance.clsp assumes this to be a struct of MOD_HASH and some rest
+      (
         MOD_HASH .
         OPERATIONS
       )
@@ -17,9 +17,9 @@
       ; PRICE_INFO -> ( price . last_updated)
       PRICE_INFO
       ; cumulative fee updated since start, updated whenever oracle prices are updated
-      PAST_CUMULATIVE_STABILITY_FEE_RATE
+      PAST_CUMULATIVE_STABILITY_FEE_DF
       ; cumulative interest rate fee, same schedule as stability fee
-      PAST_CUMULATIVE_INTEREST_RATE
+      PAST_CUMULATIVE_INTEREST_DF
       ; counter of all price updates
       PRICE_UPDATES
 
@@ -51,7 +51,7 @@
             (list CREATE_PUZZLE_ANNOUNCEMENT
               (concat STATUTES_ANN_PREFIX
                 (sha256tree
-                  (list (concat prefix 'f') start_index (f statutes))
+                  (list 'S' start_index (f statutes))
                 )
               )
             )
@@ -128,7 +128,7 @@
     (statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates mutation_conditions)
       (if (= operation_mod_hash ())
         ; default to existing values
-        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE PRICE_UPDATES ())
+        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
         ; mutate statutes
         (assert_debug
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
@@ -138,7 +138,7 @@
           (a
             operation_mod
             (list
-              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
+              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
               mutation_index mutation_value crt_inner_puzzle_hash
             )
           )

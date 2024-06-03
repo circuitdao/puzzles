@@ -52,16 +52,14 @@
       (list
         ()
         (list
-          (if (> veto_seconds 1)
+          (if (> veto_seconds ONE)
             (list ASSERT_BEFORE_SECONDS_RELATIVE veto_seconds)
             ; noop
             (list ASSERT_SECONDS_RELATIVE veto_seconds)
           )
-          ; no ephemeral coins
-          (list ASSERT_HEIGHT_RELATIVE 1)
           (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
           ; assert announcement from another CRT coin with higher amount than this one
-          ; REVIEW: didn't veto_announcement operation say we can mass veto (which presumably means assert vetos from multiple veto coins? if so, we'd need to loop over those and add veto coin amounts up)
+          ; LATER: we'd need to loop over those and add veto coin amounts up (can take multiple veto coins to pump up the amount)
           (list ASSERT_COIN_ANNOUNCEMENT
             (sha256
               (calculate-coin-id

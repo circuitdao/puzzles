@@ -2,9 +2,9 @@
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
-      amount ; REVIEW: not used anywhere. make dummy _?
-      target_bill; REVIEW: only need to treehash of this, so make this arg target_bill_hash to save costs?
-      relative_time_spent ; REVIEW: not asserted anywhere, so any value can be passed in?
+      _ ;
+      target_bill_hash
+      relative_time_spent
     )
   )
 
@@ -53,11 +53,9 @@
         ()
       )
       (list
-        ; no ephemeral coins
-        (list ASSERT_HEIGHT_RELATIVE 1) ; REVIEW: can change from 1 to 0?
-        (list ASSERT_SECONDS_RELATIVE relative_time_spent) ; REVIEW: what is the purpose of this assert?
-        ; puzzle hash allows for mass vetoing too ; REVIEW: <- what is meant by mass vetoing? we veto a specific target_bill, no? or that proposer coin can assert vetos from multiple veto coins?
-        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETO (sha256tree target_bill)))
+        ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
+        (list ASSERT_SECONDS_RELATIVE relative_time_spent)
+        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETO target_bill_hash))
       )
     )
   )

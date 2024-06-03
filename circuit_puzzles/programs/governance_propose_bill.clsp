@@ -27,16 +27,16 @@
   (include utils.clib)
 
   (defconst ANN_PREFIX 'G')
-  (defconstant ANN_PROPOSED '^')
+  (defconst ANN_PROPOSED '^')
 
-  (assert
+  (assert_debug
     (> amount threshold_amount_to_propose)
     (> new_threshold_amount_to_propose 0)
-    (> new_veto_seconds 0) ; REVIEW: hardcode a minimum >> 0?
-    (> new_delay_seconds 0) ; REVIEW: hardcode a minimum >> 0?
+    (> new_veto_seconds 0)
+    (> new_delay_seconds 0)
     ; if we have a max_delta, make sure new value doesn't exceed it
     (if (= max_delta 0)
-      (= max_delta 0) ; REVIEW: unnecessary code, why not just 1?
+      ONE
       ; or new value must be within max_delta of current value
       (if (> new_statute_value statute_value)
         (> max_delta (- new_statute_value statute_value))
@@ -52,19 +52,15 @@
         new_bill
       )
       (c
-        ; avoid ephemeral coins so people can't reuse CRT to issue multiple proposals or veto
-        (list ASSERT_HEIGHT_RELATIVE 1)
-        (c
-          (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_PROPOSED))
-          ; assert that passed statute index correlates to correct statute
-          ; and that passed statute values are correct
-          (list
-            (assert-full-statute
-              statutes_puzzle_hash
-              ; we use special statute to use for custom announcements limits
-              (if (= statute_index -1) STATUTE_CUSTOM_ANNOUNCEMENTS statute_index)
-              current_statute
-            )
+        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_PROPOSED))
+        ; assert that passed statute index correlates to correct statute
+        ; and that passed statute values are correct
+        (list
+          (assert-full-statute
+            statutes_puzzle_hash
+            ; we use special statute to use for custom announcements limits
+            (if (= statute_index -1) STATUTE_CUSTOM_ANNOUNCEMENTS statute_index)
+            current_statute
           )
         )
       )

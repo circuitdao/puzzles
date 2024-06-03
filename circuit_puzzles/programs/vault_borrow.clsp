@@ -2,13 +2,13 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
       (
-         byc_amount_to_mint my_coin_id minimum_debt_amount collateralization_ratio ; REVIEW: rename collateralization_ratio to liquidation_ratio
+         byc_amount_to_mint my_coin_id minimum_debt_amount liquidation_ratio
          price_info
          byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
          statutes_cumulative_stability_fee_rate
@@ -25,14 +25,14 @@
 
   (assign
     ; calculate the latest cumulative stability fee rate
-    cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
+    cumulative_stability_fee_rate (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_rate
       current_stability_fee_rate
       current_timestamp
       (r price_info)
     )
     (xch_price . last_updated) price_info
-    principal (+ BYC_MINTED_AMOUNT byc_amount_to_mint)
+    principal (+ PRINCIPAL byc_amount_to_mint)
     ; divide negative numbers to ceil
     discounted_mint_amount (* -1 (/ (* -1 byc_amount_to_mint PRECISION) cumulative_stability_fee_rate))
     discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_mint_amount)
@@ -42,24 +42,34 @@
       BYC_TAIL_HASH
       byc_issuing_coin_info
     )
+    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
     ; check that total debt is larger than minted amount, not minimum mint amount
-    (assert (> (+ BYC_MINTED_AMOUNT byc_amount_to_mint) minimum_debt_amount) ; REVIEW: need to ensure that debt, not principal, is > min debt amount
+    (assert (> (+ undiscounted_principal byc_amount_to_mint) minimum_debt_amount)
             (> byc_amount_to_mint 0)
             ; check if requested amount of BYC to mint takes us over the collateralization ratio
-            (> (available-to-mint DEPOSITED_AMOUNT BYC_MINTED_AMOUNT collateralization_ratio xch_price) byc_amount_to_mint) ; REVIEW: debt, not BYC minted, is relevant
+            (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio xch_price) byc_amount_to_mint)
       (list
         ; updated state
-        (list TRANSFERRED_FEES DEPOSITED_AMOUNT principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
+        (list TRANSFERRED_FEES COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
         ; additional conditions
         (list
-          (list REMARK "VAULT==>" discounted_principal ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT))
-          ; REVIEW: is this remark needed, or remove?
+          (list REMARK "VAULT==>" discounted_principal VAULT_ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT))
           ; signal to tail that it can issue BYC with certain amount
           (list CREATE_COIN_ANNOUNCEMENT
             (concat
-              ANN_PREFIX; REVIEW: rename to VAULT_ANN_PREFIX if we rename it in vault.clib
+              VAULT_ANN_PREFIX
               "i"
               byc_issuing_coin_id
+              byc_amount_to_mint
+              (sha256tree STATUTES_STRUCT)
+            )
+          )
+          (list REMARK
+            (list
+              byc_issuing_coin_id
+              BYC_ANN_PREFIX
+              'i'
+              my_coin_id
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)
             )
@@ -75,22 +85,22 @@
               (sha256tree STATUTES_STRUCT)
             )
           )
-          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
+          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
           (assert-statute
             statutes_puzzle_hash
-            STATUTE_COLLATERALIZATION_RATIO
-            collateralization_ratio)
+            STATUTE_LIQUIDATION_RATIO
+            liquidation_ratio)
           (assert-statute
             statutes_puzzle_hash
             STATUTE_MINIMUM_VAULT_DEBT_AMOUNT
             minimum_debt_amount)
-          (assert-price
+          (assert-price-info
             statutes_puzzle_hash
             price_info)
           (list ASSERT_MY_COIN_ID my_coin_id)
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
         )
       )
     )

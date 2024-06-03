@@ -1,9 +1,7 @@
 (
 
-  (defconst PRECISION 10000000000)
-  ; REVIEW: PERCENT_PRECISION used in several places in this mod but isn't defined anywhere
 
-  (defconst ANN_PREFIX 0x56) ; chr(86) -> "V" ; REVIEW: rename to VAULT_ANN_PREFIX in line with byc_tail.clsp?
+  (defconst VAULT_ANN_PREFIX 0x56) ; chr(86) -> "V"
   (defconst TREASURY_ANN_PREFIX 0x24) ; -> "$"
   (defconst BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
 
@@ -28,16 +26,14 @@
     )
   )
 
-  ; REVIEW: Available to mint should be measured against debt, not BYC minted.
-  ; REVIEW: rename collateralization ration to liquidation ratio
-  (defun-inline available-to-mint (xch_deposited byc_minted coll_ratio xch_price)
+
+
+  (defun-inline available-to-mint (collateral debt liquidation_ratio xch_price)
     (assign
-      max_to_mint (/ (/ (* xch_deposited xch_price 1000) coll_ratio) MOJOS)
-      ; REVIEW: safer to return 0 instead of a clvm raise if assert fails?
-      ;  Need to make sure failing works, eg if increasing liquidation ratio in Statutes results in a vault becoming liquidatable.
-      (assert (> (- max_to_mint byc_minted) -1) 
+      max_to_mint (/ (/ (* collateral xch_price 1000) liquidation_ratio) MOJOS)
+      (assert (> (- max_to_mint debt) -1)
         ; reduce max to mint by what we already have
-        (- max_to_mint byc_minted)
+        (- max_to_mint debt)
       )
     )
   )
@@ -56,49 +52,29 @@
     )
   )
 
-  ; REVIEW: Should be assessed vs debt not BYC minted
-  ; REVIEW: Rename collateralisation ratio to liquidation ratio
-  (defun-inline get-min-collateral-amount (byc_minted coll_ratio xch_price)
+  (defun-inline get-min-collateral-amount (debt liquidation_ratio xch_price)
         ; returns min collateral value for threshold coll ratio, multiplying with -1 to ceil the division
-        (/ (* -1 (* (/ (* -1 byc_minted 100) xch_price) coll_ratio) MOJOS) 100000)
+        (/ (* -1 (* (/ (* -1 debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
   )
 
-  ; REVIEW: no need to use negative byc principal to melt. pass in the positive value
+  ; LATER: no need to use negative byc principal to melt. pass in the positive value
   (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
     (- discounted_principal
-      (* 1 (/ ; REVIEW: outer (* 1 ...) not necessary
+      (/
         (* (* -1 negative_byc_principal_to_melt) PRECISION)
         cumulative_stability_fee_rate
-      ))
+      )
     )
   )
 
-  (defun calculate-cumulative-stability-fee-rate
-      (past_cumulative_stability_fee
-       current_stability_fee
-       current_timestamp
-       previous_timestamp
-      )
-    (if (> previous_timestamp current_timestamp)
-      past_cumulative_stability_fee
-      (calculate-cumulative-stability-fee-rate
-        (/ (* past_cumulative_stability_fee current_stability_fee) PRECISION)
-        current_stability_fee
-        current_timestamp
-        ; per minute calculation
-        (+ previous_timestamp 60)
-      )
-    )
-  )
 
   (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate
                          discounted_principal
                          principal liquidation_penalty_percent)
     (assign
-      undiscounted_principal (* 1 (/ (* 1 discounted_principal cumulative_stability_fee_rate) PRECISION)) ; REVIEW: remove outer (* 1 ...)? serves no purpose
-      ; REVIEW: If SF >= 0, then undiscounted principal will always be >= principal. Check calculations below for simplifications.
-      calculated_outstanding_fees (if (> undiscounted_principal principal) (- undiscounted_principal principal) 0)
-      liquidation_penalty (/ (* (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION) 
+      undiscounted_principal (/ (* discounted_principal cumulative_stability_fee_rate) PRECISION)
+      calculated_outstanding_fees (if (> undiscounted_principal (- principal 1)) (- undiscounted_principal principal) (x "fees are negative"))
+      liquidation_penalty (/ (* (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION)
       total_debt (+ principal liquidation_penalty calculated_outstanding_fees)
       total_repayment_percentage (/ (* byc_amount PRECISION) total_debt)
       (if (= total_repayment_percentage PRECISION)

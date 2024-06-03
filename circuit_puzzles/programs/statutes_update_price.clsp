@@ -1,4 +1,4 @@
-(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE
+(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       _
       (@ mutation_value (oracle_inner_puz_hash statutes_struct price last_updated))
@@ -12,7 +12,7 @@
   (defun calculate-cumulative-stability-fee-rate (past_cumulative_stability_fee current_stability_fee current_timestamp previous_timestamp)
     (if (> previous_timestamp current_timestamp)
       past_cumulative_stability_fee
-      (calculate-cumulative-stability-fee-rate
+      (calculate-cumulative-discount-factor
         (/ (* past_cumulative_stability_fee current_stability_fee) PRECISION)
         current_stability_fee
         current_timestamp
@@ -35,16 +35,16 @@
     ; - current stability_fee rate
     ; - current timestamp
     ; - last timestamp of calculation previously
-    (calculate-cumulative-stability-fee-rate
-      PAST_CUMULATIVE_STABILITY_FEE_RATE
+    (calculate-cumulative-discount-factor
+      PAST_CUMULATIVE_STABILITY_FEE_DF
       (f (f (r STATUTES)))
       last_updated ; current timestamp
       ; get previous timestamp when price was last updated
       ; NOTE: this assumes that at least one oracle is always present and active at position 0
       (r PRICE_INFO) ; prev timestamp
     )
-    (calculate-cumulative-stability-fee-rate
-      PAST_CUMULATIVE_INTEREST_RATE
+    (calculate-cumulative-discount-factor
+      PAST_CUMULATIVE_INTEREST_DF
       ; current interest rate
       (f (f (r (r STATUTES))))
       last_updated

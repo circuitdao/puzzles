@@ -9,13 +9,13 @@
     (@ args
       (
         byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
-        statutes_cumulative_stability_fee_rate
+        statutes_cumulative_stability_df
         my_coin_id
         treasury_coin_info
         p2_treasury_mod_hash
         minimum_sf_transfer_amount
         current_timestamp
-        current_stability_fee_rate
+        current_stability_df
         price_info
       )
     )
@@ -30,15 +30,15 @@
 
   (assign
     byc_principal_to_melt BYC_MINTED_AMOUNT
-    cumulative_stability_fee_rate (calculate-cumulative-stability-fee-rate
-      statutes_cumulative_stability_fee_rate
-      current_stability_fee_rate
-      current_timestamp
+    cumulative_stability_df (calculate-cumulative-discount-factor
+      statutes_cumulative_stability_df
+      current_stability_df
+      (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    (full_fees . liquidation_penalty) (calculate-fees ; REVIEW: calculate conservatively wrt to current_timestamp, so that full_fees never bigger than actual?
+    (full_fees . liquidation_penalty) (calculate-fees
       byc_principal_to_melt
-      cumulative_stability_fee_rate
+      cumulative_stability_df
       DISCOUNTED_PRINCIPAL
       BYC_MINTED_AMOUNT
       0 ; no liquidation penalty
@@ -87,11 +87,11 @@
           DISCOUNTED_PRINCIPAL
         )
         (list
-          (list REMARK ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount TRANSFERRED_FEES) ; REVIEW: needed?
+          (list REMARK VAULT_ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount TRANSFERRED_FEES)
           ; signal to tail that it can issue BYC with certain amount
           (list CREATE_COIN_ANNOUNCEMENT
             (concat
-              ANN_PREFIX
+              VAULT_ANN_PREFIX
               "i"
               byc_issuing_coin_id
               fees
@@ -111,7 +111,7 @@
           )
           ; approve treasury coin to receive a deposit
           (list CREATE_COIN_ANNOUNCEMENT
-            (concat ANN_PREFIX treasury_coin_id fees new_treasury_amount)
+            (concat VAULT_ANN_PREFIX treasury_coin_id fees new_treasury_amount)
           )
           (list ASSERT_COIN_ANNOUNCEMENT
             (sha256
@@ -122,14 +122,14 @@
               new_treasury_amount
             )
           )
-          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_RATE statutes_cumulative_stability_fee_rate)
+          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_df)
           (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
           (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_SF_TRANSFER_AMOUNT minimum_sf_transfer_amount)
           (list ASSERT_MY_COIN_ID my_coin_id)
-          (assert-price statutes_puzzle_hash price_info)
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
-          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_RATE current_stability_fee_rate)
+          (assert-price-info statutes_puzzle_hash price_info)
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_df)
         )
       )
     )

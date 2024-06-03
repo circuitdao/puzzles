@@ -83,7 +83,7 @@
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MAXIMUM treasury_maximum) ; end of recursion
           announcements
         )
-        (x)
+        (x 'not')
       )
     )
   )
@@ -179,7 +179,7 @@
           )
         )
       )
-      (x)
+      (x "boop")
     )
   )
 )
