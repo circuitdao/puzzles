@@ -177,7 +177,7 @@
               ; can mutate the atom value only, or also deactivate itself or topup deposit
               (assign
                 (current_timestamp atom_value delay deactivate) args
-                (assert
+                (assert_debug
                   (> deposit (- DEPOSIT 1))
                   inner_puzzle_hash ; must be owner
                   (c

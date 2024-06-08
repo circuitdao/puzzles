@@ -116,6 +116,7 @@
       (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
 
+    ; FIXME: do we need the individual state variables or would a (partial) hash do?
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
