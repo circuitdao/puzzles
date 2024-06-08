@@ -67,14 +67,14 @@
             (list REMARK (list 'updated state->'  " byc principal=" (- BYC_MINTED_AMOUNT reconcile_amount)
                          'inner_puzzle=' INNER_PUZZLE)
                                             )
-            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
-            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
             (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
             ; signal to tail that it can issue BYC with certain amount
             (list CREATE_COIN_ANNOUNCEMENT
               (concat
-                ANN_PREFIX
+                VAULT_ANN_PREFIX
                 "x"
                 treasury_coin_id
                 (* -1 reconcile_amount)
@@ -95,7 +95,7 @@
             ; approve treasury coin to receive a withdrawal
             (list CREATE_COIN_ANNOUNCEMENT
               (concat
-                ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
+                VAULT_ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
             )
             (list ASSERT_COIN_ANNOUNCEMENT
               (sha256

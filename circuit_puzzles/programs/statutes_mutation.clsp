@@ -1,5 +1,5 @@
 
-(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE
+(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       mutation_index mutation_value crt_inner_puzzle_hash)
   (include *standard-cl-23*)
@@ -20,7 +20,7 @@
   )
 
   (list
-    ; we're maybe updating, if indexes match and it's not announcements
+    ; we're updating if indexes match and it's not announcements
     (if (= mutation_index -1)
       STATUTES
       (mutate-list mutation_index mutation_value STATUTES 0)
@@ -28,20 +28,28 @@
     ; prices staying the same
     PRICE_INFO
     ; don't change the rate
-    PAST_CUMULATIVE_STABILITY_FEE_RATE
-    PAST_CUMULATIVE_INTEREST_RATE
+    PAST_CUMULATIVE_STABILITY_FEE_DF
+    PAST_CUMULATIVE_INTEREST_DF
     PRICE_UPDATES
 
     ;  updating statutes, assert permission
-    (list
-      ; confirm to CRT voting coin that mutation was applied
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+    (assert
+      (size_b32 crt_inner_puzzle_hash)
+      (if (= mutation_index -1)
+        (l mutation_value)
+        ; should be  a list with 5 elements if mutating statutes
+        (not (r (r (r (r (r mutation_value))))))
       )
-      ; assert from CRT vote that mutation was indeed voted for and confirmed
-      (list ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-                                     CRT_ANN_PREFIX (sha256tree (c mutation_index mutation_value))))
+      (list
+        ; confirm to CRT voting coin that mutation was applied
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+        )
+        ; assert from CRT vote that mutation was indeed voted for and confirmed
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
+                                       CRT_ANN_PREFIX (sha256tree (c mutation_index mutation_value))))
+      )
     )
   )
 )

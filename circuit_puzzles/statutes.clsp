@@ -1,4 +1,8 @@
-(mod (MOD_STATUTES_HASH
+(mod (
+      (
+        MOD_HASH .
+        OPERATIONS
+      )
       (
         ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
         TREASURY_APPROVAL_MOD_HASHES
@@ -13,9 +17,9 @@
       ; PRICE_INFO -> ( price . last_updated)
       PRICE_INFO
       ; cumulative fee updated since start, updated whenever oracle prices are updated
-      PAST_CUMULATIVE_STABILITY_FEE_RATE
+      PAST_CUMULATIVE_STABILITY_FEE_DF
       ; cumulative interest rate fee, same schedule as stability fee
-      PAST_CUMULATIVE_INTEREST_RATE
+      PAST_CUMULATIVE_INTEREST_DF
       ; counter of all price updates
       PRICE_UPDATES
 
@@ -30,7 +34,6 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconst STATUTES_OPERATIONS ())
 
   (defun announce-statutes (statutes prefix start_index rest)
     (if statutes
@@ -48,7 +51,7 @@
             (list CREATE_PUZZLE_ANNOUNCEMENT
               (concat STATUTES_ANN_PREFIX
                 (sha256tree
-                  (list (concat prefix 'f') start_index (f statutes))
+                  (list 'S' start_index (f statutes))
                 )
               )
             )
@@ -61,15 +64,15 @@
     )
   )
 
-  (defun-inline create-coin-condition (MOD_STATUTES_HASH TREASURY_APPROVAL_MOD_HASHES
-                                          P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
-                                          CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
-                                          statutes prices cumulative_stability_fee cumulative_interest_rate price_updates)
+  (defun-inline create-coin-condition ((MOD_HASH . OPERATIONS) TREASURY_APPROVAL_MOD_HASHES
+                                        P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
+                                        CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
+                                        statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
     (list
       CREATE_COIN
       ; puzzle
-      (curry_hashes MOD_STATUTES_HASH
-        (sha256 ONE MOD_STATUTES_HASH)
+      (curry_hashes MOD_HASH
+        (sha256tree (c MOD_HASH OPERATIONS))
         (sha256tree
           (list
             TREASURY_APPROVAL_MOD_HASHES
@@ -81,7 +84,7 @@
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE CRT_TAIL_HASH)
         (sha256tree statutes)
-        (sha256tree prices)
+        (sha256tree price_info)
         (sha256 ONE cumulative_stability_fee)
         (sha256 ONE cumulative_interest_rate)
         (sha256 ONE price_updates)
@@ -122,32 +125,27 @@
   (assign
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
     (operation_mod . operation_mod_hash) (if operation (c operation (sha256tree operation)) (c () ()))
-    (statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates mutation_conditions) (if (= operation_mod_hash ())
-      ; default to existing values
-      (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE PRICE_UPDATES ())
-      ; mutate statutes
-      (if STATUTES_OPERATIONS
-        (if (any (= operation_mod_hash (f STATUTES_OPERATIONS)) (= operation_mod_hash (r STATUTES_OPERATIONS)))
+    (statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates mutation_conditions)
+      (if (= operation_mod_hash ())
+        ; default to existing values
+        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
+        ; mutate statutes
+        (assert_debug
+          (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
+          (> mutation_index -3)
+          (> 3 (strlen mutation_index))
+          (l mutation_value)
           (a
             operation_mod
             (list
-              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
+              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
               mutation_index mutation_value crt_inner_puzzle_hash
             )
           )
-          (x)
-        )
-        (a
-          operation_mod
-          (list
-            STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
-            mutation_index mutation_value crt_inner_puzzle_hash
-          )
         )
       )
-    )
     create_coin_condition (create-coin-condition
-      MOD_STATUTES_HASH
+      (c MOD_HASH OPERATIONS)
       TREASURY_APPROVAL_MOD_HASHES
       P2_TREASURY_MOD_HASH
       P2_SURPLUS_AUCTION_MOD_HASH

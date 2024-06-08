@@ -5,7 +5,7 @@
       statutes_inner_puzzle_hash
       current_amount
       my_coin_id
-      statutes_cumulative_interest_rate current_timestamp current_interest_rate price_info
+      statutes_cumulative_interest_df current_timestamp current_interest_df price_info
       inner_solution
       .
       (@ treasury_coin_info ((p2_treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
@@ -19,36 +19,13 @@
   (include utils.clib)
 
   (defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
-  (defconstant BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
   (defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
-  (defconstant MOJOS 1000000000000)
-  (defconstant PERCENT_PRECISION 10000)
   (defconstant PRECISION 10000000000)
 
 
 
-  (defun calculate-cumulative-interest-rate
-      (past_cumulative_interest_rate
-       current_interest_rate
-       current_timestamp
-       previous_timestamp
-      )
-    (if (> previous_timestamp current_timestamp)
-      past_cumulative_interest_rate
-      (calculate-cumulative-interest-rate
-        (/ (* past_cumulative_interest_rate current_interest_rate) PRECISION)
-        current_interest_rate
-        current_timestamp
-        ; per minute calculation
-        (+ previous_timestamp 60)
-      )
-    )
-  )
-
-  (defun filter-conditions (generate-puzzle-hash
-                            (@ conditions ( (condition_code . condition_rest) . rest_of_conditions))
+  (defun filter-conditions ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions))
                             found_first_create_coin
-                            delta_amount
                             filtered_conditions)
     (if conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
@@ -56,10 +33,8 @@
               (= (substr (f condition_rest) 0 1) ANN_PREFIX)
             )
           (filter-conditions
-            generate-puzzle-hash
             rest_of_conditions
             found_first_create_coin
-            delta_amount
             (c (f conditions) filtered_conditions)
           )
           ; bad announcement found, error
@@ -68,18 +43,13 @@
         (if (= condition_code CREATE_COIN)
           (if found_first_create_coin
             (filter-conditions
-              generate-puzzle-hash
               rest_of_conditions
               found_first_create_coin
-              ; subtract amount from create coin condition if we have additional create coin conditions
-              (- delta_amount (f (r condition_rest)))
               (c (f conditions) filtered_conditions)
             )
             (filter-conditions
-              generate-puzzle-hash
               rest_of_conditions
               condition_rest ; first create coin condition
-              0 ;(+ delta_amount (f (r condition_rest))) ; passed in delta amount, in case there's a deposit, this is > 0
               ; skip this condition so we can add it later
               filtered_conditions
             )
@@ -87,31 +57,27 @@
           (if (= condition_code REMARK)
             ; skip REMARK conditions since we use them to generate reveals
             (filter-conditions
-              generate-puzzle-hash
               rest_of_conditions
               found_first_create_coin
-              delta_amount
               filtered_conditions
             )
             (filter-conditions
-              generate-puzzle-hash
               rest_of_conditions
               found_first_create_coin
-              delta_amount
               (c (f conditions) filtered_conditions)
             )
           )
         )
       )
       (assert found_first_create_coin
-        (list found_first_create_coin delta_amount filtered_conditions)
+        (list found_first_create_coin filtered_conditions)
       )
     )
   )
 
-  (defun-inline calculate-interests (discounted_deposit principal cumulative_interest_rate)
+  (defun-inline calculate-interests (discounted_deposit principal cumulative_interest_df)
     (assign
-      value (- (/ (* discounted_deposit cumulative_interest_rate) PRECISION) principal)
+      value (- (/ (* discounted_deposit cumulative_interest_df) PRECISION) principal)
       (if (> value -1)
         value
         0
@@ -120,44 +86,37 @@
   )
 
   (assign
-    generate-puzzle-hash (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT)
-                                     discounted_deposit inner_puzzle_hash)
-      ; only inner puzzle
-      (curry_hashes MOD_HASH ; puzzle hash
-        (sha256tree MOD_HASH)
-        (sha256tree CAT_MOD_HASH)
-        (sha256tree CAT_TAIL_HASH)
-        (sha256tree STATUTES_STRUCT)
-        (sha256tree discounted_deposit)
-        inner_puzzle_hash
-      )
-    )
-    cumulative_interest_rate (calculate-cumulative-interest-rate
-      statutes_cumulative_interest_rate
-      current_interest_rate
+    cumulative_deposit_interest_df (calculate-cumulative-discount-factor
+      statutes_cumulative_interest_df
+      current_interest_df
       current_timestamp
       (r price_info)
     )
+    cumulative_withdrawal_interest_df (calculate-cumulative-discount-factor
+      statutes_cumulative_interest_df
+      current_interest_df
+      (- current_timestamp (* 3 MAX_TX_BLOCK_TIME))
+      (r price_info)
+    )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (create_coin_body withdraw_amount conditions) (filter-conditions
-      generate-puzzle-hash
+    (create_coin_body conditions) (filter-conditions
       (a INNER_PUZZLE inner_solution)
-      0 ; found first coin
-      0 ; delta amount
+      0 ; found first coin set to false
       ()
     )
     interests_amount (if treasury_coin_info
-      (calculate-interests DISCOUNTED_DEPOSIT current_amount cumulative_interest_rate)
+      (calculate-interests DISCOUNTED_DEPOSIT current_amount cumulative_withdrawal_interest_df)
       0
     )
     new_amount (f (r create_coin_body))
     delta_amount (- new_amount current_amount)
     new_discounted_deposit (if treasury_coin_info
       ; discount with interests
-      (+ (/ (* (- delta_amount interests_amount) PRECISION) cumulative_interest_rate) DISCOUNTED_DEPOSIT)
-      (+ (/ (* delta_amount PRECISION) cumulative_interest_rate) DISCOUNTED_DEPOSIT)
+      (+ (/ (* (- delta_amount interests_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
+      (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
 
+    ; FIXME: do we need the individual state variables or would a (partial) hash do?
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
@@ -173,7 +132,8 @@
             (sha256tree treasury_coin_launcher_id)
           )
         )
-        treasury_coin_amount)
+        treasury_coin_amount
+      )
       ()
     )
     new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interests_amount) 0)
@@ -229,65 +189,69 @@
       )
       pre_final_conditions
     )
-    (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
-      (c
-        (list ASSERT_MY_COIN_ID my_coin_id)
+    (assert
+      (size_b32 (f create_coin_body))
+      (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
         (c
-          (list ASSERT_MY_AMOUNT current_amount)
+          (list ASSERT_MY_COIN_ID my_coin_id)
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_RATE statutes_cumulative_interest_rate)
+            (list ASSERT_MY_AMOUNT current_amount)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_INTEREST_RATE current_interest_rate)
+              (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
               (c
-                (assert-price statutes_puzzle_hash price_info)
+                (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
                 (c
-                  (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
+                  (assert-price-info statutes_puzzle_hash price_info)
                   (c
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
                     (c
-                      (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
-                        (c
-                          (a generate-puzzle-hash
-                            (list
-                              new_discounted_deposit
-                              ; puzzle hash provided in the solution
+                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+                      (c
+                        (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
+                          (c
+                            (curry_hashes MOD_HASH ; puzzle hash
+                              (sha256tree MOD_HASH)
+                              (sha256tree CAT_MOD_HASH)
+                              (sha256tree CAT_TAIL_HASH)
+                              (sha256tree STATUTES_STRUCT)
+                              (sha256tree new_discounted_deposit)
                               (f create_coin_body)
                             )
-                          )
-                          (c new_amount
-                            (r (r create_coin_body)) ; memos
-                          )
-                        )
-                      )
-                      (if treasury_coin_id
-                        (assert
-                          ; treasury coin should hae enough amount to cover interests
-                          (> new_treasury_amount 0)
-                          ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins
-                          (> interests_amount minimum_interest_amount)
-                          (c
-                            (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_AMOUNT_TO_WITHDRAW minimum_interest_amount)
-                            (c
-                              (list CREATE_COIN_ANNOUNCEMENT
-                                (concat ANN_PREFIX treasury_coin_id (* -1 interests_amount) new_treasury_amount)
-                              )
-                              (c
-                                (list ASSERT_COIN_ANNOUNCEMENT
-                                  (sha256
-                                    treasury_coin_id
-                                    TREASURY_ANN_PREFIX
-                                    my_coin_id
-                                    (* -1 interests_amount)
-                                    new_treasury_amount
-                                  )
-                                )
-                                final_conditions
-                              )
+                            (c new_amount
+                              (r (r create_coin_body)) ; memos
                             )
                           )
                         )
-                        ; return conditions as in, we assume driver is handling withdrawals and announcements properly
-                        final_conditions
+                        (if treasury_coin_id
+                          (assert
+                            ; treasury coin should have enough amount to cover interest
+                            (> new_treasury_amount 0)
+                            ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins
+                            (> interests_amount minimum_interest_amount)
+                            (c
+                              (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_AMOUNT_TO_WITHDRAW minimum_interest_amount)
+                              (c
+                                (list CREATE_COIN_ANNOUNCEMENT
+                                  (concat ANN_PREFIX treasury_coin_id (* -1 interests_amount) new_treasury_amount)
+                                )
+                                (c
+                                  (list ASSERT_COIN_ANNOUNCEMENT
+                                    (sha256
+                                      treasury_coin_id
+                                      TREASURY_ANN_PREFIX
+                                      my_coin_id
+                                      (* -1 interests_amount)
+                                      new_treasury_amount
+                                    )
+                                  )
+                                  final_conditions
+                                )
+                              )
+                            )
+                          )
+                          ; return conditions as in, we assume driver is handling withdrawals and announcements properly
+                          final_conditions
+                        )
                       )
                     )
                   )

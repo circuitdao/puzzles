@@ -1,5 +1,8 @@
-(mod (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
-      TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
+(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
+      TRANSFERRED_FEES
+      COLLATERAL_AMOUNT
+      PRINCIPAL_AMOUNT
+      AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
         ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
@@ -74,57 +77,44 @@
       filtered_conditions
     )
   )
-  (defconst OPERATIONS (list ))
 
   (defun-inline operation-program (operation)
     (f (r operation))
-  )
-  (defun-inline operation-treearg (operation)
-    (f (r (r operation)))
   )
 
   (assign
     ; generate tail hash from curried params to avoid any malicious currying
     BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
       (sha256tree STATUTES_STRUCT)
-      (sha256 ONE CAT_MOD_HASH)
     )
-
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
     (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
-    valid_solution
+    operation_mod (operation-program vault_operation_condition_pre)
+    operation_mod_hash (sha256tree operation_mod)
+    (conditions vault_operation_condition)
       (if (all solution (not keeper_operation_info))
         ; owner mode if AUCTION_STATE is empty, ie liquidation hasn't started yet
-        (if (all (not AUCTION_STATE) (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH))
-          1
-          (x)
-        )
-        ; keeper mode
-        (assert keeper_operation_info
-          1
-        )
-      )
-    (conditions vault_operation_condition)
-      (if (all valid_solution OPERATIONS)
         (assert
-          (=
-            ; FIXME: this is not safe, iterate over all operations and verify that way
-            (sha256tree (operation-program vault_operation_condition_pre))
-            (a (operation-treearg vault_operation_condition_pre) OPERATIONS)
-          )
+          (not AUCTION_STATE)
+          (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
+          ;(contains OWNER_OPERATIONS operation_mod_hash)
           (list conditions_pre vault_operation_condition_pre)
         )
-        (list conditions_pre vault_operation_condition_pre)
+        ; keeper mode
+        (assert
+          keeper_operation_info
+          ;(contains KEEPER_OPERATIONS operation_mod_hash)
+          (list conditions_pre vault_operation_condition_pre)
+        )
       )
-
-    (statutes_inner_puzzle_hash vault_operation _ . args) vault_operation_condition
+    (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (
       (
         final_transferred_fees
-        final_xch_deposited_amount
-        final_byc_deposited_amount
-        final_bids
+        final_collateral_amount
+        final_principal_amount
+        final_auction_state
         final_inner_puzzle_hash
         final_discounted_principal
       )
@@ -132,7 +122,7 @@
     ) (a
       vault_operation
       (list
-        (list DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+        (list COLLATERAL_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
               STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
         args
       )
@@ -149,20 +139,19 @@
       (c
         CREATE_COIN ; op code
         (c
-          (curry_hashes
-            MOD_HASH
-            (sha256 ONE MOD_HASH)
+          (curry_hashes MOD_HASH
+            (sha256tree MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_MOD_HASH)
             (sha256 ONE final_transferred_fees)
-            (sha256 ONE final_xch_deposited_amount)
-            (sha256 ONE final_byc_deposited_amount)
-            (sha256tree final_bids)
+            (sha256 ONE final_collateral_amount)
+            (sha256 ONE final_principal_amount)
+            (sha256tree final_auction_state)
             (sha256 ONE final_inner_puzzle_hash)
             (sha256 ONE final_discounted_principal)
           ) ; puzzle hash
-          (c  final_xch_deposited_amount ; amount
+          (c  final_collateral_amount ; amount
             ; this is a list that forms the create coin condition (using cons), hence double list operator
             (list (list final_inner_puzzle_hash)) ; memos
           )
@@ -174,6 +163,7 @@
           (list
             ASSERT_MY_PARENT_ID
               (assign
+                ; TODO: why include all these state variables in lineage proof instead of just their hash?
                 deposited_amount (f (r lineage_proof))
                 byc_minted_amount (f (r (r lineage_proof)))
                 auction_state (f (r (r (r lineage_proof))))
@@ -184,7 +174,7 @@
                   (f lineage_proof)
                   (curry_hashes
                     MOD_HASH
-                    (sha256 ONE MOD_HASH)
+                    (sha256tree MOD_HASH)
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256tree STATUTES_STRUCT)
                     (sha256 ONE BYC_TAIL_MOD_HASH)
@@ -199,15 +189,15 @@
                 )
               )
           )
-          (c (list ASSERT_MY_AMOUNT DEPOSITED_AMOUNT)
+          (c (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT)
             (c
               (list
                 ; this is for driver code to make it easy to generate puzzle reveal
                 REMARK
                 final_transferred_fees
-                final_xch_deposited_amount
-                final_byc_deposited_amount
-                final_bids
+                final_collateral_amount
+                final_principal_amount
+                final_auction_state
                 final_inner_puzzle_hash
                 final_discounted_principal
               )
@@ -219,16 +209,15 @@
         (c
           (list
             ASSERT_MY_PUZZLEHASH
-            (curry_hashes
-              MOD_HASH
-              (sha256 ONE MOD_HASH)
+            (curry_hashes MOD_HASH
+              (sha256tree MOD_HASH)
               (sha256 ONE CAT_MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_MOD_HASH)
               (sha256 ONE 0)
               (sha256 ONE 0)
               (sha256 ONE 0)
-              (sha256 ONE  ())
+              (sha256 ONE ())
               (sha256 ONE INNER_PUZZLE_HASH)
               (sha256 ONE 0)
             )

@@ -16,7 +16,7 @@
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0)
     (treasury_deposit_per_coin . remainder) (divmod winning_bid_amount treasury_coins_count)
-    (assert
+    (assert_debug
       (> CRT_LOT_AMOUNT 0)
       ; ttl should've expired
       (> (- current_timestamp timestamp) ttl)

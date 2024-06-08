@@ -5,14 +5,14 @@
       amount
     )
   )
+
   (include condition_codes.clib)
+
   ; can only reset if in proposal mode (BILL is not empty)
   (if BILL
     (list
       ()
       (list
-        ; no ephemeral coins
-        (list ASSERT_HEIGHT_RELATIVE 1)
       )
     )
     (x)

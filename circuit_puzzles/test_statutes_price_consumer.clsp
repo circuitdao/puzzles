@@ -6,7 +6,7 @@
   (include utils.clib)
 
   (list
-    (assert-price
+    (assert-price-info
       (curry_hashes (f STATUTES_STRUCT)
         (sha256tree STATUTES_STRUCT)
         statutes_inner_puzzle_hash

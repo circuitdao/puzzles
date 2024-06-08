@@ -34,7 +34,12 @@
               (sha256tree last_bid)
             )
         )
-        (assert
+        (assert_debug
+          (size_b32 crt_tail_hash)
+          (size_b32 launcher_id)
+          (size_b32 byc_tail_hash)
+          (size_uint64 byc_lot_amount)
+          (size_b32 surplus_mod_hash)
           ; can't melt a non-cat
           parent_is_cat
           ; must be a launched surplus auction
@@ -42,8 +47,8 @@
           ; must have a lot to exchange for melting
           (> byc_lot_amount 0)
           ; should have a winning bid
-          last_bid
           (> (f (r last_bid)) 0)
+          ; surplus mod hash is the second in approved mod hash list
           (= surplus_mod_hash (f (r approved_mod_hashes)))
           (list
             ; if this is a surplus auction and it called for melting, melt
@@ -54,10 +59,10 @@
         )
       )
       ; no minting
-      (x)
+      (x 'no minting')
     )
     (if (= (my_parent_cat_truth Truths) GENESIS_ID)
-      ()
+      () ; issuance at launch
       ; third option is issuing by recharge auction
       (assign
         (
@@ -84,10 +89,19 @@
           )
           amount
         )
-        (assert
+        (assert_debug
+          ; recharge auction mod is the third in approved mod hash list
           (= mod_hash (f (r (r approved_mod_hashes))))
+          (size_b32 byc_tail_hash)
+          (size_uint64 amount)
+          (size_uint64 issuance_amount)
+          (size_b32 my_coin_id)
+          (size_b1 ann_prefix)
+          (size_b32 curried_mod_args)
+          (size_b32 approving_coin_id)
           (= delta 0)
           (list
+            (list ASSERT_MY_COIN_ID my_coin_id)
             (list CREATE_COIN_ANNOUNCEMENT (concat statutes_struct_hash issuance_amount))
             (list ASSERT_COIN_ANNOUNCEMENT
               (sha256

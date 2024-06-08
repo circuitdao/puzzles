@@ -8,15 +8,17 @@
     )
     (@ args
       (
-         inner_puzzle
+         target_puzzle_hash
       )
     )
   )
+
   (include *standard-cl-23*)
   (include utils.clib)
+
   (list
-    (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE (sha256tree inner_puzzle) DISCOUNTED_PRINCIPAL)
-    ; nothing else to assert here, just create a coin with new amount
+    (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
+    ; nothing else to assert here, just create a coin with new inner puzzle (target_puzzle_hash)
     (list )
   )
 )

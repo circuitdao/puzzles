@@ -1,4 +1,5 @@
-(mod (MOD_HASH
+(mod (OPERATIONS
+      MOD_HASH
       CAT_MOD_HASH
       STATUTES_STRUCT ; to assert statutes
       LAUNCHER_ID ; to assert uniqueness of launcher_id
@@ -15,7 +16,7 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (defconst OPERATIONS ())
+
   (defconst ANN_PREFIX '^')
 
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
@@ -29,7 +30,7 @@
             (c (f conditions) filtered_announcements)
           )
           ; bad announcement found, error
-          (x)
+          (x )
         )
         (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
           (filter-announcements
@@ -37,7 +38,7 @@
             (c (f conditions) filtered_announcements)
           )
           ; no other conditions please
-          (x)
+          (x )
         )
       )
       filtered_announcements
@@ -47,21 +48,9 @@
   (assign
     announcements (filter-announcements (f op_args) ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (if OPERATIONS
-      (if (= (sha256tree (f operation)) (a (r operation) OPERATIONS))
-;        (a
-;          (f operation)
-;          (list
-;            (list MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-;            recreate-coin statutes_puzzle_hash lineage_proof
-;            op_args
-;          )
-;        )
-        (x)
-        (x)
-      )
+    (assert (contains OPERATIONS (sha256tree operation))
       (a
-        (f operation)
+        operation
         (list
           (list MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
           statutes_puzzle_hash lineage_proof announcements

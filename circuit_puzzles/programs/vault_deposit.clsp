@@ -12,7 +12,7 @@
       )
     )
   )
-  (if (all deposit_amount (> deposit_amount 0))
+  (if (> deposit_amount 0)
     (list
       (list TRANSFERRED_FEES (+ deposit_amount DEPOSITED_AMOUNT) BYC_MINTED_AMOUNT
              AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)

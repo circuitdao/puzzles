@@ -9,13 +9,13 @@
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
-  (include sha256tree.clib)
+  (include utils.clib)
   (assign
-    launcher_coin_id (sha256
+    launcher_coin_id (calculate-coin-id
       surplus_auction_parent_id
       (curry_hashes CAT_MOD_HASH
-        (sha256tree CAT_MOD_HASH)
-        (sha256tree CRT_TAIL_HASH)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE CRT_TAIL_HASH)
         ; we're asserting that launcher coin must be using surplus puzzle so we can trust it's announcements
         (tree_hash_of_apply SURPLUS_AUCTION_MOD_HASH surplus_auction_curried_args_hash)
       )
@@ -33,12 +33,12 @@
           CREATE_COIN
           (curry_hashes
             MOD_HASH
-            (sha256tree MOD_HASH)
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree CAT_TAIL_HASH)
-            (sha256tree CRT_TAIL_HASH)
-            (sha256tree SURPLUS_AUCTION_MOD_HASH)
-            (sha256tree SURPLUS_AUCTION_LAUNCHER_ID)
+            (sha256 ONE MOD_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (sha256 ONE SURPLUS_AUCTION_MOD_HASH)
+            (sha256 ONE SURPLUS_AUCTION_LAUNCHER_ID)
           )
           amount
         )
