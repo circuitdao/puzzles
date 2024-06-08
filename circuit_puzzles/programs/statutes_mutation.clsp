@@ -22,6 +22,7 @@
   (list
     ; we're updating if indexes match and it's not announcements
     (if (= mutation_index -1)
+      ; this is a vote for announcements
       STATUTES
       (mutate-list mutation_index mutation_value STATUTES 0)
     )
@@ -36,6 +37,7 @@
     (assert
       (size_b32 crt_inner_puzzle_hash)
       (if (= mutation_index -1)
+        ; vote for announcements only, so this should just be a list
         (l mutation_value)
         ; should be  a list with 5 elements if mutating statutes
         (not (r (r (r (r (r mutation_value))))))

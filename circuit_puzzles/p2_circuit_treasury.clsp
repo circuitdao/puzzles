@@ -108,7 +108,7 @@
           ; this is initial launch, assert launcher coin
           LAUNCHER_ID
           ; not launch, just update, assert previous coin spend
-          (sha256
+          (sha256 ; FIXME: use calculate-coin-id here
             (f lineage_proof) ; parent id
             (a generate-puzzle-hash (list () ()))
             ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
@@ -127,7 +127,7 @@
           (sha256tree LAUNCHER_ID)
         )
         ; this ensures that we're keeping lineage the same
-        (sha256
+        (sha256 ; FIXME: use calculate-coin-id here
           (f lineage_proof)
           (a generate-puzzle-hash (list () ()))
           ; pass through previous amount
@@ -213,6 +213,7 @@
                 approving_mod_hash_tree_arg approving_mod_ann_prefix approving_mod_hashes my_coin_id . ring_prev_prev_info) args
                 approver_coin_id (assert
                   ; check that this approving mod hash is allowed
+                  ; FIXME: ensure mod_hash tree arg is enforced to be a small number
                   (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
                   (calculate-coin-id
                     approving_parent_id

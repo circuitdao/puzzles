@@ -163,7 +163,7 @@
           (list
             ASSERT_MY_PARENT_ID
               (assign
-                ; TODO: why include all these state variables in lineage proof instead of just their hash?
+                ; FIXME: why include all these state variables in lineage proof instead of just their hash?
                 deposited_amount (f (r lineage_proof))
                 byc_minted_amount (f (r (r lineage_proof)))
                 auction_state (f (r (r (r lineage_proof))))

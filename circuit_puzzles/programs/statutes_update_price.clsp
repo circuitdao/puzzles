@@ -77,7 +77,7 @@
                 (sha256tree (c (f statutes_struct) (c oracle_launcher_id (r (r statutes_struct)))))
                 oracle_inner_puz_hash
               )
-              price
+              (sha256 price last_updated)
             )
           )
         )
