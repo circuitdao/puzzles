@@ -28,8 +28,10 @@
 
   ;; this returns the sha256 tree hash of expression F = `((q . a1) a2)`
   (defun hash_expression_F (a1 a2)
-    (sha256 TWO (sha256 TWO (sha256_one_one) a1)
-    (sha256 TWO a2 (sha256_one)))
+    (sha256 TWO
+      (sha256 TWO (sha256_one_one) a1)
+      (sha256 TWO a2 (sha256_one))
+    )
   )
 
   ;; Given the tree hash `environment_hash` of an environment tree E

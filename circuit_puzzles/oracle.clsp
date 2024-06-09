@@ -1,6 +1,5 @@
 (mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES LAST_UPDATED
       ; solution
-      from_timestamp
       (@ oracle_mutation
         (
           statutes_inner_puzzle_hash
@@ -175,18 +174,23 @@
   (defun cut-prices (price_list expiration_timestamp cut_price_list last_price)
     (if price_list
       (if (> (r (f price_list)) expiration_timestamp)
-        (cut-prices (r price_list) expiration_timestamp (c (f price_list) cut_price_list) (f (f price_list)))
-        (c cut_price_list (if last_price last_price -1))
+        (cut-prices (r price_list) expiration_timestamp (c (f price_list) cut_price_list) (f price_list))
+        (c cut_price_list (if last_price last_price (c -1 -1)))
       )
-      (c cut_price_list (if last_price last_price -1))
+      (c cut_price_list (if last_price last_price (c -1 -1)))
     )
   )
 
   (defun verify-announcement-asserts (input_announcement_asserts conditions)
     (if input_announcement_asserts
-      (if (= (f (f input_announcement_asserts)) ASSERT_COIN_ANNOUNCEMENT)
+      (if
+        (any
+          (= (f (f input_announcement_asserts)) ASSERT_COIN_ANNOUNCEMENT)
+          ; we only use puzzle announcements, so coin announcements are fine
+          (= (f (f input_announcement_asserts)) CREATE_COIN_ANNOUNCEMENT)
+        )
         (verify-announcement-asserts (r input_announcement_asserts) (c (f input_announcement_asserts) conditions))
-        (x)
+        (x "bad announcement:" (f (f input_announcement_asserts)))
       )
       conditions
     )
@@ -208,11 +212,12 @@
         announcer_delay
         price_announcers
       )
-      (new_prices . last_price) (cut-prices PRICES (- current_timestamp price_expiration_seconds) (list (c mean_price current_timestamp)) ())
+      (new_prices . last_price_info) (cut-prices PRICES (- current_timestamp price_expiration_seconds) (list (c mean_price current_timestamp)) ())
+      (last_price . last_updated) last_price_info
       ;  new coin will have updated price, increase the counter of updates
       ;###  main expression
       ; check that we haven't updated the price recently OR new price is much higher than previous
-      (assert
+      (assert_debug
         (> price_announcers_length (- m_of_n 1))
         ; check that prices are unique
         (unique price_announcers)
@@ -236,7 +241,7 @@
                   (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY announcer_delay)
                     (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_deposit)
                       (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_EXPIRATION_SECONDS price_expiration_seconds)
-                        (c (list CREATE_PUZZLE_ANNOUNCEMENT (if (> last_price -1) last_price mean_price))
+                        (c (list CREATE_PUZZLE_ANNOUNCEMENT (if (> last_price -1) (sha256 last_price last_updated) (sha256 mean_price current_timestamp)))
                           (c
                             (list
                               CREATE_COIN
@@ -282,7 +287,10 @@
           ; min singleton amount, force it to be this
           1
         )
-        (list CREATE_PUZZLE_ANNOUNCEMENT (r (cut-prices PRICES from_timestamp ())))
+        (assign
+          (last_price . last_updated) (r (cut-prices PRICES 0 () ()))
+          (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 last_price last_updated))
+        )
       )
     )
   )
