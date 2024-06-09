@@ -162,32 +162,11 @@
         (c
           (list
             ASSERT_MY_PARENT_ID
-              (assign
-                ; FIXME: why include all these state variables in lineage proof instead of just their hash?
-                deposited_amount (f (r lineage_proof))
-                byc_minted_amount (f (r (r lineage_proof)))
-                auction_state (f (r (r (r lineage_proof))))
-                inner_puzzle_hash (f (r (r (r (r lineage_proof)))))
-                discounted_principal (f (r (r (r (r (r lineage_proof))))))
-                transferred_fees (f (r (r (r (r (r (r lineage_proof)))))))
-                (calculate-coin-id
-                  (f lineage_proof)
-                  (curry_hashes
-                    MOD_HASH
-                    (sha256tree MOD_HASH)
-                    (sha256 ONE CAT_MOD_HASH)
-                    (sha256tree STATUTES_STRUCT)
-                    (sha256 ONE BYC_TAIL_MOD_HASH)
-                    (sha256 ONE transferred_fees)
-                    (sha256 ONE deposited_amount)
-                    (sha256 ONE byc_minted_amount)
-                    (sha256tree auction_state)
-                    (sha256 ONE inner_puzzle_hash)
-                    (sha256 ONE discounted_principal)
-                  )
-                  deposited_amount
-                )
-              )
+            (calculate-coin-id
+              (f lineage_proof)
+              (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
+              (f (r (r lineage_proof)))
+            )
           )
           (c (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT)
             (c

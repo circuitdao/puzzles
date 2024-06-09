@@ -74,7 +74,6 @@
                           (c
                             (list ASSERT_MY_PARENT_ID
                               (sha256
-                                ; TODO: do we need to pass full lineage proof here?
                                 (f lineage_proof)
                                 (curry_hashes
                                   CAT_MOD_HASH

@@ -66,7 +66,6 @@
       )
     )
   )
-  ; FIXME: can we move logic of this puzzle to driver for mutations at least?
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
     raw_conditions (if inner_puzzle_hash
@@ -95,7 +94,6 @@
           (list ASSERT_MY_PARENT_ID
             (calculate-coin-id
               parent_id
-              ; TODO: make this lineage cheaper
               (curry_hashes MOD_HASH
                 (sha256 ONE MOD_HASH)
                 statutes_struct_hash

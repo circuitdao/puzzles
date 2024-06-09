@@ -108,7 +108,7 @@
           ; this is initial launch, assert launcher coin
           LAUNCHER_ID
           ; not launch, just update, assert previous coin spend
-          (sha256 ; FIXME: use calculate-coin-id here
+          (calculate-coin-id
             (f lineage_proof) ; parent id
             (a generate-puzzle-hash (list () ()))
             ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
@@ -127,7 +127,7 @@
           (sha256tree LAUNCHER_ID)
         )
         ; this ensures that we're keeping lineage the same
-        (sha256 ; FIXME: use calculate-coin-id here
+        (calculate-coin-id
           (f lineage_proof)
           (a generate-puzzle-hash (list () ()))
           ; pass through previous amount
@@ -188,33 +188,40 @@
             (if (all (= (strlen (r lineage_proof)) 32) (= withdraw_amount 0))
               ; updating lineage, don't require approving mods
               ; there is initial launch and later update of the ring
-              (c
-                (list ASSERT_PUZZLE_ANNOUNCEMENT
-                  ; get approval from statutes
-                  (sha256
-                    statutes_puzzle_hash
-                    ANN_PREFIX
-                    (f args) ; my_coin_id
-                    LAUNCHER_ID
-                    (r lineage_proof) ; prev ring launcher id
+              (assert
+                (size_b32 (f args)) ; my_coin_id
+                (size_b32 (r lineage_proof))
+                (c
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT
+                    ; get approval from statutes
+                    (sha256
+                      statutes_puzzle_hash
+                      ANN_PREFIX
+                      (f args) ; my_coin_id
+                      LAUNCHER_ID
+                      (r lineage_proof) ; prev ring launcher id
+                    )
                   )
-                )
-                (c (list ASSERT_MY_COIN_ID (f args))
-                  ; confirm back to statutes that we indeed updated the curried args
-                  (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX LAUNCHER_ID (r lineage_proof)))
-                    conditions
+                  (c (list ASSERT_MY_COIN_ID (f args))
+                    ; confirm back to statutes that we indeed updated the curried args
+                    (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX LAUNCHER_ID (r lineage_proof)))
+                      conditions
+                    )
                   )
                 )
               )
               ;ELSE; we're spending/announcing, require approving mods
               (assign
-                ; ring_prev_prev_info is (ring_prev_prev_id . ring_prev_prev_amount)
                 (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
-                approving_mod_hash_tree_arg approving_mod_ann_prefix approving_mod_hashes my_coin_id . ring_prev_prev_info) args
+                approving_mod_ann_prefix approving_mod_hashes my_coin_id) args
                 approver_coin_id (assert
+                  (size_b32 approving_parent_id)
+                  (size_b32 approving_mod_hash)
+                  (size_uint64 approver_amount)
+                  (size_b32 my_coin_id)
+                  (size_b1 approving_mod_ann_prefix)
                   ; check that this approving mod hash is allowed
-                  ; FIXME: ensure mod_hash tree arg is enforced to be a small number
-                  (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
+                  (contains approving_mod_hashes approving_mod_hash)
                   (calculate-coin-id
                     approving_parent_id
                     ; we want to ensure that the approving puzzle is using the correct mod
