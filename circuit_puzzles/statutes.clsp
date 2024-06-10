@@ -119,7 +119,7 @@
 
   (assign
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
-    operation_mod_hash (if operation (sha256tree (f operation)) ())
+    operation_mod_hash (if operation (sha256tree (f operation)) ()) ; REVIEW: this isn't secure. possible solution: select operation by index
     (statutes prices cumulative_stability_fee cumulative_interest_rate mutation_conditions) (if (= operation_mod_hash ())
       ; default to existing values
       (list STATUTES PRICES PAST_CUMULATIVE_STABILITY_FEE_RATE PAST_CUMULATIVE_INTEREST_RATE ())

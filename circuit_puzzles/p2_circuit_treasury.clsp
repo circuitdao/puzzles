@@ -40,9 +40,10 @@
       (assign
         (condition_code condition_body . rest_condition) (f input_conditions)
         (if (= condition_code CREATE_COIN)
-          (if condition_body
+          (if condition_body ; REVIEW: is this check necessary? If somebody want to pay to nil puzhash, let them. Also, as is, withdraw amount doesn't increase if a withdrawal to nil puzhash is made.
             (if (= condition_body my_puzzle_hash)
               ; if it's paying into our puzzle hash, increase the sum (they're depositing)
+              ; REVIEW: can we construct an exploit by withdrawing to another treasury coin?
               (if my_create_coin_exists
                 ; can't pay into our own puzzle hash twice
                 (x "Cant pay into our own puzzle hash twice")
@@ -140,7 +141,7 @@
       my_puzzle_hash
       0 ; create coin exists = false
       () ; return_conditions
-      () ; collect conditions here
+      () ; collect conditions here ; REVIEW: delete this line as duplicate of the one above? in any case, parse-conditions only takes 6 args
       ; init new_amount = 0
       0
       ; init withdraw_amount = 0
@@ -154,7 +155,7 @@
           ; withdraw is set, use that
           (if (> withdraw_amount_pre 0)
             withdraw_amount_pre
-            ; withdraw_amount_pre is negative, use it
+            ; withdraw_amount_pre is negative, use it ; REVIEW: why allow a negative withdraw amount? only needed when melting, but is should never be possible to melt a treasury coin
             (assert (> withdraw_amount_pre (- new_amount current_amount)) (* -1 withdraw_amount_pre))
           )
         )
@@ -164,7 +165,7 @@
      ; can't go into negative
      (> new_amount -1) (> withdraw_amount -1)
      ; no change allowed
-     ;(> (+ new_amount withdraw_amount) (- current_amount 1))
+     ;(> (+ new_amount withdraw_amount) (- current_amount 1)) ; REVIEW: delete this line. covered by the (any ... below
      (any
       ; we can't leave any change if withdrawing
       (= current_amount (+ new_amount withdraw_amount))
@@ -178,11 +179,7 @@
      ; ---- all asserts passed, return conditions
       (c (list
         ASSERT_MY_AMOUNT current_amount)
-        (c (list
-          REMARK
-
-               withdraw_amount  (- new_amount current_amount)
-              )
+        (c (list REMARK withdraw_amount  (- new_amount current_amount)) ; REVIEW: needed for drivers or remove?
           (c (list
             ASSERT_MY_PARENT_ID parent_id)
             (if (all (= (strlen (r lineage_proof)) 32) (= withdraw_amount 0))
@@ -209,11 +206,21 @@
               ;ELSE; we're spending/announcing, require approving mods
               (assign
                 ; ring_prev_prev_info is (ring_prev_prev_id . ring_prev_prev_amount)
-                (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
-                approving_mod_hash_tree_arg approving_mod_ann_prefix approving_mod_hashes my_coin_id . ring_prev_prev_info) args
+                (
+                  approving_parent_id
+                  approving_mod_hash
+                  approving_mod_curried_args_hash
+                  approver_amount
+                  approving_mod_hash_tree_arg
+                  approving_mod_ann_prefix
+                  approving_mod_hashes
+                  my_coin_id
+                  .
+                  ring_prev_prev_info
+                ) args
                 approver_coin_id (assert
                   ; check that this approving mod hash is allowed
-                  (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
+                  (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes)) ; REVIEW: not secure. select by index instead?
                   (calculate-coin-id
                     approving_parent_id
                     ; we want to ensure that the approving puzzle is using the correct mod
@@ -222,7 +229,7 @@
                       (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
                         (curry_hashes CAT_MOD_HASH
                           (sha256tree CAT_MOD_HASH)
-                          (sha256tree (f (r approving_mod_curried_args_hash)))
+                          (sha256tree (f (r approving_mod_curried_args_hash))) ; REVIEW: this isn't validated anywhere, so can be an arbitrary tail hash?
                           (tree_hash_of_apply approving_mod_hash (f (r (r approving_mod_curried_args_hash))))
                         )
                       )
@@ -238,7 +245,7 @@
                   (list ASSERT_COIN_ANNOUNCEMENT
                     (sha256
                       approver_coin_id
-                      approving_mod_ann_prefix
+                      approving_mod_ann_prefix ; REVIEW: not validated anywhere. need to make sure that approver cannot make coin announcements using another prefix?
                       my_coin_id
                       (- new_amount current_amount)
                       new_amount
