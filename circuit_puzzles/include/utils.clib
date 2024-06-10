@@ -14,7 +14,7 @@
 
   (defun-inline size_uint32 (var)
     ; 5 bytes for uint32
-    (all (> var 0) (> 6 (strlen var)))
+    (all (> var -1) (> 6 (strlen var)))
   )
 
   (defun-inline size_uint64 (var)

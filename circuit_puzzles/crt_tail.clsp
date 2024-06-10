@@ -1,6 +1,6 @@
 ; Circuit CAT token (CRT)
 (mod (
-      GENESIS_ID CAT_MOD_HASH
+      GENESIS_ID STATUTES_STRUCT CAT_MOD_HASH
       Truths parent_is_cat lineage_proof delta inner_conditions
       solution
      ) 
@@ -17,8 +17,8 @@
       (assign
         (crt_tail_hash byc_tail_hash surplus_mod_hash
         launcher_id byc_lot_amount last_bid
-        statutes_inner_puzzle_hash statutes_struct approved_mod_hashes) solution
-        statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
+        statutes_inner_puzzle_hash approved_mod_hashes) solution
+        statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         puzzle_hash (
           curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
@@ -26,7 +26,7 @@
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
               (sha256 ONE CAT_MOD_HASH)
-              (sha256tree statutes_struct)
+              (sha256tree STATUTES_STRUCT)
               (sha256 ONE launcher_id)
               (sha256 ONE byc_lot_amount)
               (sha256 ONE byc_tail_hash)
@@ -55,6 +55,7 @@
             (list ASSERT_MY_PUZZLEHASH puzzle_hash)
             ; we should be melting the whole coin value
             (list ASSERT_MY_AMOUNT (* -1 delta))
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
           )
         )
       )
@@ -76,10 +77,9 @@
           my_coin_id
           approved_mod_hashes
           statutes_inner_puzzle_hash
-          statutes_struct
         ) solution
-        statutes_struct_hash (sha256tree statutes_struct)
-        statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
+        statutes_struct_hash (sha256tree STATUTES_STRUCT)
+        statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         approving_coin_id (calculate-coin-id
           parent_id
           (if byc_tail_hash
@@ -110,6 +110,7 @@
           (list
             (list ASSERT_MY_COIN_ID my_coin_id)
             (list REMARK approving_coin_id ann_prefix statutes_struct_hash my_coin_id issuance_amount)
+            ; TODO: use SEND/RECEIVE MESSAGE condition for this
             (list CREATE_COIN_ANNOUNCEMENT (concat statutes_struct_hash issuance_amount))
             (list ASSERT_COIN_ANNOUNCEMENT
               (sha256

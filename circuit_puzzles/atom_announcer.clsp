@@ -11,13 +11,14 @@
 
   (defconst ANN_PREFIX 'A')
 
-  (defun-inline is-valid-ann-cond (cond_body)
-    (not
-      (=
-        (substr (f cond_body) 0 ONE)
-        ANN_PREFIX
+  (defun-inline is-invalid-ann-cond (cond_body)
+    (all
+        (=
+          (substr (f cond_body) 0 ONE)
+          ANN_PREFIX
+        )
+        (any (= (strlen (f cond_body)) 2) (> (strlen (f cond_body)) 64))
       )
-    )
   )
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
@@ -26,13 +27,13 @@
     (if conditions
       (if (= condition_code CREATE_COIN)
         (if found_create_coin
-          (x)
+          (x "no create coin")
           (restrict-conditions rest_of_conditions condition_body final_conditions)
         )
         (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-          (if (is-valid-ann-cond condition_body)
+          (if (is-invalid-ann-cond condition_body)
+            (x "invalid announcement" condition_body)
             (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-            (x)
           )
           (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
         )
@@ -66,11 +67,10 @@
       )
     )
   )
-  ; FIXME: can we move logic of this puzzle to driver for mutations at least?
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
     raw_conditions (if inner_puzzle_hash
-      (assert (= inner_puzzle_hash INNER_PUZZLE_HASH)
+      (assert_debug (= inner_puzzle_hash INNER_PUZZLE_HASH)
         (a inner_puzzle solution_or_conditions)
       )
       ; otherwise, solution_or_conditions is conditions
@@ -95,7 +95,6 @@
           (list ASSERT_MY_PARENT_ID
             (calculate-coin-id
               parent_id
-              ; TODO: make this lineage cheaper
               (curry_hashes MOD_HASH
                 (sha256 ONE MOD_HASH)
                 statutes_struct_hash
@@ -109,7 +108,7 @@
               prev_deposit
             )
           )
-          (assert
+          (assert_debug
             (= DEPOSIT 0)
             (= APPROVED 0)
             (= ATOM_VALUE 0)
@@ -191,8 +190,7 @@
                         deposit
                         delay
                         atom_value
-                        ; only update the expiration timestamp if atom value changes
-                        (if (= atom_value ATOM_VALUE) TIMESTAMP_EXPIRES (+ current_timestamp delay))
+                        (+ current_timestamp delay)
                         input_conditions
                       )
                     )
@@ -239,7 +237,7 @@
                 )
                 (if (= operation_code 4) ; REGISTER
                   ; register the announcer with announcer registry coin
-                  (assert
+                  (assert_debug
                     inner_puzzle_hash ; must be owner
                     APPROVED
                     (c

@@ -108,7 +108,7 @@
           ; this is initial launch, assert launcher coin
           LAUNCHER_ID
           ; not launch, just update, assert previous coin spend
-          (sha256 ; FIXME: use calculate-coin-id here
+          (calculate-coin-id
             (f lineage_proof) ; parent id
             (a generate-puzzle-hash (list () ()))
             ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
@@ -127,7 +127,7 @@
           (sha256tree LAUNCHER_ID)
         )
         ; this ensures that we're keeping lineage the same
-        (sha256 ; FIXME: use calculate-coin-id here
+        (calculate-coin-id
           (f lineage_proof)
           (a generate-puzzle-hash (list () ()))
           ; pass through previous amount
@@ -140,7 +140,6 @@
       my_puzzle_hash
       0 ; create coin exists = false
       () ; return_conditions
-      () ; collect conditions here
       ; init new_amount = 0
       0
       ; init withdraw_amount = 0
@@ -154,8 +153,7 @@
           ; withdraw is set, use that
           (if (> withdraw_amount_pre 0)
             withdraw_amount_pre
-            ; withdraw_amount_pre is negative, use it
-            (assert (> withdraw_amount_pre (- new_amount current_amount)) (* -1 withdraw_amount_pre))
+            (x)
           )
         )
         withdraw_amount_pre
@@ -176,18 +174,16 @@
      ; must have at least one condition
      (l conditions)
      ; ---- all asserts passed, return conditions
-      (c (list
-        ASSERT_MY_AMOUNT current_amount)
+      (c
+        (list ASSERT_MY_AMOUNT current_amount)
         (c (list
-          REMARK
-
-               withdraw_amount  (- new_amount current_amount)
-              )
-          (c (list
-            ASSERT_MY_PARENT_ID parent_id)
-            (if (all (= (strlen (r lineage_proof)) 32) (= withdraw_amount 0))
-              ; updating lineage, don't require approving mods
-              ; there is initial launch and later update of the ring
+          ASSERT_MY_PARENT_ID parent_id)
+          (if (all (= (strlen (r lineage_proof)) 32) (= withdraw_amount 0))
+            ; updating lineage, don't require approving mods
+            ; there is initial launch and later update of the ring
+            (assert
+              (size_b32 (f args)) ; my_coin_id
+              (size_b32 (r lineage_proof))
               (c
                 (list ASSERT_PUZZLE_ANNOUNCEMENT
                   ; get approval from statutes
@@ -201,71 +197,76 @@
                 )
                 (c (list ASSERT_MY_COIN_ID (f args))
                   ; confirm back to statutes that we indeed updated the curried args
+                  ; TODO: use SEND/RECEIVE MESSAGE condition for this
                   (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX LAUNCHER_ID (r lineage_proof)))
                     conditions
                   )
                 )
               )
-              ;ELSE; we're spending/announcing, require approving mods
-              (assign
-                ; ring_prev_prev_info is (ring_prev_prev_id . ring_prev_prev_amount)
-                (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
-                approving_mod_hash_tree_arg approving_mod_ann_prefix approving_mod_hashes my_coin_id . ring_prev_prev_info) args
-                approver_coin_id (assert
-                  ; check that this approving mod hash is allowed
-                  ; FIXME: ensure mod_hash tree arg is enforced to be a small number
-                  (= approving_mod_hash (a approving_mod_hash_tree_arg approving_mod_hashes))
-                  (calculate-coin-id
-                    approving_parent_id
-                    ; we want to ensure that the approving puzzle is using the correct mod
-                    (if (l approving_mod_curried_args_hash)
-                      ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
-                      (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
-                        (curry_hashes CAT_MOD_HASH
-                          (sha256tree CAT_MOD_HASH)
-                          (sha256tree (f (r approving_mod_curried_args_hash)))
-                          (tree_hash_of_apply approving_mod_hash (f (r (r approving_mod_curried_args_hash))))
-                        )
+            )
+            ;ELSE; we're spending/announcing, require approving mods
+            (assign
+              (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
+              approving_mod_ann_prefix approving_mod_hashes my_coin_id) args
+              approver_coin_id (assert
+                (size_b32 approving_parent_id)
+                (size_b32 approving_mod_hash)
+                (size_uint64 approver_amount)
+                (size_b32 my_coin_id)
+                (size_b1 approving_mod_ann_prefix)
+                ; check that this approving mod hash is allowed
+                (contains approving_mod_hashes approving_mod_hash)
+                (calculate-coin-id
+                  approving_parent_id
+                  ; we want to ensure that the approving puzzle is using the correct mod
+                  (if (l approving_mod_curried_args_hash)
+                    ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
+                    (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
+                      (curry_hashes CAT_MOD_HASH
+                        (sha256tree CAT_MOD_HASH)
+                        (sha256tree (f (r approving_mod_curried_args_hash)))
+                        (tree_hash_of_apply approving_mod_hash (f (r (r approving_mod_curried_args_hash))))
                       )
-                      ; ELSE;
-                      (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
                     )
-                    approver_amount
+                    ; ELSE;
+                    (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
+                  )
+                  approver_amount
+                )
+              )
+
+              (c
+                ; assert approver coin announcement is valid
+                ; TODO: use SEND/RECEIVE MESSAGE condition for this
+                (list ASSERT_COIN_ANNOUNCEMENT
+                  (sha256
+                    approver_coin_id
+                    approving_mod_ann_prefix
+                    my_coin_id
+                    (- new_amount current_amount)
+                    new_amount
                   )
                 )
-
                 (c
-                  ; assert approver coin announcement is valid
-                  (list ASSERT_COIN_ANNOUNCEMENT
-                    (sha256
+                  ; create announcement back to approver confirming we have withdrawn
+                  ; NOTE: we must use coin announcements to avoid duplications of announcements
+                  (list CREATE_COIN_ANNOUNCEMENT
+                    (concat
+                      ANN_PREFIX
                       approver_coin_id
-                      approving_mod_ann_prefix
-                      my_coin_id
                       (- new_amount current_amount)
                       new_amount
                     )
                   )
-                  (c
-                    ; create announcement back to approver confirming we have withdrawn
-                    ; NOTE: we must use coin announcements to avoid duplications of announcements
-                    (list CREATE_COIN_ANNOUNCEMENT
-                      (concat
-                        ANN_PREFIX
-                        approver_coin_id
-                        (- new_amount current_amount)
-                        new_amount
-                      )
-                    )
-                    ; assert that approving mod hashes are valid
-                    (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
-                    ; assert that passed coin id is ours
-                      (c (list ASSERT_MY_COIN_ID my_coin_id)
-                        (c
-                          ; assert my new balance so someone can check whole ring balance
-                          (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
-                          (c (list REMARK my_coin_id new_amount LAUNCHER_ID)
-                            conditions
-                          )
+                  ; assert that approving mod hashes are valid
+                  (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
+                  ; assert that passed coin id is ours
+                    (c (list ASSERT_MY_COIN_ID my_coin_id)
+                      (c
+                        ; assert my new balance so someone can check whole ring balance
+                        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                        (c (list REMARK my_coin_id new_amount LAUNCHER_ID)
+                          conditions
                         )
                       )
                     )

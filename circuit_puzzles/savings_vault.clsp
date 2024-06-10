@@ -29,16 +29,17 @@
                             filtered_conditions)
     (if conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (if (not
+        (if (all
               (= (substr (f condition_rest) 0 1) ANN_PREFIX)
+              (> (strlen (f condition_rest)) 34)
             )
+          ; bad announcement found, error
+          (x "bad announcement" (f condition_rest) (strlen (f condition_rest)))
           (filter-conditions
             rest_of_conditions
             found_first_create_coin
             (c (f conditions) filtered_conditions)
           )
-          ; bad announcement found, error
-          (x)
         )
         (if (= condition_code CREATE_COIN)
           (if found_first_create_coin
@@ -69,7 +70,7 @@
           )
         )
       )
-      (assert found_first_create_coin
+      (assert_debug found_first_create_coin
         (list found_first_create_coin filtered_conditions)
       )
     )
@@ -116,7 +117,6 @@
       (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
 
-    ; FIXME: do we need the individual state variables or would a (partial) hash do?
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
@@ -189,7 +189,7 @@
       )
       pre_final_conditions
     )
-    (assert
+    (assert_debug
       (size_b32 (f create_coin_body))
       (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
         (c
@@ -223,7 +223,7 @@
                           )
                         )
                         (if treasury_coin_id
-                          (assert
+                          (assert_debug
                             ; treasury coin should have enough amount to cover interest
                             (> new_treasury_amount 0)
                             ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins

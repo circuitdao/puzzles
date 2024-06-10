@@ -4,8 +4,7 @@
         OPERATIONS
       )
       (
-        ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
-        TREASURY_APPROVAL_MOD_HASHES
+        TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
         P2_TREASURY_MOD_HASH
         OFFER_MOD_HASH
         P2_SURPLUS_AUCTION_MOD_HASH
@@ -40,6 +39,7 @@
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT
           (concat STATUTES_ANN_PREFIX
+            ; TODO: could this be just a sha256?
             (sha256tree
               (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
             )
@@ -167,6 +167,7 @@
     )
     (c create_coin_condition
       (c
+        ; TODO: this could be sha256 for most items
         (list CREATE_PUZZLE_ANNOUNCEMENT
           (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -7 PRICE_UPDATES)))
         )

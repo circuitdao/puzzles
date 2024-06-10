@@ -31,7 +31,7 @@
       current_timestamp
       (r price_info)
     )
-    (xch_price . last_updated) price_info
+    (collateral_price . last_updated) price_info
     principal (+ PRINCIPAL byc_amount_to_mint)
     ; divide negative numbers to ceil
     discounted_mint_amount (* -1 (/ (* -1 byc_amount_to_mint PRECISION) cumulative_stability_fee_rate))
@@ -44,10 +44,10 @@
     )
     undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
     ; check that total debt is larger than minted amount, not minimum mint amount
-    (assert (> (+ undiscounted_principal byc_amount_to_mint) minimum_debt_amount)
+    (assert_debug (> (+ undiscounted_principal byc_amount_to_mint) minimum_debt_amount)
             (> byc_amount_to_mint 0)
             ; check if requested amount of BYC to mint takes us over the collateralization ratio
-            (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio xch_price) byc_amount_to_mint)
+            (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) byc_amount_to_mint)
       (list
         ; updated state
         (list TRANSFERRED_FEES COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
