@@ -11,14 +11,14 @@
 
   (defconst ANN_PREFIX 'A')
 
-  (defun-inline is-valid-ann-cond (cond_body)
-    (not
-      (=
-        (substr (f cond_body) 0 ONE)
-        ; FIXME: add size checks so we don't randomly block valid announcements that accidentally start with our prefix
-        ANN_PREFIX
+  (defun-inline is-invalid-ann-cond (cond_body)
+    (all
+        (=
+          (substr (f cond_body) 0 ONE)
+          ANN_PREFIX
+        )
+        (any (= (strlen (f cond_body)) 2) (> (strlen (f cond_body)) 64))
       )
-    )
   )
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
@@ -31,9 +31,9 @@
           (restrict-conditions rest_of_conditions condition_body final_conditions)
         )
         (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-          (if (is-valid-ann-cond condition_body)
-            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+          (if (is-invalid-ann-cond condition_body)
             (x "invalid announcement" condition_body)
+            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
           )
           (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
         )

@@ -55,6 +55,7 @@
             (list ASSERT_MY_PUZZLEHASH puzzle_hash)
             ; we should be melting the whole coin value
             (list ASSERT_MY_AMOUNT (* -1 delta))
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
           )
         )
       )
@@ -109,7 +110,7 @@
           (list
             (list ASSERT_MY_COIN_ID my_coin_id)
             (list REMARK approving_coin_id ann_prefix statutes_struct_hash my_coin_id issuance_amount)
-            ; FIXME: use SEND/RECEIVE MESSAGE condition for this
+            ; TODO: use SEND/RECEIVE MESSAGE condition for this
             (list CREATE_COIN_ANNOUNCEMENT (concat statutes_struct_hash issuance_amount))
             (list ASSERT_COIN_ANNOUNCEMENT
               (sha256

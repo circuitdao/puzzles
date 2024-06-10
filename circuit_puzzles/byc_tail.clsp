@@ -49,7 +49,7 @@
         (list
           (list ASSERT_MY_AMOUNT current_coin_amount)
           (list ASSERT_MY_COIN_ID my_coin_id) ; thanks @bramv-chia
-          ; FIXME: use SEND/RECEIVE MESSAGE condition for this
+          ; TODO: use SEND/RECEIVE MESSAGE condition for this
           (list
               ASSERT_COIN_ANNOUNCEMENT
               (sha256

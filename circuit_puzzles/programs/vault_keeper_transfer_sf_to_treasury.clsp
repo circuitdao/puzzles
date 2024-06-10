@@ -68,7 +68,7 @@
         )
       )
     )
-    (assert
+    (assert_debug
       ; only if there are fees to be paid
       (> fees 0)
       ; to avoid keepers dusting and hogging treasury coins
