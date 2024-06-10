@@ -1,5 +1,9 @@
 (mod (STATUTES_STRUCT CAT_MOD_HASH ORACLE_PRICE_INDEX
-      Truths parent_is_cat lineage_proof delta inner_conditions
+      Truths
+      parent_is_cat
+      lineage_proof
+      delta
+      inner_conditions
       (@ solution
         (
           vault_parent_id
