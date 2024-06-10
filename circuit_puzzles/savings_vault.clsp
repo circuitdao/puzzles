@@ -38,7 +38,7 @@
             (c (f conditions) filtered_conditions)
           )
           ; bad announcement found, error
-          (x)
+          (x "bad announcement")
         )
         (if (= condition_code CREATE_COIN)
           (if found_first_create_coin
@@ -69,7 +69,7 @@
           )
         )
       )
-      (assert found_first_create_coin
+      (assert_debug found_first_create_coin
         (list found_first_create_coin filtered_conditions)
       )
     )
@@ -188,7 +188,7 @@
       )
       pre_final_conditions
     )
-    (assert
+    (assert_debug
       (size_b32 (f create_coin_body))
       (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
         (c
@@ -222,7 +222,7 @@
                           )
                         )
                         (if treasury_coin_id
-                          (assert
+                          (assert_debug
                             ; treasury coin should have enough amount to cover interest
                             (> new_treasury_amount 0)
                             ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins

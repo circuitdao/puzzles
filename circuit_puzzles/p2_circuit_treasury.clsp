@@ -180,7 +180,6 @@
         ASSERT_MY_AMOUNT current_amount)
         (c (list
           REMARK
-
                withdraw_amount  (- new_amount current_amount)
               )
           (c (list
@@ -204,6 +203,7 @@
                   )
                   (c (list ASSERT_MY_COIN_ID (f args))
                     ; confirm back to statutes that we indeed updated the curried args
+                    ; FIXME: use SEND/RECEIVE MESSAGE condition for this
                     (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX LAUNCHER_ID (r lineage_proof)))
                       conditions
                     )
@@ -243,6 +243,7 @@
 
                 (c
                   ; assert approver coin announcement is valid
+                  ; FIXME: use SEND/RECEIVE MESSAGE condition for this
                   (list ASSERT_COIN_ANNOUNCEMENT
                     (sha256
                       approver_coin_id
