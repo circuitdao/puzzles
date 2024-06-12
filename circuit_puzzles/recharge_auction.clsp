@@ -1,5 +1,10 @@
 (mod (OPERATIONS MOD_WITH_OPERATIONS_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT
-      statutes_inner_puzzle_hash lineage_proof operation . op_args)
+      statutes_inner_puzzle_hash
+      lineage_proof
+      operation
+      .
+      op_args
+     )
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -7,8 +12,6 @@
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
-
-
 
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)

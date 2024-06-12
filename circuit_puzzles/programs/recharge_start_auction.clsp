@@ -1,8 +1,17 @@
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
-    statutes_puzzle_hash lineage_proof announcements
-    (start_time my_coin_id lot_amount treasury_minimum auction_timeout
-     p2_treasury_hash treasury_coins)
+    statutes_puzzle_hash
+    lineage_proof
+    announcements
+    (
+      start_time
+      my_coin_id
+      lot_amount
+      treasury_minimum
+      auction_timeout
+      p2_treasury_hash
+      treasury_coins
+    )
   )
   (include *standard-cl-23*)
   (include curry.clib)
@@ -57,7 +66,7 @@
                     ; start_time minus one tx block time should already be in the past
                     (list ASSERT_SECONDS_ABSOLUTE (- start_time 55))
                     (c
-                      ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                      ; make sure that start_time hasn't happened yet, allow it to be in mempool for 5 tx blocks
                       (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
                       (c
                         ; start balance should be zero
@@ -77,6 +86,7 @@
                                     (sha256tree MOD_HASH)
                                     (sha256tree CAT_MOD_HASH)
                                     (sha256tree CAT_TAIL_HASH)
+                                    ; REVIEW: simplify lineage proof by using partial parent state hash instead of individual parent curried args? Would require moving STATUTES_STRUCT one position up in the order of curried args
                                     (sha256tree (f (r (r lineage_proof)))) ; launcher_id
                                     (sha256tree STATUTES_STRUCT)
                                     (sha256tree (f (r (r (r lineage_proof))))) ; start_time

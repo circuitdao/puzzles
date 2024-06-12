@@ -18,6 +18,7 @@
     (= LAST_BID ())
     (= LAUNCHER_ID 0)
     (= START_TIME 0)
+    ; REVIEW: do we also want to enforce CRT_LOT_AMOUNT = 0? would make coins more easily detectable on-chain
     (size_b32 statutes_puzzle_hash)
     (c
       (list

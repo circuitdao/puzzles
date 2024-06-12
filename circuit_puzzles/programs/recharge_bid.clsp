@@ -1,8 +1,20 @@
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
-    statutes_puzzle_hash  lineage_proof announcements
-    (bid_amount target_puzzle_hash current_timestamp minimum_bid_amount
-    offer_mod_hash auction_timeout ttl my_coin_id lot_amount raw_announcements)
+    statutes_puzzle_hash
+    lineage_proof
+    announcements
+    (
+      bid_amount
+      target_puzzle_hash
+      current_timestamp
+      minimum_bid_amount
+      offer_mod_hash
+      auction_timeout
+      ttl
+      my_coin_id
+      lot_amount
+      raw_announcements
+    )
   )
 
   (include *standard-cl-23*)
@@ -11,6 +23,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     (last_bid_amount last_target_puzzle_hash last_bid_timestamp) (
       if LAST_BID
@@ -19,7 +32,7 @@
     )
     conditions (assert
       LAUNCHER_ID ; can't bid if auction hasn't started yet
-      (> CRT_LOT_AMOUNT 0)
+      (> CRT_LOT_AMOUNT 0) ; REVIEW: is this the right place for this check? verify/enforce in Statutes instead?
       (> bid_amount 0)
       (any (= last_bid_amount 0) (> bid_amount last_bid_amount))
       ; bids can't be smaller than this
@@ -69,7 +82,7 @@
                       (c
                         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
                         (c
-                          ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                          ; make sure that current_timestamp hasn't happened yet, allow it to be in mempool for 5 tx blocks
                           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
                           (c
                             (list ASSERT_MY_PARENT_ID
@@ -84,6 +97,7 @@
                                     (sha256tree MOD_HASH)
                                     (sha256tree CAT_MOD_HASH)
                                     (sha256tree CAT_TAIL_HASH)
+                                    ; REVIEW: use partial parent state hash instead of individual parent curried args to simplify lineage proof
                                     (sha256tree (f (r (r lineage_proof)))) ; launcher_id
                                     (sha256tree STATUTES_STRUCT)
                                     (sha256tree (f (r (r (r lineage_proof))))) ; start_time
@@ -110,7 +124,8 @@
     )
     (if last_target_puzzle_hash
       (c
-        ; assert that keeper absorbed their collateral + left over mojos from melting
+        ; assert that keeper absorbed their collateral + left over mojos from melting ; REVIEW: what collateral, what melting? delete comment
+        ; assert that previous bidder has received their BYC lot amount back
         (list ASSERT_PUZZLE_ANNOUNCEMENT
           (sha256
             (curry_hashes CAT_MOD_HASH
@@ -119,7 +134,7 @@
               offer_mod_hash
             )
             (sha256tree
-              (c my_coin_id
+              (c my_coin_id ; REVIEW: not asserted anywhere. is this ok? probably not. best to assert
               (list
                 (list last_target_puzzle_hash last_bid_amount (list last_target_puzzle_hash)))))
           )

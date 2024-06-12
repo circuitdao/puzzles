@@ -37,7 +37,7 @@
         (parent_id launcher_id prev_launcher_id current_amount) (f treasury_coins)
         (remainder next_parent_id next_launcher_id next_prev_launcher_id next_current_amount) (
           if (r treasury_coins)
-            (c 0x00 (f (r treasury_coins)))
+            (c 0x00 (f (r treasury_coins))) ; REVIEW: why 0x00 instead of just 0?
             (c potential_remainder first_treasury_coin)
         )
         delta (+ deposit_amount remainder)
@@ -142,7 +142,7 @@
         (= amount_deposited final_treasury_amount)
         (if (all (= deposit_amount 0) (= potential_remainder 0))
           ; this is assert balance of treasury coins
-          (assert (> treasury_minimum final_treasury_amount)
+          (assert (> treasury_minimum final_treasury_amount) ; REVIEW: can final_treasury_amount no be >= treasury_minimum in this scenario?
             announcements
           )
           ; we're depositing
