@@ -175,23 +175,12 @@
         )
         (assign
           conditions (list
-            ;(list REMARK "melting ann->" ANN_PREFIX "x" byc_coin_id_to_melt negative_byc_principal_to_melt (sha256tree STATUTES_STRUCT))
-            ;(list REMARK "new state ->" leftover_deposit leftover_byc_minted_amount auction_state discounted_principal_no_fee)
-            ; verify current time is actually current
-            ; check that we current time was within the last 60 seconds
-            (list REMARK 'updated state->' 'DISCOUNTED PRINCIPAL=' DISCOUNTED_PRINCIPAL 'MINTED AMOUNT=' BYC_MINTED_AMOUNT
-                          'fees=' fees 'TRANSFERRED_FEES=' TRANSFERRED_FEES
-                          'initiator incentive=' initiator_incentive_balance initiator_incentive
-                          ' fees_for_treasury=' fees_for_treasury " byc principal=" byc_principal_to_melt " fees_to_not_pay=" fees_to_not_pay
-                          " bid xch=" bid_xch_collateral_amount " liquidation penalty=" liquidation_penalty
-                          " leftover deposit=" leftover_deposit " leftover byc=" leftover_byc_minted_amount
-                          " auction=" auction_state " discounted principal=" discounted_principal " current price=" current_price)
             (list ASSERT_SECONDS_ABSOLUTE (- tx_current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ tx_current_timestamp MAX_TX_BLOCK_TIME))
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
-            (list CREATE_COIN_ANNOUNCEMENT
+            (list SEND_MESSAGE 0x3f
               (concat
                 VAULT_ANN_PREFIX
                 'x'
@@ -199,18 +188,9 @@
                 (- negative_byc_principal_to_melt fees_to_not_pay)
                 (sha256tree STATUTES_STRUCT)
               )
+              byc_coin_id_to_melt
             )
             ; get a melt confirmation from BYC tail
-            (list ASSERT_COIN_ANNOUNCEMENT
-              (sha256
-                byc_coin_id_to_melt
-                BYC_ANN_PREFIX
-                'x'
-                my_coin_id
-                (- negative_byc_principal_to_melt fees_to_not_pay)
-                (sha256tree STATUTES_STRUCT)
-              )
-            )
             ; assert that keeper absorbed their collateral + left over mojos from melting
             (list ASSERT_PUZZLE_ANNOUNCEMENT
               (sha256
@@ -269,21 +249,11 @@
           (if (> fees_for_treasury 0)
             ; get an announcement that BYC was paid into treasury
             (c
-              (list CREATE_COIN_ANNOUNCEMENT
+              (list SEND_MESSAGE 0x3f
                 (concat VAULT_ANN_PREFIX treasury_coin_id fees_for_treasury new_treasury_amount)
+                treasury_coin_id
               )
-              (c
-                (list ASSERT_COIN_ANNOUNCEMENT
-                  (sha256
-                    treasury_coin_id
-                    TREASURY_ANN_PREFIX
-                    my_coin_id
-                    fees_for_treasury
-                    new_treasury_amount
-                  )
-                )
-                conditions
-              )
+              conditions
             )
             ; maybe we set fees to zero for some reason, so don't charge anything
             conditions

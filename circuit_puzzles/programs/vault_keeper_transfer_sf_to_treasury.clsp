@@ -89,7 +89,7 @@
         (list
           (list REMARK VAULT_ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount TRANSFERRED_FEES)
           ; signal to tail that it can issue BYC with certain amount
-          (list CREATE_COIN_ANNOUNCEMENT
+          (list SEND_MESSAGE 0x3f
             (concat
               VAULT_ANN_PREFIX
               "i"
@@ -97,30 +97,12 @@
               fees
               (sha256tree STATUTES_STRUCT)
             )
-          )
-          ; make sure tail has actually issued it too
-          (list ASSERT_COIN_ANNOUNCEMENT
-            (sha256
-              byc_issuing_coin_id
-              BYC_ANN_PREFIX
-              'i'
-              my_coin_id
-              fees
-              (sha256tree STATUTES_STRUCT)
-            )
+            byc_issuing_coin_id
           )
           ; approve treasury coin to receive a deposit
-          (list CREATE_COIN_ANNOUNCEMENT
+          (list SEND_MESSAGE 0x3f
             (concat VAULT_ANN_PREFIX treasury_coin_id fees new_treasury_amount)
-          )
-          (list ASSERT_COIN_ANNOUNCEMENT
-            (sha256
-              treasury_coin_id
-              TREASURY_ANN_PREFIX
-              my_coin_id
-              fees
-              new_treasury_amount
-            )
+            treasury_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_df)
           (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)

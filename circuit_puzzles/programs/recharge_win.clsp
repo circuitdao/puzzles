@@ -3,7 +3,7 @@
     statutes_puzzle_hash  lineage_proof announcements
     (ttl current_timestamp treasury_coins
      p2_treasury_hash funding_coin_id treasury_minimum
-     my_coin_id raw_announcements)
+     my_coin_id)
   )
   (include *standard-cl-23*)
   (include curry.clib)
@@ -59,56 +59,46 @@
                     (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
                     (c
                       ; approve issuance of new CRT coins to target_puzzle_hash
-                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX statutes_struct_hash funding_coin_id CRT_LOT_AMOUNT))
+                      (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash funding_coin_id CRT_LOT_AMOUNT) funding_coin_id)
                       (c
-                        ; assert they were issued
-                        (list ASSERT_COIN_ANNOUNCEMENT
+                        (list ASSERT_MY_PARENT_ID
                           (sha256
-                            funding_coin_id
-                            statutes_struct_hash
-                            CRT_LOT_AMOUNT
-                          )
-                        )
-                        (c
-                          (list ASSERT_MY_PARENT_ID
-                            (sha256
-                              (f lineage_proof)
+                            (f lineage_proof)
+                            (curry_hashes
+                              CAT_MOD_HASH
+                              (sha256tree CAT_MOD_HASH)
+                              (sha256tree CAT_TAIL_HASH)
                               (curry_hashes
-                                CAT_MOD_HASH
+                                MOD_HASH
+                                (sha256tree MOD_HASH)
                                 (sha256tree CAT_MOD_HASH)
                                 (sha256tree CAT_TAIL_HASH)
-                                (curry_hashes
-                                  MOD_HASH
-                                  (sha256tree MOD_HASH)
-                                  (sha256tree CAT_MOD_HASH)
-                                  (sha256tree CAT_TAIL_HASH)
-                                  (sha256tree (f (r (r lineage_proof)))) ; launcher_id
-                                  (sha256tree STATUTES_STRUCT)
-                                  (sha256tree (f (r (r (r lineage_proof))))) ; start_time
-                                  (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
-                                  (sha256tree (f (r (r (r (r (r lineage_proof))))))) ; lot
-                                )
+                                (sha256tree (f (r (r lineage_proof)))) ; launcher_id
+                                (sha256tree STATUTES_STRUCT)
+                                (sha256tree (f (r (r (r lineage_proof))))) ; start_time
+                                (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
+                                (sha256tree (f (r (r (r (r (r lineage_proof))))))) ; lot
                               )
-                              ; parent bid amount
-                              (f (r lineage_proof))
                             )
+                            ; parent bid amount
+                            (f (r lineage_proof))
                           )
-                          (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
-                            p2_treasury_hash
-                            CAT_MOD_HASH
-                            CAT_TAIL_HASH
-                            STATUTES_STRUCT
-                            treasury_minimum
-                            statutes_puzzle_hash
-                            (+ treasury_coins_total winning_bid_amount) ; expected balance after deposit of lot
-                            0 ; amount deposited
-                            treasury_deposit_per_coin
-                            remainder
-                            (f treasury_coins)
-                            treasury_coins
-                            my_coin_id
-                            announcements
-                          )
+                        )
+                        (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+                          p2_treasury_hash
+                          CAT_MOD_HASH
+                          CAT_TAIL_HASH
+                          STATUTES_STRUCT
+                          treasury_minimum
+                          statutes_puzzle_hash
+                          (+ treasury_coins_total winning_bid_amount) ; expected balance after deposit of lot
+                          0 ; amount deposited
+                          treasury_deposit_per_coin
+                          remainder
+                          (f treasury_coins)
+                          treasury_coins
+                          my_coin_id
+                          announcements
                         )
                       )
                     )

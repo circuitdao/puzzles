@@ -1,4 +1,4 @@
-(mod (MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES
+(mod (MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES
      (@ lineage (parent_id prev_value prev_inner_puzzle_hash prev_timestamp prev_delay prev_deposit prev_approved))
      inner_puzzle
      solution_or_conditions
@@ -10,6 +10,7 @@
   (include statutes_utils.clib)
 
   (defconst ANN_PREFIX 'A')
+  ; LATER: transform into operations and see if any cheaper
 
   (defun-inline is-invalid-ann-cond (cond_body)
     (all
@@ -30,11 +31,8 @@
           (x "no create coin")
           (restrict-conditions rest_of_conditions condition_body final_conditions)
         )
-        (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-          (if (is-invalid-ann-cond condition_body)
-            (x "invalid announcement" condition_body)
-            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-          )
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+          (x "invalid condition")
           (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
         )
       )
@@ -43,26 +41,27 @@
   )
 
 
-  (defun recreate-myself-condition (MOD_HASH STATUTES_STRUCT inner_puzzle_hash approved
+  (defun recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
                                     deposit delay atom_value timestamp_expires input_conditions)
     (c
       (list CREATE_COIN
         (curry_hashes MOD_HASH
-            (sha256 ONE MOD_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (sha256 ONE inner_puzzle_hash)
-            (sha256 ONE approved)
-            (sha256 ONE deposit)
-            (sha256 ONE delay)
-            (sha256 ONE atom_value)
-            (sha256 ONE timestamp_expires)
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256 ONE LAUNCHER_ID)
+          (sha256 ONE inner_puzzle_hash)
+          (sha256 ONE approved)
+          (sha256 ONE deposit)
+          (sha256 ONE delay)
+          (sha256 ONE atom_value)
+          (sha256 ONE timestamp_expires)
         )
         deposit
         (list inner_puzzle_hash)
       )
       ; driver remark to reveal the puzzle hash
       (c
-        (list REMARK inner_puzzle_hash deposit approved delay atom_value timestamp_expires)
+        (list REMARK LAUNCHER_ID inner_puzzle_hash deposit approved delay atom_value timestamp_expires)
         input_conditions
       )
     )
@@ -81,7 +80,6 @@
       (if raw_conditions
         (restrict-conditions raw_conditions () ())
         (list () (list INNER_PUZZLE_HASH DEPOSIT (list 0 0)))
-
       )
 
     (operation_code . args ) (f operation_data)
@@ -98,6 +96,7 @@
               (curry_hashes MOD_HASH
                 (sha256 ONE MOD_HASH)
                 statutes_struct_hash
+                (sha256 ONE LAUNCHER_ID)
                 (sha256 ONE prev_inner_puzzle_hash)
                 (sha256 ONE prev_approved)
                 (sha256 ONE prev_deposit)
@@ -108,23 +107,13 @@
               prev_deposit
             )
           )
+          ; launch
           (assert_debug
             (= DEPOSIT 0)
             (= APPROVED 0)
             (= ATOM_VALUE 0)
             (= TIMESTAMP_EXPIRES 0)
-            (list ASSERT_MY_PUZZLEHASH
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                statutes_struct_hash
-                (sha256 ONE INNER_PUZZLE_HASH)
-                (sha256 ONE 0) ; starts without approval
-                (sha256 ONE 0) ; zero deposit
-                (sha256 ONE DELAY)
-                (sha256 ONE 0) ; enforce value of -1 for atom value in launch
-                (sha256 ONE 0) ; expiry is not set
-              )
-            )
+            (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
           )
         )
         (c
@@ -135,38 +124,39 @@
               (current_timestamp statutes_inner_puzzle_hash input_toggle_activation) args
               toggle_activation (assert (any (= input_toggle_activation 0) (= input_toggle_activation 1)) input_toggle_activation)
               statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+              operation_conditions (recreate-myself-condition MOD_HASH
+                STATUTES_STRUCT
+                LAUNCHER_ID
+                INNER_PUZZLE_HASH
+                input_toggle_activation ; current statutes price counter passed
+                deposit
+                DELAY
+                (if (= toggle_activation 0) ATOM_VALUE 0) ; on activation, atom value must be zero
+                ; on activation, we give the announcer some time to update the price before we penalize
+                ; it's activated but can't be announced until it updates the price
+                (if (= toggle_activation 0) TIMESTAMP_EXPIRES (+ current_timestamp DELAY))
+                (if (all (= toggle_activation 0) APPROVED (> (- DEPOSIT deposit) 0))
+                  ; unallocated XCH goes to tx fee to ensure owner can't block us for long
+                  (c (list RESERVE_FEE (- DEPOSIT deposit))
+                    input_conditions
+                  )
+                  input_conditions
+                )
+              )
               (c
                 (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
                 (c
                   (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-                  (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX input_toggle_activation))
-                    (c (list ASSERT_PUZZLE_ANNOUNCEMENT
-                          (sha256
-                            statutes_puzzle_hash
-                            ANN_PREFIX
-                            INNER_PUZZLE_HASH
-                            toggle_activation
-                          )
+                  (c
+                    (list RECEIVE_MESSAGE 0x10
+                      (concat
+                        ANN_PREFIX
+                        LAUNCHER_ID
+                        toggle_activation
                       )
-                      (recreate-myself-condition MOD_HASH
-                        STATUTES_STRUCT
-                        INNER_PUZZLE_HASH
-                        input_toggle_activation ; current statutes price counter passed
-                        deposit
-                        DELAY
-                        (if (= toggle_activation 0) ATOM_VALUE 0) ; on activation, atom value must be zero
-                        ; on activation, we give the announcer some time to update the price before we penalize
-                        ; it's activated but can't be announced until it updates the price
-                        (if (= toggle_activation 0) TIMESTAMP_EXPIRES (+ current_timestamp DELAY))
-                        (if (all (= toggle_activation 0) APPROVED (> (- DEPOSIT deposit) 0))
-                          ; unallocated XCH goes to tx fee to ensure owner can't block us for long
-                          (c (list RESERVE_FEE (- DEPOSIT deposit))
-                            input_conditions
-                          )
-                          input_conditions
-                        )
-                      )
+                      statutes_puzzle_hash
                     )
+                    operation_conditions
                   )
                 )
               )
@@ -177,6 +167,7 @@
               (assign
                 (current_timestamp atom_value delay deactivate) args
                 (assert_debug
+                  LAUNCHER_ID
                   (> deposit (- DEPOSIT 1))
                   inner_puzzle_hash ; must be owner
                   (c
@@ -185,6 +176,7 @@
                       (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
                       (recreate-myself-condition MOD_HASH
                         STATUTES_STRUCT
+                        LAUNCHER_ID
                         new_puzzle_hash
                         (if deactivate 0 APPROVED)
                         deposit
@@ -208,6 +200,7 @@
                   (assert_debug
                     (> current_timestamp TIMESTAMP_EXPIRES)
                     APPROVED
+                    LAUNCHER_ID
                     (> DEPOSIT penalized_deposit)
                     (> penalized_deposit 0)
                     (c
@@ -219,6 +212,7 @@
                               (c (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
                                 (recreate-myself-condition MOD_HASH
                                   STATUTES_STRUCT
+                                  LAUNCHER_ID
                                   INNER_PUZZLE_HASH
                                   APPROVED
                                   (- DEPOSIT penalized_deposit)
@@ -237,22 +231,44 @@
                 )
                 (if (= operation_code 4) ; REGISTER
                   ; register the announcer with announcer registry coin
-                  (assert_debug
-                    inner_puzzle_hash ; must be owner
-                    APPROVED
-                    (c
-                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX INNER_PUZZLE_HASH APPROVED statutes_struct_hash))
-                      ; should not be expired
-                      (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
-                        (recreate-myself-condition MOD_HASH
-                          STATUTES_STRUCT
-                          INNER_PUZZLE_HASH
-                          APPROVED
-                          DEPOSIT
-                          DELAY
-                          ATOM_VALUE
-                          TIMESTAMP_EXPIRES
-                          input_conditions
+                  (assign
+                    (registry_mod_hash registry_args_hash approved_mod_hashes statutes_inner_puzzle_hash) args
+                    announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
+                    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+                    (assert_debug
+                      inner_puzzle_hash ; must be owner
+                      APPROVED
+                      (size_b32 registry_mod_hash)
+                      (l approved_mod_hashes)
+                      ; TODO: you might not need to validate approved hashes as registry could curry in the announcer mod with curried in registry mod
+                      (= registry_mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry
+                      (c
+                        (list SEND_MESSAGE 0x12
+                          (concat
+                            ANN_PREFIX
+                            INNER_PUZZLE_HASH
+                            APPROVED
+                            statutes_struct_hash
+                          )
+                          announcer_registry_puzhash
+                        )
+                        ; should not be expired
+                        (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+                          (c
+                            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
+
+                            (recreate-myself-condition MOD_HASH
+                              STATUTES_STRUCT
+                              LAUNCHER_ID
+                              INNER_PUZZLE_HASH
+                              APPROVED
+                              DEPOSIT
+                              DELAY
+                              ATOM_VALUE
+                              TIMESTAMP_EXPIRES
+                              input_conditions
+                            )
+                          )
                         )
                       )
                     )
@@ -269,27 +285,17 @@
                         ATOM_VALUE
                       )
                     )
-                    (c
-                      (list REMARK
-                        'announcer sending price ann =>'
-                        statutes_struct_hash
+                    (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+                      (recreate-myself-condition MOD_HASH
+                        STATUTES_STRUCT
+                        LAUNCHER_ID
                         INNER_PUZZLE_HASH
                         APPROVED
                         DEPOSIT
                         DELAY
-                        ATOM_VALUE
-                      )
-                      (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
-                        (recreate-myself-condition MOD_HASH
-                          STATUTES_STRUCT
-                          INNER_PUZZLE_HASH
-                          APPROVED
-                          DEPOSIT
-                          DELAY
-                          (if (all APPROVED (> 1 ATOM_VALUE)) (x "no price") ATOM_VALUE) ; if approved, atom value must > 0
-                          TIMESTAMP_EXPIRES
-                          input_conditions
-                        )
+                        (if (all APPROVED (> 1 ATOM_VALUE)) (x "no price") ATOM_VALUE) ; if approved, atom value must > 0
+                        TIMESTAMP_EXPIRES
+                        input_conditions
                       )
                     )
                   )

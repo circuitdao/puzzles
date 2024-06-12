@@ -10,14 +10,6 @@
 
   (defconstant ANN_PREFIX 0x24) ; -> '$'
 
-   (defun assert_ (items)
-    (if (r items)
-      (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x (unquote (c 1 (f items))))))
-      (f items)
-      )
-    )
-
-  (defmac assert items (assert_ items))
 
   (defun print (to-show result) (if (all "$print$" to-show result) result result))
 
@@ -185,22 +177,18 @@
               (size_b32 (f args)) ; my_coin_id
               (size_b32 (r lineage_proof))
               (c
-                (list ASSERT_PUZZLE_ANNOUNCEMENT
+                (list RECEIVE_MESSAGE 0x10  ; only check that statutes singleton sent this message
                   ; get approval from statutes
-                  (sha256
-                    statutes_puzzle_hash
+                  (concat
                     ANN_PREFIX
                     (f args) ; my_coin_id
                     LAUNCHER_ID
                     (r lineage_proof) ; prev ring launcher id
                   )
+                  statutes_puzzle_hash
                 )
                 (c (list ASSERT_MY_COIN_ID (f args))
-                  ; confirm back to statutes that we indeed updated the curried args
-                  ; TODO: use SEND/RECEIVE MESSAGE condition for this
-                  (c (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX LAUNCHER_ID (r lineage_proof)))
-                    conditions
-                  )
+                  conditions
                 )
               )
             )
@@ -237,37 +225,24 @@
 
               (c
                 ; assert approver coin announcement is valid
-                ; TODO: use SEND/RECEIVE MESSAGE condition for this
-                (list ASSERT_COIN_ANNOUNCEMENT
-                  (sha256
-                    approver_coin_id
+                (list RECEIVE_MESSAGE 0x3f
+                  (concat
                     approving_mod_ann_prefix
                     my_coin_id
                     (- new_amount current_amount)
                     new_amount
                   )
+                  approver_coin_id
                 )
-                (c
-                  ; create announcement back to approver confirming we have withdrawn
-                  ; NOTE: we must use coin announcements to avoid duplications of announcements
-                  (list CREATE_COIN_ANNOUNCEMENT
-                    (concat
-                      ANN_PREFIX
-                      approver_coin_id
-                      (- new_amount current_amount)
-                      new_amount
-                    )
-                  )
-                  ; assert that approving mod hashes are valid
-                  (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
-                  ; assert that passed coin id is ours
-                    (c (list ASSERT_MY_COIN_ID my_coin_id)
-                      (c
-                        ; assert my new balance so someone can check whole ring balance
-                        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
-                        (c (list REMARK my_coin_id new_amount LAUNCHER_ID)
-                          conditions
-                        )
+                ; assert that approving mod hashes are valid
+                (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
+                ; assert that passed coin id is ours
+                  (c (list ASSERT_MY_COIN_ID my_coin_id)
+                    (c
+                      ; assert my new balance so someone can check whole ring balance
+                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                      (c (list REMARK my_coin_id new_amount LAUNCHER_ID)
+                        conditions
                       )
                     )
                   )

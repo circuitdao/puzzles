@@ -37,27 +37,30 @@
   (defun announce-statutes (statutes prefix start_index rest)
     (if statutes
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT
-          (concat STATUTES_ANN_PREFIX
-            ; TODO: could this be just a sha256?
-            (sha256tree
-              (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
+        (list REMARK (f (f statutes)))
+        (c
+          (list CREATE_PUZZLE_ANNOUNCEMENT
+            (concat STATUTES_ANN_PREFIX
+              ; TODO: could this be just a sha256?
+              (sha256tree
+                (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
+              )
             )
           )
-        )
-        (if (= prefix 's')
-          ; add a full statutes when announcing statutes
-          (c
-            (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX
-                (sha256tree
-                  (list 'S' start_index (f statutes))
+          (if (= prefix 's')
+            ; add a full statutes when announcing statutes
+            (c
+              (list CREATE_PUZZLE_ANNOUNCEMENT
+                (concat STATUTES_ANN_PREFIX
+                  (sha256tree
+                    (list 'S' start_index (f statutes))
+                  )
                 )
               )
+              (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
             )
             (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
           )
-          (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
         )
       )
       rest
@@ -106,7 +109,8 @@
     (if ann_conditions
       (if
         (any
-            (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT)
+            (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
+            (= condition_code CREATE_COIN_ANNOUNCEMENT)
         )
         (if (= (substr (f condition_body) 0 ONE) STATUTES_ANN_PREFIX)
           ; bad announcement, error
@@ -115,7 +119,14 @@
         )
         (if (any (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
           (filter-ann-conditions rest (c condition filtered_announcements))
-          (filter-ann-conditions rest filtered_announcements)
+          (if (= condition_code SEND_MESSAGE)
+            (if (= (substr (f (r condition_body)) 0 ONE) STATUTES_ANN_PREFIX)
+              ; bad message, error
+              (x)
+              (filter-ann-conditions rest (c condition filtered_announcements))
+            )
+            (filter-ann-conditions rest filtered_announcements)
+          )
         )
       )
       filtered_announcements

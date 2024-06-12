@@ -44,13 +44,9 @@
       )
       (list
         ; confirm to CRT voting coin that mutation was applied
-        (list CREATE_PUZZLE_ANNOUNCEMENT
+        (list SEND_MESSAGE 0x10
           (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
         )
-        ; assert from CRT vote that mutation was indeed voted for and confirmed
-        (list ASSERT_PUZZLE_ANNOUNCEMENT
-          (sha256 (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-                                       CRT_ANN_PREFIX (sha256tree (c mutation_index mutation_value))))
       )
     )
   )

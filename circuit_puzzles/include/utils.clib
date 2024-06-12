@@ -44,6 +44,25 @@
     )
   )
 
+  (defun validate-conditions-for-invalid-msgs ( (@ conditions ((condition_code . condition_rest) . rest_of_conditions)) coin_id)
+    (if conditions
+      (if
+        (all
+          (any
+            (= condition_code SEND_MESSAGE)
+            (= condition_code RECEIVE_MESSAGE)
+          )
+        )
+        (if (= (f (r (r condition_rest))) coin_id)
+          (x "bad msg cond" condition_code)
+          (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
+        )
+        (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
+      )
+      1
+    )
+  )
+
   (defun-inline calculate-coin-id (parent puzzle_hash amount)
     (if (all (size_b32 parent) (size_b32 puzzle_hash) (> amount -1))
       (sha256 parent puzzle_hash amount)
@@ -58,7 +77,7 @@
         (contains (r lst) item)
       )
       ; not found
-      (x "list" lst "doesn't contain" item)
+      ()
     )
   )
 

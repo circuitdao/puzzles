@@ -24,10 +24,9 @@
     (if (all (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
       (list ;create / fill the coin from treasury
-        (list CREATE_COIN_ANNOUNCEMENT (concat launcher_coin_id amount puzzle_hash))
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee that locked them delegating control to launcher coin id
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 launcher_coin_id my_coin_id amount puzzle_hash))
+        (list RECEIVE_MESSAGE 0x3f (concat  my_coin_id amount puzzle_hash) launcher_coin_id)
         ; recreate ourselves with the surplus BYC lot amount
         (list
           CREATE_COIN
@@ -54,9 +53,7 @@
         (list ASSERT_MY_AMOUNT amount)
         ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
         ; and the winning bid amount to melt
-        (list ASSERT_COIN_ANNOUNCEMENT (sha256 launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID amount puzzle_hash))
-        ; confirm to surplus auction that we have transferred funds to the winner (puzzle_hash)
-        (list CREATE_COIN_ANNOUNCEMENT (concat launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID amount puzzle_hash))
+        (list RECEIVE_MESSAGE 0x3f (concat amount puzzle_hash) launcher_coin_id)
         ; transfer out
         (list CREATE_COIN puzzle_hash amount)
       )
