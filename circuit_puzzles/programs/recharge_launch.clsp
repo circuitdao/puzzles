@@ -49,19 +49,9 @@
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; not LAUNCHER set, this is a launch, we need to get approval from statutes
             (c
-              (list ASSERT_PUZZLE_ANNOUNCEMENT
-                ; get approval from statutes to launch this auction coin
-                (sha256
-                  statutes_puzzle_hash
-                  ANN_PREFIX
-                  my_coin_id
-                )
-              )
-              (c
-                ; confirm back to statutes that we indeed updated the curried args
-                (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX my_coin_id))
-                announcements
-              )
+              ; confirm back to statutes that we indeed updated the curried args
+              (list RECEIVE_MESSAGE 0x10 (concat ANN_PREFIX my_coin_id) statutes_puzzle_hash)
+              announcements
             )
           )
         )

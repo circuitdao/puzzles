@@ -72,6 +72,7 @@
            (assert_debug
              ; not just filter out announcements with our prefix namespace
              ; but raise an error if someone is trying to be cheeky
+             ; FIXME: we should filter out message conditions too
              (not
                  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
              )

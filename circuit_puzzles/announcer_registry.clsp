@@ -1,4 +1,4 @@
-(mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_MOD_HASH ANNOUNCER_REGISTRY CLAIM_ITERATION
+(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_MOD_HASH ANNOUNCER_REGISTRY CLAIM_ITERATION
       lineage_proof mint_or_register . args)
 
   (include condition_codes.clib)
@@ -54,15 +54,17 @@
         )
         (assert_debug
           (> current_iteration CLAIM_ITERATION)
+          (> claim_interval MIN_CLAIM_INTERVAL)
           (> announcers_count 0)
           (> current_iteration 1) ; rewards kick in only after initial interval
+          ; we can't mint more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
+          (> MAX_MINT_AMOUNT crt_credits_per_interval)
           (list
             () ; clear the registry when minting
             current_iteration
             (list
-              (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX statutes_struct_hash issuance_coin_id crt_credits_per_interval))
-              (list ASSERT_COIN_ANNOUNCEMENT (sha256 issuance_coin_id statutes_struct_hash crt_credits_per_interval))
-              (list CREATE_COIN_ANNOUNCEMENT '$')
+              (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash issuance_coin_id crt_credits_per_interval) issuance_coin_id)
+              (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee coin to
               (list ASSERT_MY_COIN_ID my_coin_id)
               (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CLAIM_INTERVAL claim_interval)
@@ -103,27 +105,28 @@
       ; register
       (if (= mint_or_register 'r')
         (assign
-          (announcer_inner_puzzle_hash parent_id puzzle_args_hash amount) args
-          (list
-            (c announcer_inner_puzzle_hash ANNOUNCER_REGISTRY)
-            CLAIM_ITERATION
+          (announcer_inner_puzzle_hash puzzle_args_hash) args
+          announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH puzzle_args_hash)
+          (assert_debug
+            (size_b32 puzzle_args_hash)
+            (size_b32 announcer_inner_puzzle_hash)
+            (not (contains ANNOUNCER_REGISTRY announcer_inner_puzzle_hash))
             (list
-              ; assert approval from announcer coin with correct puzzle hash
-              (list ASSERT_COIN_ANNOUNCEMENT
-                (sha256
-                  (calculate-coin-id
-                    parent_id
-                    (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH puzzle_args_hash)
-                    amount
+              (c announcer_inner_puzzle_hash ANNOUNCER_REGISTRY)
+              CLAIM_ITERATION
+              (list
+                ; assert approval from announcer coin with correct puzzle hash
+                (list RECEIVE_MESSAGE
+                  0x12
+                  (concat
+                    'A'
+                    announcer_inner_puzzle_hash
+                    1 ; must be an approved announcer
+                    statutes_struct_hash ; must be on the same protocol
                   )
-                  (concat 'A'
-                  announcer_inner_puzzle_hash
-                  ONE ; enabled flag must be true
-                  statutes_struct_hash ; statutes  struct must match to ensure announcer is part of same protocol
-                  )
+                  announcer_puzzle_hash
                 )
               )
-              (list CREATE_COIN_ANNOUNCEMENT announcer_inner_puzzle_hash)
             )
           )
         )

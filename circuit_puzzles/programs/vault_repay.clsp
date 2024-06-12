@@ -124,7 +124,8 @@
                               (list )
                               (list
                                 ; signal to tail that it can melt the BYC
-                                (list CREATE_COIN_ANNOUNCEMENT
+                                (list SEND_MESSAGE
+                                  0x3f
                                   (concat
                                     VAULT_ANN_PREFIX
                                     'x'
@@ -132,17 +133,7 @@
                                     (- negative_byc_principal_to_melt fees_to_not_pay)
                                     (sha256tree STATUTES_STRUCT)
                                   )
-                                )
-                                ; get a melt confirmation from BYC tail
-                                (list ASSERT_COIN_ANNOUNCEMENT
-                                  (sha256
-                                    byc_coin_id_to_melt
-                                    BYC_ANN_PREFIX
-                                    'x'
-                                    my_coin_id
-                                    (- negative_byc_principal_to_melt fees_to_not_pay)
-                                    (sha256tree STATUTES_STRUCT)
-                                  )
+                                  byc_coin_id_to_melt
                                 )
                               )
                             )
@@ -159,21 +150,11 @@
             ; get an announcement from offer module that BYC was paid into treasury
             ; approve treasury coin to receive a deposit
             (c
-              (list CREATE_COIN_ANNOUNCEMENT
+              (list SEND_MESSAGE 0x3f
                 (concat VAULT_ANN_PREFIX treasury_coin_id fees_to_pay new_treasury_amount)
+                treasury_coin_id
               )
-              (c
-                (list ASSERT_COIN_ANNOUNCEMENT
-                  (sha256
-                    treasury_coin_id
-                    TREASURY_ANN_PREFIX
-                    my_coin_id
-                    fees_to_pay
-                    new_treasury_amount
-                  )
-                )
-                conditions
-              )
+              conditions
             )
             ; else no approvals needed
             conditions

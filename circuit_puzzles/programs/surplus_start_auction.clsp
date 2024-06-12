@@ -44,34 +44,24 @@
             current_amount ; taking second of (launcher_id amount) pair
         )
         (c
-          (list ASSERT_COIN_ANNOUNCEMENT
-            (sha256
+          ; send a message to approve treasury coins for withdrawal
+          (list SEND_MESSAGE 0x3f
+            (concat
+              ANN_PREFIX
               treasury_coin_id
-              TREASURY_COIN_ANN_PREFIX
-              my_coin_id
               (* -1 withdraw_amount)
               (- current_amount withdraw_amount)
             )
+            treasury_coin_id
           )
-          (c
-            ; we also create a coin announcement for each treasury coin
-            (list CREATE_COIN_ANNOUNCEMENT
-              (concat
-                ANN_PREFIX
-                treasury_coin_id
-                (* -1 withdraw_amount)
-                (- current_amount withdraw_amount)
-              )
-            )
-            (assert-treasury-coins-withdrawal
-              P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
-              (r treasury_coins)
-              my_coin_id
-              lot_amount
-              (+ sum_amount withdraw_amount)
-              (- (+ CAT_leftover current_amount) withdraw_amount)
-              announcements
-            )
+          (assert-treasury-coins-withdrawal
+            P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+            (r treasury_coins)
+            my_coin_id
+            lot_amount
+            (+ sum_amount withdraw_amount)
+            (- (+ CAT_leftover current_amount) withdraw_amount)
+            announcements
           )
         )
       )
@@ -151,23 +141,21 @@
                     ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
                     (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
                       ; assert p2_surplus_auction coin received the lot amount
-                      (c (list CREATE_COIN_ANNOUNCEMENT (concat p2_surplus_auction_coin_id lot_amount ()))
-                        (c (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id lot_amount ()))
-                          (c (list REMARK my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
-                            (assert-treasury-coins-withdrawal
-                              p2_treasury_hash
-                              CAT_MOD_HASH
-                              CAT_TAIL_HASH
-                              STATUTES_STRUCT
-                              treasury_maximum
-                              statutes_puzzle_hash
-                              treasury_coins
-                              my_coin_id
-                              lot_amount ; lot amount of byc offered
-                              0 ; withdrawal sum amount
-                              0 ; leftover byc amount
-                              announcements
-                            )
+                      (c (list SEND_MESSAGE 0x3f (concat p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id)
+                        (c (list REMARK my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
+                          (assert-treasury-coins-withdrawal
+                            p2_treasury_hash
+                            CAT_MOD_HASH
+                            CAT_TAIL_HASH
+                            STATUTES_STRUCT
+                            treasury_maximum
+                            statutes_puzzle_hash
+                            treasury_coins
+                            my_coin_id
+                            lot_amount ; lot amount of byc offered
+                            0 ; withdrawal sum amount
+                            0 ; leftover byc amount
+                            announcements
                           )
                         )
                       )

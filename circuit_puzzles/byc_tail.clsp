@@ -1,5 +1,10 @@
 (mod (STATUTES_STRUCT
-      Truths parent_is_cat lineage_proof delta inner_conditions
+      Truths
+      parent_is_cat
+      lineage_proof
+      delta
+      inner_conditions ; we don't check these as since they're checked in vault puzzle,
+                       ; which is the only one that can approve minting
       (@ solution
         (
           vault_parent_id
@@ -25,6 +30,7 @@
   (include utils.clib)
   (include vault.clib)
 
+
   (if (any (= delta 0) (> 0 delta))
     ; we're issuing or melting
     (assign
@@ -48,28 +54,18 @@
         (size_b32 statutes_struct_hash)
         (list
           (list ASSERT_MY_AMOUNT current_coin_amount)
-          (list ASSERT_MY_COIN_ID my_coin_id) ; thanks @bramv-chia
-          ; TODO: use SEND/RECEIVE MESSAGE condition for this
+          (list ASSERT_MY_COIN_ID my_coin_id)  ; thanks @bramv-chia
           (list
-              ASSERT_COIN_ANNOUNCEMENT
-              (sha256
-                vault_coin_id
-                cat_ann_prefix
-                (if (> 0 delta) "x" "i")
-                my_coin_id
-                (if (> 0 delta) delta new_melting_coin_amount)
-                statutes_struct_hash ; need to tie it to statutes struct
-              )
-          )
-          (list
-            CREATE_COIN_ANNOUNCEMENT
+            RECEIVE_MESSAGE
+            0x3f
             (concat
-              BYC_ANN_PREFIX
+              cat_ann_prefix
               (if (> 0 delta) "x" "i")
-              vault_coin_id
+              my_coin_id
               (if (> 0 delta) delta new_melting_coin_amount)
-              statutes_struct_hash
+              statutes_struct_hash ; need to tie it to statutes struct
             )
+            vault_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
         )

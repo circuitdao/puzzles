@@ -4,25 +4,13 @@
 
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
     (if conditions
-      (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (if (not
-              (= (substr (f condition_rest) 0 1) ANN_PREFIX)
-            )
-          (filter-announcements
-            rest_of_conditions
-            (c (f conditions) filtered_announcements)
-          )
-          ; bad announcement found, error
-          (x)
+      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
+        (filter-announcements
+          rest_of_conditions
+          (c (f conditions) filtered_announcements)
         )
-        (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
-          (filter-announcements
-            rest_of_conditions
-            (c (f conditions) filtered_announcements)
-          )
-          ; no other conditions please
-          (x)
-        )
+        ; no other conditions please
+        (x)
       )
       filtered_announcements
     )
@@ -80,59 +68,49 @@
             next_current_amount ; taking second of (launcher_id amount) pair
         )
         (c
-          (list ASSERT_COIN_ANNOUNCEMENT
-            (sha256
+          ; we also create a coin announcement for each treasury coin
+          (list SEND_MESSAGE 0x3f
+            (concat
+              ANN_PREFIX
               treasury_coin_id
-              TREASURY_COIN_ANN_PREFIX
-              my_coin_id
               delta
               new_amount
             )
+            treasury_coin_id
           )
           (c
-            ; we also create a coin announcement for each treasury coin
-            (list CREATE_COIN_ANNOUNCEMENT
-              (concat
-                ANN_PREFIX
-                treasury_coin_id
-                delta
-                new_amount
-              )
+            (list REMARK
+                prev_treasury_coin_id
+                TREASURY_COIN_ANN_PREFIX
+                '=' ; as in '$=amount', to avoid collisions
+                new_prev_amount
+                ; link the coins, this previous coin to treasury_coin_id
+                launcher_id
             )
             (c
-              (list REMARK
+              ; check that whole ring is deposited
+              (list ASSERT_COIN_ANNOUNCEMENT
+                (sha256
                   prev_treasury_coin_id
                   TREASURY_COIN_ANN_PREFIX
                   '=' ; as in '$=amount', to avoid collisions
                   new_prev_amount
                   ; link the coins, this previous coin to treasury_coin_id
                   launcher_id
+                )
               )
-              (c
-                ; check that whole ring is deposited
-                (list ASSERT_COIN_ANNOUNCEMENT
-                  (sha256
-                    prev_treasury_coin_id
-                    TREASURY_COIN_ANN_PREFIX
-                    '=' ; as in '$=amount', to avoid collisions
-                    new_prev_amount
-                    ; link the coins, this previous coin to treasury_coin_id
-                    launcher_id
-                  )
-                )
-                (deposit-to-treasury
-                  P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
-                  treasury_minimum
-                  statutes_puzzle_hash
-                  final_treasury_amount
-                  (+ amount_deposited new_amount)
-                  deposit_amount
-                  potential_remainder
-                  first_treasury_coin
-                  (r treasury_coins)
-                  my_coin_id
-                  announcements
-                )
+              (deposit-to-treasury
+                P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                treasury_minimum
+                statutes_puzzle_hash
+                final_treasury_amount
+                (+ amount_deposited new_amount)
+                deposit_amount
+                potential_remainder
+                first_treasury_coin
+                (r treasury_coins)
+                my_coin_id
+                announcements
               )
             )
           )

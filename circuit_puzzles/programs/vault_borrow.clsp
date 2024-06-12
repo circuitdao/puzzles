@@ -53,9 +53,9 @@
         (list TRANSFERRED_FEES COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
         ; additional conditions
         (list
-          (list REMARK "VAULT==>" discounted_principal VAULT_ANN_PREFIX "i" byc_issuing_coin_id byc_amount_to_mint (sha256tree STATUTES_STRUCT))
           ; signal to tail that it can issue BYC with certain amount
-          (list CREATE_COIN_ANNOUNCEMENT
+          (list SEND_MESSAGE
+            0x3f
             (concat
               VAULT_ANN_PREFIX
               "i"
@@ -63,27 +63,7 @@
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)
             )
-          )
-          (list REMARK
-            (list
-              byc_issuing_coin_id
-              BYC_ANN_PREFIX
-              'i'
-              my_coin_id
-              byc_amount_to_mint
-              (sha256tree STATUTES_STRUCT)
-            )
-          )
-          ; make sure tail has actually issued it too
-          (list ASSERT_COIN_ANNOUNCEMENT
-            (sha256
-              byc_issuing_coin_id
-              BYC_ANN_PREFIX
-              'i'
-              my_coin_id
-              byc_amount_to_mint
-              (sha256tree STATUTES_STRUCT)
-            )
+            byc_issuing_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
           (assert-statute

@@ -56,35 +56,32 @@
                   (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
                   (c
                     ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
-                    (list CREATE_COIN_ANNOUNCEMENT (concat LAUNCHER_ID lot_amount target_puzzle_hash))
+                    (list SEND_MESSAGE 0x3f (concat lot_amount target_puzzle_hash) p2_surplus_auction_coin_id)
                     (c
-                      (list ASSERT_COIN_ANNOUNCEMENT (sha256 p2_surplus_auction_coin_id my_coin_id LAUNCHER_ID lot_amount target_puzzle_hash))
-                      (c
-                        ; ensure lineage so nobody can fake the winning bid
-                        (list ASSERT_MY_PARENT_ID
-                          (calculate-coin-id
-                            (f lineage_proof)
-                            (curry_hashes
-                              CAT_MOD_HASH
+                      ; ensure lineage so nobody can fake the winning bid
+                      (list ASSERT_MY_PARENT_ID
+                        (calculate-coin-id
+                          (f lineage_proof)
+                          (curry_hashes
+                            CAT_MOD_HASH
+                            (sha256tree CAT_MOD_HASH)
+                            (sha256tree CRT_TAIL_HASH)
+                            (curry_hashes MOD_HASH
+                              (sha256tree MOD_HASH)
                               (sha256tree CAT_MOD_HASH)
+                              (sha256tree STATUTES_STRUCT)
+                              (sha256tree (f (r (r lineage_proof))))
+                              (sha256tree (f (r (r (r lineage_proof)))))
+                              (sha256tree CAT_TAIL_HASH)
                               (sha256tree CRT_TAIL_HASH)
-                              (curry_hashes MOD_HASH
-                                (sha256tree MOD_HASH)
-                                (sha256tree CAT_MOD_HASH)
-                                (sha256tree STATUTES_STRUCT)
-                                (sha256tree (f (r (r lineage_proof))))
-                                (sha256tree (f (r (r (r lineage_proof)))))
-                                (sha256tree CAT_TAIL_HASH)
-                                (sha256tree CRT_TAIL_HASH)
-                                (sha256tree (f (r (r (r (r lineage_proof))))))
-                              )
+                              (sha256tree (f (r (r (r (r lineage_proof))))))
                             )
-                            ; parent bid amount
-                            (f (r lineage_proof))
                           )
+                          ; parent bid amount
+                          (f (r lineage_proof))
                         )
-                        announcements
                       )
+                      announcements
                     )
                   )
                 )

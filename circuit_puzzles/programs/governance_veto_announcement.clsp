@@ -5,6 +5,7 @@
       _ ;
       target_bill_hash
       relative_time_spent
+      target_coin_id
     )
   )
 
@@ -55,7 +56,7 @@
       (list
         ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
         (list ASSERT_SECONDS_RELATIVE relative_time_spent)
-        (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETO target_bill_hash))
+        (list SEND_MESSAGE 0x3f (concat ANN_PREFIX ANN_VETO target_bill_hash) target_coin_id)
       )
     )
   )

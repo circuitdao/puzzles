@@ -60,21 +60,20 @@
           (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
           ; assert announcement from another CRT coin with higher amount than this one
           ; LATER: we'd need to loop over those and add veto coin amounts up (can take multiple veto coins to pump up the amount)
-          (list ASSERT_COIN_ANNOUNCEMENT
-            (sha256
-              (calculate-coin-id
-                grandparent_veto_id
-                (calculate-crt-puzzle
-                  MOD_HASH
-                  CAT_MOD_HASH
-                  TAIL_MOD_HASH
-                  STATUTES_STRUCT
-                  veto_inner_puzzle_hash
-                  veto_bill_hash
-                )
-                veto_amount
+          (list RECEIVE_MESSAGE
+            0x3f
+            (concat ANN_PREFIX ANN_VETO (sha256tree BILL))
+            (calculate-coin-id
+              grandparent_veto_id
+              (calculate-crt-puzzle
+                MOD_HASH
+                CAT_MOD_HASH
+                TAIL_MOD_HASH
+                STATUTES_STRUCT
+                veto_inner_puzzle_hash
+                veto_bill_hash
               )
-              (concat ANN_PREFIX ANN_VETO (sha256tree BILL))
+              veto_amount
             )
           )
         )

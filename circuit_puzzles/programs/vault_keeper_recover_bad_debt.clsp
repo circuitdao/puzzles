@@ -71,8 +71,8 @@
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
             (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-            ; signal to tail that it can issue BYC with certain amount
-            (list CREATE_COIN_ANNOUNCEMENT
+            ; signal to tail that it can melt BYC with certain amount
+            (list SEND_MESSAGE 0x3f
               (concat
                 VAULT_ANN_PREFIX
                 "x"
@@ -80,31 +80,13 @@
                 (* -1 reconcile_amount)
                 (sha256tree STATUTES_STRUCT)
               )
-            )
-            ; make sure tail has actually issued it too
-            (list ASSERT_COIN_ANNOUNCEMENT
-              (sha256
-                treasury_coin_id
-                BYC_ANN_PREFIX
-                'x'
-                my_coin_id
-                (* -1 reconcile_amount)
-                (sha256tree STATUTES_STRUCT)
-              )
+              treasury_coin_id
             )
             ; approve treasury coin to receive a withdrawal
-            (list CREATE_COIN_ANNOUNCEMENT
+            (list SEND_MESSAGE 0x3f
               (concat
                 VAULT_ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
-            )
-            (list ASSERT_COIN_ANNOUNCEMENT
-              (sha256
-                treasury_coin_id
-                TREASURY_ANN_PREFIX
-                my_coin_id
-                (* -1 reconcile_amount)
-                new_treasury_amount
-              )
+              treasury_coin_id
             )
             (list ASSERT_MY_COIN_ID my_coin_id)
         )

@@ -1,7 +1,9 @@
 ; Circuit CAT token (CRT)
 (mod (
       GENESIS_ID STATUTES_STRUCT CAT_MOD_HASH
-      Truths parent_is_cat lineage_proof delta inner_conditions
+      Truths parent_is_cat lineage_proof delta
+      inner_conditions ; we don't check these as since they're checked in approved mod puzzles,
+                       ; and those are the only ones that can send the message
       solution
      ) 
   (include *standard-cl-23*)
@@ -10,7 +12,6 @@
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
-
   (if delta
     (if (> 0 delta)
       ; melting only by surplus auction
@@ -109,17 +110,15 @@
           (= delta 0)
           (list
             (list ASSERT_MY_COIN_ID my_coin_id)
-            (list REMARK approving_coin_id ann_prefix statutes_struct_hash my_coin_id issuance_amount)
-            ; TODO: use SEND/RECEIVE MESSAGE condition for this
-            (list CREATE_COIN_ANNOUNCEMENT (concat statutes_struct_hash issuance_amount))
-            (list ASSERT_COIN_ANNOUNCEMENT
-              (sha256
-                approving_coin_id
+            (list RECEIVE_MESSAGE
+              0x3f
+              (concat
                 ann_prefix
                 statutes_struct_hash
                 my_coin_id
                 issuance_amount
               )
+              approving_coin_id
             )
             (list ASSERT_MY_AMOUNT issuance_amount)
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
