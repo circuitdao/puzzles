@@ -1,7 +1,7 @@
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
     statutes_puzzle_hash lineage_proof announcements
-    (start_time my_coin_id lot_amount treasury_minimum auction_timeout
+    (start_time my_coin_id treasury_minimum auction_timeout
      p2_treasury_hash treasury_coins)
   )
   (include *standard-cl-23*)
@@ -33,7 +33,6 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE start_time)
             (sha256 ONE ())
-            (sha256 ONE lot_amount)
           )
           0
         )
@@ -42,68 +41,62 @@
             LAUNCHER_ID
             start_time
             () ; no bids
-            lot_amount
-            0
           )
           (c
             (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_LOT_AMOUNT lot_amount)
+              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
               (c
-                (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
+                (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
                 (c
-                  (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+                  ; start_time minus one tx block time should already be in the past
+                  (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
                   (c
-                    ; start_time minus one tx block time should already be in the past
-                    (list ASSERT_SECONDS_ABSOLUTE (- start_time 55))
+                    ; make sure that start_time hasn't happened yet, allow it to be in mempool for 5 tx blocks
+                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
                     (c
-                      ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
+                      ; start balance should be zero
+                      (list ASSERT_MY_AMOUNT 0)
                       (c
-                        ; start balance should be zero
-                        (list ASSERT_MY_AMOUNT 0)
+                        (list ASSERT_MY_COIN_ID my_coin_id)
                         (c
-                          (list ASSERT_MY_COIN_ID my_coin_id)
-                          (c
-                            (list ASSERT_MY_PARENT_ID
-                              (sha256
-                                (f lineage_proof)
+                          (list ASSERT_MY_PARENT_ID
+                            (sha256
+                              (f lineage_proof)
+                              (curry_hashes
+                                CAT_MOD_HASH
+                                (sha256tree CAT_MOD_HASH)
+                                (sha256tree CAT_TAIL_HASH)
                                 (curry_hashes
-                                  CAT_MOD_HASH
+                                  MOD_HASH
+                                  (sha256tree MOD_HASH)
                                   (sha256tree CAT_MOD_HASH)
                                   (sha256tree CAT_TAIL_HASH)
-                                  (curry_hashes
-                                    MOD_HASH
-                                    (sha256tree MOD_HASH)
-                                    (sha256tree CAT_MOD_HASH)
-                                    (sha256tree CAT_TAIL_HASH)
-                                    (sha256tree (f (r (r lineage_proof)))) ; launcher_id
-                                    (sha256tree STATUTES_STRUCT)
-                                    (sha256tree (f (r (r (r lineage_proof))))) ; start_time
-                                    (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
-                                    (sha256tree (f (r (r (r (r (r lineage_proof))))))) ; lot
-                                  )
+                                  (sha256tree (f (r (r lineage_proof)))) ; launcher_id
+                                  (sha256tree STATUTES_STRUCT)
+                                  (sha256tree (f (r (r (r lineage_proof))))) ; start_time
+                                  (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
                                 )
-                                ; parent bid amount
-                                (f (r lineage_proof))
                               )
+                              ; parent bid amount
+                              (f (r lineage_proof))
                             )
-                            (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
-                              p2_treasury_hash
-                              CAT_MOD_HASH
-                              CAT_TAIL_HASH
-                              STATUTES_STRUCT
-                              treasury_minimum
-                              statutes_puzzle_hash
-                              treasury_coins_total ; expected balance after deposit of lot
-                              0 ; amount deposited
-                              0
-                              0
-                              (f treasury_coins)
-                              treasury_coins
-                              my_coin_id
-                              announcements
-                            )
+                          )
+                          (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+                            p2_treasury_hash
+                            CAT_MOD_HASH
+                            CAT_TAIL_HASH
+                            STATUTES_STRUCT
+                            treasury_minimum
+                            statutes_puzzle_hash
+                            treasury_coins_total ; expected balance after deposit of lot
+                            0 ; amount deposited
+                            0
+                            0
+                            (f treasury_coins)
+                            treasury_coins
+                            my_coin_id
+                            announcements
                           )
                         )
                       )
