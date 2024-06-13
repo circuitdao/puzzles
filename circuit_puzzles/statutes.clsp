@@ -37,30 +37,26 @@
   (defun announce-statutes (statutes prefix start_index rest)
     (if statutes
       (c
-        (list REMARK (f (f statutes)))
-        (c
-          (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX
-              ; TODO: could this be just a sha256?
-              (sha256tree
-                (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
-              )
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (concat STATUTES_ANN_PREFIX
+            (sha256tree
+              (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
             )
           )
-          (if (= prefix 's')
-            ; add a full statutes when announcing statutes
-            (c
-              (list CREATE_PUZZLE_ANNOUNCEMENT
-                (concat STATUTES_ANN_PREFIX
-                  (sha256tree
-                    (list 'S' start_index (f statutes))
-                  )
+        )
+        (if (= prefix 's')
+          ; add a full statutes when announcing statutes
+          (c
+            (list CREATE_PUZZLE_ANNOUNCEMENT
+              (concat STATUTES_ANN_PREFIX
+                (sha256tree
+                  (list 'S' start_index (f statutes))
                 )
               )
-              (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
             )
             (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
           )
+          (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
         )
       )
       rest
@@ -112,15 +108,21 @@
             (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
             (= condition_code CREATE_COIN_ANNOUNCEMENT)
         )
-        (if (= (substr (f condition_body) 0 ONE) STATUTES_ANN_PREFIX)
+        (if (all
+              (= (substr (f condition_body) 0 ONE) STATUTES_ANN_PREFIX)
+              (= (strlen (f condition_body)) 33)
+            )
           ; bad announcement, error
           (x)
           (filter-ann-conditions rest (c condition filtered_announcements))
         )
         (if (any (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
           (filter-ann-conditions rest (c condition filtered_announcements))
-          (if (= condition_code SEND_MESSAGE)
-            (if (= (substr (f (r condition_body)) 0 ONE) STATUTES_ANN_PREFIX)
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (if (all
+                  (= (substr (f (r condition_body)) 0 ONE) STATUTES_ANN_PREFIX)
+                  (= (strlen (f (r condition_body))) 34)
+                )
               ; bad message, error
               (x)
               (filter-ann-conditions rest (c condition filtered_announcements))
@@ -141,10 +143,10 @@
         ; default to existing values
         (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
         ; mutate statutes
-        (assert_debug
+        (assert
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
           (> mutation_index -3)
-          (> 3 (strlen mutation_index))
+          (> 2 (strlen mutation_index))
           (l mutation_value)
           (a
             operation_mod
@@ -170,7 +172,7 @@
       price_updates
     )
     ; add announcements if any
-    announcements (if (all operation_mod_hash (= mutation_index -1))
+    announcements (if (all (= (f OPERATIONS) operation_mod_hash) (= mutation_index -1))
       ; filter announcements
       (filter-ann-conditions (f mutation_value) mutation_conditions)
       ; no announcements
@@ -178,9 +180,8 @@
     )
     (c create_coin_condition
       (c
-        ; TODO: this could be sha256 for most items
         (list CREATE_PUZZLE_ANNOUNCEMENT
-          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -7 PRICE_UPDATES)))
+          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -7 price_updates)))
         )
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT

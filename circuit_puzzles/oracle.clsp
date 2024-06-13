@@ -139,7 +139,7 @@
         (f prices)
         (get-price (r prices) index (+ curr_index 1))
       )
-      (x "no price")
+      (x)
     )
   )
 
@@ -190,7 +190,7 @@
           (= (f (f input_announcement_asserts)) CREATE_COIN_ANNOUNCEMENT)
         )
         (verify-announcement-asserts (r input_announcement_asserts) (c (f input_announcement_asserts) conditions))
-        (x "bad announcement:" (f (f input_announcement_asserts)))
+        (x)
       )
       conditions
     )
@@ -199,6 +199,7 @@
   ; ###################### MAIN ############################
   
   (if oracle_mutation
+    ; LATER: break this puzzle into operation to minimise cost of announcing?
     (assign
       price_announcers_length (if oracle_mutation (list-length price_announcers 0) ())
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)

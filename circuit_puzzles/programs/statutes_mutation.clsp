@@ -34,7 +34,7 @@
     PRICE_UPDATES
 
     ;  updating statutes, assert permission
-    (assert
+    (assert_debug
       (size_b32 crt_inner_puzzle_hash)
       (if (= mutation_index -1)
         ; vote for announcements only, so this should just be a list
