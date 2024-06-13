@@ -1,7 +1,7 @@
-(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
+(mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       _
-      (@ mutation_value (oracle_inner_puz_hash statutes_struct price last_updated))
+      (@ mutation_value (oracle_inner_puz_hash price last_updated))
       crt_inner_puzzle_hash)
   (include *standard-cl-23*)
   (include curry.clib)
@@ -68,13 +68,10 @@
         (list
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
-              ; generate oracle puzzle hash
+              ; generate oracle singleton puzzle hash
               (curry_hashes
-                ; statutes struct is passed as a solution and could be anything, although it's expected to be a singleton
-                ; with singleton id that we have stored at launch, so that ensures that passed statutes struct must be correct
-                ; otherwise puzzle can't be asserted
-                (f statutes_struct) ; singleton mod hash
-                (sha256tree (c (f statutes_struct) (c oracle_launcher_id (r (r statutes_struct)))))
+                SINGLETON_MOD_HASH
+                (sha256tree (c SINGLETON_MOD_HASH (c oracle_launcher_id SINGLETON_LAUNCHER_HASH)))
                 oracle_inner_puz_hash
               )
               (sha256 price last_updated)

@@ -55,10 +55,10 @@
                   (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
                   (c
                     ; start_time minus one tx block time should already be in the past
-                    (list ASSERT_SECONDS_ABSOLUTE (- start_time 55))
+                    (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
                     (c
                       ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 55)))
+                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
                       (c
                         ; start balance should be zero
                         (list ASSERT_MY_AMOUNT 0)
