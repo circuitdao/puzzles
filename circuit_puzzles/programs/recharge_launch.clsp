@@ -31,7 +31,6 @@
           (sha256tree STATUTES_STRUCT)
           (sha256 ONE 0)
           (sha256 ONE ())
-          (sha256 ONE 0)
         )
         0
       )
@@ -40,8 +39,6 @@
           my_coin_id
           0
           () ; no bids
-          0
-          0
         )
         (c
           (list ASSERT_MY_AMOUNT 0)
