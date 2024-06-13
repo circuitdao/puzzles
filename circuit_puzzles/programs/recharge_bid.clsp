@@ -67,10 +67,10 @@
                       (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
                       ; current_time minus one tx block time should already be in the past
                       (c
-                        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
                         (c
                           ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
                           (c
                             (list ASSERT_MY_PARENT_ID
                               (sha256
