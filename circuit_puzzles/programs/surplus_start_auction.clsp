@@ -1,12 +1,21 @@
 (mod
   (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-    statutes_puzzle_hash lineage_proof announcements
+    statutes_puzzle_hash
+    lineage_proof
+    announcements
     (
-      p2_surplus_auction_coin_parent_id lot_amount p2_surplus_auction_mod_hash p2_treasury_hash
-      start_time my_coin_id treasury_coins treasury_maximum
+      p2_surplus_auction_coin_parent_id
+      lot_amount
+      p2_surplus_auction_mod_hash
+      p2_treasury_hash
+      start_time
+      my_coin_id
+      treasury_coins
+      treasury_maximum
     )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -115,7 +124,7 @@
       ; to guarantee uniqueness based on the amount we're taking from treasury
       ; ie: there's a limited amount that can be taken from treasury
       ;     and coin_id is unique per spend. Once this coin is filled from treasury
-      ;     it can't be filled again, hence can be used as unique event in this coins history
+      ;     it can't be filled again, hence can be used as unique event in this coin's history
       (= LAUNCHER_ID 0)
       (= CAT_LOT_AMOUNT 0)
       )
@@ -125,6 +134,7 @@
           CREATE_COIN
           (curry_hashes
             MOD_HASH
+            ; REVIEW: OPERATIONS missing as first curried arg?
             (sha256tree MOD_HASH)
             (sha256tree CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)

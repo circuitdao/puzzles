@@ -2,9 +2,19 @@
 ; coin is created with zero amount, and when it's first spent it's filled with the lot amount and puzzle hash
 ; if the coin is spent again, it's transferred to the winner of the surplus auction
 ; every spend needs to be approved by the surplus auction coin
-(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH SURPLUS_AUCTION_MOD_HASH SURPLUS_AUCTION_LAUNCHER_ID
-      surplus_auction_parent_id surplus_auction_curried_args_hash surplus_auction_amount
-      my_coin_id puzzle_hash amount)
+(mod (MOD_HASH
+      CAT_MOD_HASH
+      CAT_TAIL_HASH ; REVIEW: remove as not needed? only used once below when recreating itself
+      CRT_TAIL_HASH
+      SURPLUS_AUCTION_MOD_HASH
+      SURPLUS_AUCTION_LAUNCHER_ID
+      surplus_auction_parent_id
+      surplus_auction_curried_args_hash
+      surplus_auction_amount
+      my_coin_id
+      puzzle_hash
+      amount
+     )
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -16,14 +26,14 @@
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE CRT_TAIL_HASH)
-        ; we're asserting that launcher coin must be using surplus puzzle so we can trust it's announcements
+        ; we're asserting that launcher coin must be using surplus puzzle so we can trust its announcements
         (tree_hash_of_apply SURPLUS_AUCTION_MOD_HASH surplus_auction_curried_args_hash)
       )
       surplus_auction_amount
     )
     (if (all (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
-      (list ;create / fill the coin from treasury
+      (list ; create / fill the coin from treasury
         (list CREATE_COIN_ANNOUNCEMENT (concat launcher_coin_id amount puzzle_hash))
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee that locked them delegating control to launcher coin id

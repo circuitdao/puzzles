@@ -9,7 +9,10 @@
       LAST_BID ; to hold bid data -> (bid_crt_amount bid_coin_parent_id target_puzzle_hash current_timestamp)
       statutes_inner_puzzle_hash
       lineage_proof ; (parent_id launcher_id amount last_bid)
-      operation . op_args)
+      operation
+      .
+      op_args
+     )
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -19,6 +22,7 @@
 
   (defconst ANN_PREFIX '^')
 
+  ; REVIEW: filter function identical to the one in recharge_auction.clib (apart from ANN_PREFIX). Reuse code?
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
     (if conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))

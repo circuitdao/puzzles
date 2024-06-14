@@ -1,16 +1,28 @@
 (mod
   (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-    statutes_puzzle_hash lineage_proof announcements
-    (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl my_coin_id
-          offer_mod_hash lot_amount)
+    statutes_puzzle_hash
+    lineage_proof
+    announcements
+    (
+      bid_crt_amount
+      target_puzzle_hash
+      current_timestamp
+      my_amount
+      ttl
+      my_coin_id
+      offer_mod_hash
+      lot_amount
+    )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include surplus_auction.clib)
+
   (assign
     (last_target_puzzle_hash last_bid_timestamp) (if LAST_BID LAST_BID (list 0 0))
     bid_conditions (assert
@@ -18,10 +30,11 @@
       (l lineage_proof)
       ; ensure bidder is aware what they bidding for, this might be different if lot amount changes while auction
       ; is running, so we're double checking it here to make sure that bidder is aware of the current lot amount
-      (= lot_amount CAT_LOT_AMOUNT)
+      (= lot_amount CAT_LOT_AMOUNT) ; REVIEW: what's the point in passing in lot amount via solution if it must be equal to CAT_LOT_AMOUNT? CAT_LOT_AMOUNT gets transferred to p2_surplus_auction coin on start auction operation, and can't change during bidding.
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> bid_crt_amount 0)) (> bid_crt_amount my_amount))
       ; TTL for bid hasn't expired yet
+      ; REVIEW: also check that auction hasn't timed out yet. in fact, SURPLUS_AUCTION_TIMEOUT doesn't seem to be checked in any surplus auction operation
       (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
       (c
         (list ASSERT_MY_AMOUNT my_amount)
@@ -52,7 +65,7 @@
                 (c
                   (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
                   (c
-                    ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+                    ; make sure that current_timestamp hasn't happened yet, allow it to be in mempool for 5 tx blocks
                     (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
                     (c
                       (list ASSERT_MY_COIN_ID my_coin_id)
@@ -69,6 +82,7 @@
                                 (sha256tree MOD_HASH)
                                 (sha256tree CAT_MOD_HASH)
                                 (sha256tree STATUTES_STRUCT)
+                                ; REVIEW: simplify lineage proof my using partial state hash instead of individual args
                                 (sha256tree (f (r (r lineage_proof)))) ; launcher id
                                 (sha256tree (f (r (r (r lineage_proof))))) ; lot amount
                                 (sha256tree CAT_TAIL_HASH)
@@ -93,7 +107,8 @@
     )
     (if last_target_puzzle_hash
       (c
-        ; assert that keeper absorbed their collateral + left over mojos from melting
+        ; assert that keeper absorbed their collateral + left over mojos from melting ; REVIEW: what collateral? remove comment
+        ; assert that CRT locked up in surplus auction has been returned to previous bidder
         (list ASSERT_PUZZLE_ANNOUNCEMENT
           (sha256
             (curry_hashes CAT_MOD_HASH

@@ -1,6 +1,11 @@
 (mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
-      lineage_proof statutes_inner_puzzle_hash current_amount
-      input_conditions . args)
+      lineage_proof
+      statutes_inner_puzzle_hash
+      current_amount
+      input_conditions
+      .
+      args
+     )
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -61,7 +66,7 @@
     )
   )
 
-      ; filter conditions to only those that are allowed
+  ; filter conditions to only those that are allowed
   (assign
     filtered_conditions (filter-ann-conditions input_conditions ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
@@ -206,8 +211,15 @@
             )
             ;ELSE; we're spending/announcing, require approving mods
             (assign
-              (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
-              approving_mod_ann_prefix approving_mod_hashes my_coin_id) args
+              (
+                approving_parent_id
+                approving_mod_hash ; REVIEW: assert against Statutes (instead of asserting approving_mod_hashes, which we do not need to pass in)
+                approving_mod_curried_args_hash
+                approver_amount
+                approving_mod_ann_prefix
+                approving_mod_hashes ; REVIEW: unnecessarily expensive to pass in all approving mod hashes. assert only the one needed
+                my_coin_id
+              ) args
               approver_coin_id (assert
                 (size_b32 approving_parent_id)
                 (size_b32 approving_mod_hash)

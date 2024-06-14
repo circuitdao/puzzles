@@ -72,6 +72,7 @@
                                 (sha256tree MOD_HASH)
                                 (sha256tree CAT_MOD_HASH)
                                 (sha256tree STATUTES_STRUCT)
+                                ; REVIEW: simplify lineage proof by using partial state hash instead of individual args
                                 (sha256tree (f (r (r lineage_proof))))
                                 (sha256tree (f (r (r (r lineage_proof)))))
                                 (sha256tree CAT_TAIL_HASH)
