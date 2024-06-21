@@ -81,7 +81,7 @@
         cumulative_stability_fee_rate
       )
     )
-    current_price_factor (
+    current_price_factor ( ; REVIEW: rename to current_price_delta?
       assert_debug (> current_timestamp auction_start_time)
         (*
           (/
@@ -94,7 +94,7 @@
           (/ (- current_timestamp auction_start_time) step_time_interval)
         )
     )
-    current_price (- start_price (/ (* current_price_factor start_price) PERCENT_PRECISION))
+    current_price (- start_price (/ (* current_price_factor start_price) PERCENT_PRECISION)) ; REVIEW: remove start_price after current_price_factor? it's already included in the definition of current_price_factor. want SP - current_price_factor.
     ; use all byc provided from keeper to get a piece of collateral
     bid_xch_collateral_amount_pre (/ (* (/ (* byc_to_bid PRECISION) (* current_price 10)) MOJOS) PRECISION)
     bid_xch_collateral_amount (

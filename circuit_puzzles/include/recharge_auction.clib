@@ -119,7 +119,7 @@
       (assert
         (= amount_deposited final_treasury_amount)
         (if (all (= deposit_amount 0) (= potential_remainder 0))
-          ; this is assert balance of treasury coins, point is to prove  that recharge auction can be started
+          ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
           (assert (> treasury_minimum final_treasury_amount)
             announcements
           )

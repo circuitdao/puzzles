@@ -1,8 +1,18 @@
 (mod (MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES
-     (@ lineage (parent_id prev_value prev_inner_puzzle_hash prev_timestamp prev_delay prev_deposit prev_approved))
-     inner_puzzle
-     solution_or_conditions
+       (@ lineage (
+                    parent_id
+                    prev_value
+                    prev_inner_puzzle_hash
+                    prev_timestamp
+                    prev_delay
+                    prev_deposit
+                    prev_approved
+                  )
+       )
+       inner_puzzle
+       solution_or_conditions
      )
+
   (include condition_codes.clib)
   (include curry.clib)
   (include *standard-cl-23*)
@@ -131,7 +141,7 @@
                 input_toggle_activation ; current statutes price counter passed
                 deposit
                 DELAY
-                (if (= toggle_activation 0) ATOM_VALUE 0) ; on activation, atom value must be zero
+                (if (= toggle_activation 0) ATOM_VALUE 0) ; on activation, atom value must be zero ; REVIEW: wouldn't it be better to activate on the fly?
                 ; on activation, we give the announcer some time to update the price before we penalize
                 ; it's activated but can't be announced until it updates the price
                 (if (= toggle_activation 0) TIMESTAMP_EXPIRES (+ current_timestamp DELAY))

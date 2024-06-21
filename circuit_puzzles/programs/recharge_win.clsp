@@ -1,16 +1,27 @@
 (mod (
+    ; REVIEW: rename MOD_HASH to MOD_WITH_OPERATIONS_HASH for consistency (as in recharge_launch.clsp)?
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
-    statutes_puzzle_hash  lineage_proof announcements
-    (ttl current_timestamp treasury_coins
-     p2_treasury_hash funding_coin_id treasury_minimum
-     my_coin_id)
+    statutes_puzzle_hash
+    lineage_proof
+    announcements
+    (
+      ttl
+      current_timestamp
+      treasury_coins
+      p2_treasury_hash
+      funding_coin_id
+      treasury_minimum
+      my_coin_id
+    )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
@@ -69,6 +80,7 @@
                                 (sha256tree MOD_HASH)
                                 (sha256tree CAT_MOD_HASH)
                                 (sha256tree CAT_TAIL_HASH)
+                                ; REVIEW: use partial state hash instead of individual curried args in lineage proof
                                 (sha256tree (f (r (r lineage_proof)))) ; launcher_id
                                 (sha256tree STATUTES_STRUCT)
                                 (sha256tree (f (r (r (r lineage_proof))))) ; start_time

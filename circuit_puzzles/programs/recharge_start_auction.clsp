@@ -1,15 +1,24 @@
 (mod (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
+    ; REVIEW: rename MOD_HASH to MOD_WITH_OPERATIONS_HASH for consistency (as in recharge_launch.clsp)?
+    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT) ; REVIEW: CRT_LOT_AMOUNT no longer needed
     statutes_puzzle_hash lineage_proof announcements
-    (start_time my_coin_id treasury_minimum auction_timeout
-     p2_treasury_hash treasury_coins)
+    (
+      start_time
+      my_coin_id
+      treasury_minimum
+      auction_timeout
+      p2_treasury_hash
+      treasury_coins
+    )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0)
     (assert
@@ -19,7 +28,7 @@
       ; can only (re-)start auction if it hasn't started yet
       (any
         (= START_TIME 0)
-        (> (- start_time START_TIME) auction_timeout)
+        (> (- start_time START_TIME) auction_timeout) ; REVIEW: START_TIME is set to 0 by both launch and win ops, so the timeout condition serves no purpose here?
       )
       (c
         (list
@@ -72,6 +81,8 @@
                                   (sha256tree MOD_HASH)
                                   (sha256tree CAT_MOD_HASH)
                                   (sha256tree CAT_TAIL_HASH)
+                                  ; REVIEW: use partial state hash for lineage proof instead of individual args?
+                                  ;  Actually, START_TIME and LAST_BID of parent (launcher coin) are enforced to be 0/(), so only state arg needed in lineage_proof is launcher_id
                                   (sha256tree (f (r (r lineage_proof)))) ; launcher_id
                                   (sha256tree STATUTES_STRUCT)
                                   (sha256tree (f (r (r (r lineage_proof))))) ; start_time
@@ -82,6 +93,9 @@
                               (f (r lineage_proof))
                             )
                           )
+                          ; REVIEW: what does this do/why is it needed?
+                          ;   creates a bunch of messages/announcements/asserts with treasury coins, but what's the point if none of this info is retained in state?
+                          ;   if not needed, can remove some args from solution
                           (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
                             p2_treasury_hash
                             CAT_MOD_HASH
@@ -91,8 +105,8 @@
                             statutes_puzzle_hash
                             treasury_coins_total ; expected balance after deposit of lot
                             0 ; amount deposited
-                            0
-                            0
+                            0 ; deposit amount
+                            0 ; potential remainder
                             (f treasury_coins)
                             treasury_coins
                             my_coin_id
