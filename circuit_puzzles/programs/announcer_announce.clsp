@@ -1,0 +1,39 @@
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+      ; solution
+      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      _
+     )
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include *standard-cl-23*)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include announcer.clib)
+  (c
+    (list CREATE_PUZZLE_ANNOUNCEMENT
+      (sha256
+        (sha256tree STATUTES_STRUCT)
+        INNER_PUZZLE_HASH
+        APPROVED
+        DEPOSIT
+        DELAY
+        ATOM_VALUE
+      )
+    )
+    (c
+      (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+      (recreate-myself-condition MOD_HASH
+        STATUTES_STRUCT
+        LAUNCHER_ID
+        INNER_PUZZLE_HASH
+        APPROVED
+        DEPOSIT
+        DELAY
+        ; if approved, atom value must > 0
+        (if (all APPROVED (> 1 ATOM_VALUE)) (x) ATOM_VALUE)
+        TIMESTAMP_EXPIRES
+        input_conditions
+      )
+    )
+  )
+)

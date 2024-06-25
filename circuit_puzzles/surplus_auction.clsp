@@ -12,13 +12,11 @@
       operation . op_args)
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
-  (include statutes_utils.clib)
   (include utils.clib)
 
   (defconst ANN_PREFIX '^')
-
+  ; LATER: filter function identical to the one in recharge_auction.clib (apart from ANN_PREFIX). Reuse code?
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
     (if conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
@@ -38,19 +36,15 @@
       filtered_announcements
     )
   )
-
-  (assign
-    announcements (filter-announcements (f op_args) ())
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (assert (contains OPERATIONS (sha256tree operation))
-      (a
-        operation
-        (list
-          (list MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-          statutes_puzzle_hash lineage_proof announcements
-          (r op_args)
-        )
+  (if (contains OPERATIONS (sha256tree operation))
+    (a
+      operation
+      (list
+        (list MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
+        statutes_inner_puzzle_hash lineage_proof (filter-announcements (f op_args) ())
+        (r op_args)
       )
     )
+    (x)
   )
 )

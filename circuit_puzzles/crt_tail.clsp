@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 ; Circuit CAT token (CRT)
 (mod (
       GENESIS_ID STATUTES_STRUCT CAT_MOD_HASH

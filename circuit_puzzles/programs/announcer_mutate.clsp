@@ -1,0 +1,42 @@
+; mutation of announcers curried values by owner
+; can mutate the atom value only, or also deactivate itself or topup deposit
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+      ; solution
+      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      (current_timestamp atom_value delay deactivate)
+     )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include *standard-cl-23*)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include announcer.clib)
+
+  (assert
+    LAUNCHER_ID
+    (> deposit (- DEPOSIT 1))
+    inner_puzzle_hash  ; must be owner
+    (c
+      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+      (c
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+        (if (= new_puzzle_hash 0)
+          ; melt the announcer if they want to bail out
+          (list (list CREATE_COIN INNER_PUZZLE_HASH deposit (list INNER_PUZZLE_HASH)))
+          (recreate-myself-condition MOD_HASH
+            STATUTES_STRUCT
+            LAUNCHER_ID
+            new_puzzle_hash
+            (if deactivate 0 APPROVED)
+            deposit
+            delay
+            atom_value
+            (+ current_timestamp delay)
+            input_conditions
+          )
+        )
+      )
+    )
+  )
+)

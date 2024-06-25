@@ -62,7 +62,7 @@
          statutes_puzzle_hash
         (concat
           STATUTES_ANN_PREFIX
-          (sha256tree (list STATUTE_PREFIX statute_index statute_value))
+          STATUTE_PREFIX statute_index (if (l statute_value) (sha256tree statute_value) statute_value)
         )
       )
     )
@@ -74,7 +74,7 @@
          statutes_puzzle_hash
         (concat
           STATUTES_ANN_PREFIX
-          (sha256tree (list STATUTE_FULL_PREFIX statute_index statute_full_value))
+          STATUTE_FULL_PREFIX statute_index (sha256tree statute_full_value)
         )
       )
     )
@@ -95,7 +95,7 @@
       (sha256 statutes_puzzle_hash
         (concat
           STATUTES_ANN_PREFIX
-          (sha256tree (list PRICE_PREFIX price_info))
+          PRICE_PREFIX (sha256tree price_info)
         )
       )
     )

@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 
 (mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
@@ -10,6 +11,35 @@
 
   (defconstant CRT_ANN_PREFIX 'G')
 
+  (defun filter-ann-conditions (
+    (@ ann_conditions
+      (
+        (@ condition
+          (condition_code . condition_body)
+        )
+        . rest
+      )
+    ) filtered_announcements)
+    (if ann_conditions
+      (if
+        (any
+          (= condition_code ASSERT_COIN_ANNOUNCEMENT)
+          (= condition_code CREATE_COIN_ANNOUNCEMENT)
+        )
+        (filter-ann-conditions rest (c condition filtered_announcements))
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          (if
+            (= (substr (f (r condition_body)) 0 ONE) STATUTES_ANN_PREFIX)
+            ; bad message, error
+            (x)
+            (filter-ann-conditions rest (c condition filtered_announcements))
+          )
+          (x)
+        )
+      )
+      filtered_announcements
+    )
+  )
 
   (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL_HASH INNER_PUZZLE_HASH)
     (curry_hashes CAT_MOD_HASH
@@ -34,7 +64,7 @@
     PRICE_UPDATES
 
     ;  updating statutes, assert permission
-    (assert_debug
+    (assert
       (size_b32 crt_inner_puzzle_hash)
       (if (= mutation_index -1)
         ; vote for announcements only, so this should just be a list
@@ -42,10 +72,14 @@
         ; should be  a list with 5 elements if mutating statutes
         (not (r (r (r (r (r mutation_value))))))
       )
-      (list
+      (c
         ; confirm to CRT voting coin that mutation was applied
         (list SEND_MESSAGE 0x10
           (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+        )
+        (if (= mutation_index -1)
+          (filter-ann-conditions (f mutation_value) ())
+          ()
         )
       )
     )

@@ -1,7 +1,8 @@
+; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-    statutes_puzzle_hash lineage_proof announcements
+    statutes_inner_puzzle_hash lineage_proof announcements
     (ttl current_timestamp my_amount crt_tail_puzzle p2_surplus_auction_coin_parent_id
              my_coin_id p2_surplus_auction_hash lot_amount limitation_solution)
   )
@@ -12,6 +13,7 @@
   (include utils.clib)
   (include surplus_auction.clib)
   (assign
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (target_puzzle_hash timestamp) LAST_BID
     crt_tail_hash (sha256tree crt_tail_puzzle)
     p2_surplus_puzzle_hash (
@@ -50,10 +52,10 @@
               (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_hash)
               (c
                 ; current_time minus one tx block time should already be in the past
-                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 55))
+                (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
                 (c
                   ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 55)))
+                  (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
                   (c
                     ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
                     (list SEND_MESSAGE 0x3f (concat lot_amount target_puzzle_hash) p2_surplus_auction_coin_id)
@@ -66,16 +68,7 @@
                             CAT_MOD_HASH
                             (sha256tree CAT_MOD_HASH)
                             (sha256tree CRT_TAIL_HASH)
-                            (curry_hashes MOD_HASH
-                              (sha256tree MOD_HASH)
-                              (sha256tree CAT_MOD_HASH)
-                              (sha256tree STATUTES_STRUCT)
-                              (sha256tree (f (r (r lineage_proof))))
-                              (sha256tree (f (r (r (r lineage_proof)))))
-                              (sha256tree CAT_TAIL_HASH)
-                              (sha256tree CRT_TAIL_HASH)
-                              (sha256tree (f (r (r (r (r lineage_proof))))))
-                            )
+                            (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
                           )
                           ; parent bid amount
                           (f (r lineage_proof))

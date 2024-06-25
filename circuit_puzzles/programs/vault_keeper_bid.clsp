@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -40,20 +41,20 @@
       current_timestamp
       (r price_info)
     )
-    (fees . liquidation_penalty) (assert (> liquidation_penalty_percent 0) (calculate-fees
+    (fees . liquidation_penalty) (calculate-fees
       byc_to_bid
       cumulative_stability_fee_rate
       DISCOUNTED_PRINCIPAL
       BYC_MINTED_AMOUNT
       liquidation_penalty_percent
-    ))
+    )
     ; parse auction state as we'll need to verify it's still running and hasn't timed out
     (auction_start_time
      start_price
      step_price_decrease_factor
      step_time_interval
      initiator_puzzle_hash
-     initiator_incentive_balance) (assert AUCTION_STATE AUCTION_STATE)
+     initiator_incentive_balance) AUCTION_STATE
 
     fees_to_pay (if (> TRANSFERRED_FEES fees)
       0
@@ -81,22 +82,36 @@
         cumulative_stability_fee_rate
       )
     )
-    current_price_factor (
-      assert_debug (> current_timestamp auction_start_time)
-        (*
-          (/
-            (*
-              start_price
-              step_price_decrease_factor
-            )
-            PERCENT_PRECISION
-          )
-          (/ (- current_timestamp auction_start_time) step_time_interval)
-        )
-    )
-    current_price (- start_price (/ (* current_price_factor start_price) PERCENT_PRECISION))
     ; use all byc provided from keeper to get a piece of collateral
-    bid_xch_collateral_amount_pre (/ (* (/ (* byc_to_bid PRECISION) (* current_price 10)) MOJOS) PRECISION)
+    bid_xch_collateral_amount_pre (/
+      (*
+        (/
+          (* byc_to_bid PRECISION)
+          (*
+            (- start_price
+            (/
+              (*
+                (* ; current price factor
+                  (/
+                    (*
+                      start_price
+                      step_price_decrease_factor
+                    )
+                    PERCENT_PRECISION
+                  )
+                  ; current price
+                  (/ (- current_timestamp auction_start_time) step_time_interval)
+                )
+                start_price
+              )
+              PERCENT_PRECISION)
+            )
+            10
+          )
+        )
+        MOJOS)
+      PRECISION
+    )
     bid_xch_collateral_amount (
       if (> bid_xch_collateral_amount_pre DEPOSITED_AMOUNT)
         DEPOSITED_AMOUNT
@@ -149,7 +164,9 @@
           (- initiator_incentive_balance initiator_incentive)
         )
     )
-    (assert_debug
+    (assert
+      (> liquidation_penalty_percent 0)
+      (> current_timestamp auction_start_time)
       ; needs to be more than zero
       (> byc_principal_to_melt 0)
       (> BYC_MINTED_AMOUNT (- byc_principal_to_melt 1))
@@ -159,10 +176,7 @@
       ; sanity check for time
       (> current_timestamp (- auction_start_time 1))
       ; check that there is a deposit to bid for
-      (if (> DEPOSITED_AMOUNT 0)
-        1
-        (x current_price_factor current_price)
-      )
+      (> DEPOSITED_AMOUNT 0)
       (> leftover_deposit -1)
       (list
         ; auction_state -> (start_time start_price last_auction_price)

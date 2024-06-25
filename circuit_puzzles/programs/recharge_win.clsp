@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
@@ -14,7 +15,7 @@
   (assign
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0)
+    (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
     (assert_debug
       ; ttl should've expired
@@ -58,7 +59,7 @@
                       (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash funding_coin_id winning_crt_bid_amount) funding_coin_id)
                       (c
                         (list ASSERT_MY_PARENT_ID
-                          (sha256
+                          (calculate-coin-id
                             (f lineage_proof)
                             (curry_hashes
                               CAT_MOD_HASH
@@ -69,10 +70,10 @@
                                 (sha256tree MOD_HASH)
                                 (sha256tree CAT_MOD_HASH)
                                 (sha256tree CAT_TAIL_HASH)
-                                (sha256tree (f (r (r lineage_proof)))) ; launcher_id
+                                (sha256tree LAUNCHER_ID)
                                 (sha256tree STATUTES_STRUCT)
-                                (sha256tree (f (r (r (r lineage_proof))))) ; start_time
-                                (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
+                                (sha256tree START_TIME)
+                                (sha256tree (f (r (r lineage_proof)))) ; bid
                               )
                             )
                             ; parent bid amount

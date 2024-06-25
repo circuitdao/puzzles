@@ -1,0 +1,60 @@
+(
+
+  (defun cut-prices (price_list expiration_timestamp)
+    (if price_list
+      (if (> expiration_timestamp  (r (f price_list)))
+        (cut-prices (r price_list) expiration_timestamp)
+        price_list
+      )
+      ()
+    )
+  )
+
+  (defun verify-announcement-asserts (input_announcement_asserts conditions)
+    (if input_announcement_asserts
+      (if
+        (any
+          (= (f (f input_announcement_asserts)) ASSERT_COIN_ANNOUNCEMENT)
+          ; we only use puzzle announcements, so coin announcements are fine
+          (= (f (f input_announcement_asserts)) CREATE_COIN_ANNOUNCEMENT)
+        )
+        (verify-announcement-asserts (r input_announcement_asserts) (c (f input_announcement_asserts) conditions))
+        (x)
+      )
+      conditions
+    )
+  )
+  (defun-inline abs (number)
+    (if (> number -1) number (* number -1))
+  )
+
+  (defun last-item (lst)
+    (if lst
+      (if (r lst)
+        (last-item (r lst))
+        (f lst)
+      )
+      (x)
+    )
+  )
+
+  (defun generate-ann-conditions (STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY price_announcers)
+    (if price_announcers
+      (assign
+        announcer (f price_announcers)
+        ; price_announcers -> ((inner_puzzle_hash_sha256 args_hash price))
+        (inner_puzzle_hash args_hash price) announcer
+        announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_PUZZLE_HASH args_hash)
+        ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
+        (c
+          (list ASSERT_PUZZLE_ANNOUNCEMENT
+            ; ONE value represents that announcer is enabled
+            (sha256 announcer_puzzle_hash (sha256 (sha256tree STATUTES_STRUCT) inner_puzzle_hash ONE DEPOSIT DELAY price))
+          )
+          (generate-ann-conditions STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY (r price_announcers))
+        )
+      )
+      ()
+    )
+  )
+)

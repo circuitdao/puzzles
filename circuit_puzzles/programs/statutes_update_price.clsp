@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       _
@@ -66,6 +67,7 @@
         (size_uint32 price)
         ; confirm to oracle price announcement to update the price
         (list
+          (list REMARK (list price last_updated))
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               ; generate oracle singleton puzzle hash

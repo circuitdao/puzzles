@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
       TRANSFERRED_FEES
       COLLATERAL_AMOUNT
@@ -33,13 +34,12 @@
   )
 
   (defun-inline is-valid-msg-cond (cond_body)
-    1
-;    (not
-;      (=
-;        (substr (f (r cond_body)) 0 1)
-;        ANN_PREFIX
-;      )
-;    )
+    (not
+      (=
+        (substr (f (r cond_body)) 0 1)
+        ANN_PREFIX
+      )
+    )
   )
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)

@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod (STATUTES_STRUCT
       Truths
       parent_is_cat

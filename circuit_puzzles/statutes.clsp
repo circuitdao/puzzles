@@ -1,8 +1,7 @@
+; REVIEW: Optimize chialisp and then audit
 (mod (
-      (
-        MOD_HASH .
-        OPERATIONS
-      )
+      OPERATIONS
+      MOD_HASH
       (
         TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
         P2_TREASURY_MOD_HASH
@@ -34,36 +33,29 @@
   (include utils.clib)
 
 
-  (defun announce-statutes (statutes prefix start_index rest)
+  (defun announce-statutes (statutes start_index rest)
     (if statutes
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT
           (concat STATUTES_ANN_PREFIX
-            (sha256tree
-              (list prefix start_index (if (= prefix 's') (f (f statutes)) (f statutes)))
-            )
+            STATUTE_PREFIX start_index (f (f statutes))
           )
         )
-        (if (= prefix 's')
-          ; add a full statutes when announcing statutes
-          (c
-            (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX
-                (sha256tree
-                  (list 'S' start_index (f statutes))
-                )
-              )
+        ; add a full statutes when announcing statutes
+        (c
+          (list CREATE_PUZZLE_ANNOUNCEMENT
+            (concat STATUTES_ANN_PREFIX
+              STATUTE_FULL_PREFIX start_index (sha256tree (f statutes))
             )
-            (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
           )
-          (announce-statutes (r statutes) prefix (+ start_index ONE) rest)
+          (announce-statutes (r statutes) (+ start_index ONE) rest)
         )
       )
       rest
     )
   )
 
-  (defun-inline create-coin-condition ((MOD_HASH . OPERATIONS) TREASURY_APPROVAL_MOD_HASHES
+  (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES
                                         P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
@@ -71,7 +63,7 @@
       CREATE_COIN
       ; puzzle
       (curry_hashes MOD_HASH
-        (sha256tree (c MOD_HASH OPERATIONS))
+        (sha256 ONE MOD_HASH)
         (sha256tree
           (list
             TREASURY_APPROVAL_MOD_HASHES
@@ -93,47 +85,6 @@
     )
   )
 
-  (defun filter-ann-conditions (
-    (@ ann_conditions
-      (
-        (@ condition
-          (condition_code . condition_body)
-        )
-        . rest
-      )
-    ) filtered_announcements)
-    (if ann_conditions
-      (if
-        (any
-            (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
-            (= condition_code CREATE_COIN_ANNOUNCEMENT)
-        )
-        (if (all
-              (= (substr (f condition_body) 0 ONE) STATUTES_ANN_PREFIX)
-              (= (strlen (f condition_body)) 33)
-            )
-          ; bad announcement, error
-          (x)
-          (filter-ann-conditions rest (c condition filtered_announcements))
-        )
-        (if (any (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
-          (filter-ann-conditions rest (c condition filtered_announcements))
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (if (all
-                  (= (substr (f (r condition_body)) 0 ONE) STATUTES_ANN_PREFIX)
-                  (= (strlen (f (r condition_body))) 34)
-                )
-              ; bad message, error
-              (x)
-              (filter-ann-conditions rest (c condition filtered_announcements))
-            )
-            (filter-ann-conditions rest filtered_announcements)
-          )
-        )
-      )
-      filtered_announcements
-    )
-  )
 
   (assign
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
@@ -157,61 +108,56 @@
           )
         )
       )
-    create_coin_condition (create-coin-condition
-      (c MOD_HASH OPERATIONS)
-      TREASURY_APPROVAL_MOD_HASHES
-      P2_TREASURY_MOD_HASH
-      P2_SURPLUS_AUCTION_MOD_HASH
-      CAT_MOD_HASH
-      OFFER_MOD_HASH
-      CRT_TAIL_HASH
-      statutes
-      price_info
-      cumulative_stability_fee
-      cumulative_interest_rate
-      price_updates
-    )
-    ; add announcements if any
-    announcements (if (all (= (f OPERATIONS) operation_mod_hash) (= mutation_index -1))
-      ; filter announcements
-      (filter-ann-conditions (f mutation_value) mutation_conditions)
-      ; no announcements
-      mutation_conditions
-    )
-    (c create_coin_condition
+    (c (list REMARK statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT
-          (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -7 price_updates)))
+        (create-coin-condition
+          MOD_HASH
+          TREASURY_APPROVAL_MOD_HASHES
+          P2_TREASURY_MOD_HASH
+          P2_SURPLUS_AUCTION_MOD_HASH
+          CAT_MOD_HASH
+          OFFER_MOD_HASH
+          CRT_TAIL_HASH
+          statutes
+          price_info
+          cumulative_stability_fee
+          cumulative_interest_rate
+          price_updates
         )
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)))
+            (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -7 price_updates)
           )
           (c
             (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -5 OFFER_MOD_HASH)))
+              (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)
             )
             (c
               (list CREATE_PUZZLE_ANNOUNCEMENT
-                (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)))
+                (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -5 OFFER_MOD_HASH)
               )
               (c
                 (list CREATE_PUZZLE_ANNOUNCEMENT
-                  (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)))
+                  (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
                 )
                 (c
                   (list CREATE_PUZZLE_ANNOUNCEMENT
-                    (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -2 cumulative_interest_rate)))
+                    (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 (sha256tree TREASURY_APPROVAL_MOD_HASHES))
                   )
                   (c
                     (list CREATE_PUZZLE_ANNOUNCEMENT
-                      (concat STATUTES_ANN_PREFIX (sha256tree (list STATUTE_PREFIX -1 cumulative_stability_fee)))
+                      (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -2 cumulative_interest_rate)
                     )
                     (c
                       (list CREATE_PUZZLE_ANNOUNCEMENT
-                        (concat STATUTES_ANN_PREFIX (sha256tree (list PRICE_PREFIX price_info)))
+                        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -1 cumulative_stability_fee)
                       )
-                      (announce-statutes statutes STATUTE_PREFIX 0 announcements)
+                      (c
+                        (list CREATE_PUZZLE_ANNOUNCEMENT
+                          (concat STATUTES_ANN_PREFIX PRICE_PREFIX (sha256tree price_info))
+                        )
+                        (announce-statutes statutes 0 mutation_conditions)
+                      )
                     )
                   )
                 )

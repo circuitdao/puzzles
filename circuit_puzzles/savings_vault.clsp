@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
 (mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
@@ -65,7 +66,7 @@
     )
   )
 
-  (defun-inline calculate-interests (discounted_deposit principal cumulative_interest_df)
+  (defun-inline calculate-interest (discounted_deposit principal cumulative_interest_df)
     (assign
       value (- (/ (* discounted_deposit cumulative_interest_df) PRECISION) principal)
       (if (> value -1)
@@ -94,15 +95,15 @@
       0 ; found first coin set to false
       ()
     )
-    interests_amount (if treasury_coin_info
-      (calculate-interests DISCOUNTED_DEPOSIT current_amount cumulative_withdrawal_interest_df)
+    interest_amount (if treasury_coin_info
+      (calculate-interest DISCOUNTED_DEPOSIT current_amount cumulative_withdrawal_interest_df)
       0
     )
     new_amount (f (r create_coin_body))
     delta_amount (- new_amount current_amount)
     new_discounted_deposit (if treasury_coin_info
-      ; discount with interests
-      (+ (/ (* (- delta_amount interests_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
+      ; discount with interest
+      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
       (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
 
@@ -125,7 +126,7 @@
       )
       ()
     )
-    new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interests_amount) 0)
+    new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
     pre_final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_deposit, inner_puzzle_hash)
       (c
@@ -215,13 +216,13 @@
                           (assert_debug
                             ; treasury coin should have enough amount to cover interest
                             (> new_treasury_amount 0)
-                            ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins
-                            (> interests_amount minimum_interest_amount)
+                            ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
+                            (> interest_amount minimum_interest_amount)
                             (c
                               (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_AMOUNT_TO_WITHDRAW minimum_interest_amount)
                               (c
                                 (list SEND_MESSAGE 0x3f
-                                  (concat ANN_PREFIX treasury_coin_id (* -1 interests_amount) new_treasury_amount)
+                                  (concat ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
                                   treasury_coin_id
                                 )
                                 final_conditions

@@ -2,6 +2,7 @@
 (
 
   (defconst ONE 1)
+  (defconst TWO 2)
   (defconst MOJOS 1000000000000)
   (defconst PERCENT_PRECISION 10000)
   (defconst MAX_TX_BLOCK_TIME 120)

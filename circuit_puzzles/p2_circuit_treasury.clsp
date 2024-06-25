@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
@@ -18,7 +19,7 @@
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
         (if  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
           ; bad announcement found, error
-          (x)
+          (x "bad announcement" (f condition_rest))
           (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
         )
         (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
@@ -37,7 +38,7 @@
               ; if it's paying into our puzzle hash, increase the sum (they're depositing)
               (if my_create_coin_exists
                 ; can't pay into our own puzzle hash twice
-                (x "Cant pay into our own puzzle hash twice")
+                (x "already paid into our own puzzle hash")
                 (parse-conditions (r input_conditions) my_puzzle_hash 1 (c (f input_conditions) return_conditions) (+ new_amount (f rest_condition)) withdraw_amount)
               )
               ; if it's paying into a different puzzle hash, decrease the sum (they're withdrawing)
@@ -145,7 +146,7 @@
           ; withdraw is set, use that
           (if (> withdraw_amount_pre 0)
             withdraw_amount_pre
-            (x)
+            (x "negative")
           )
         )
         withdraw_amount_pre
@@ -239,9 +240,9 @@
                 ; assert that passed coin id is ours
                   (c (list ASSERT_MY_COIN_ID my_coin_id)
                     (c
-                      ; assert my new balance so someone can check whole ring balance
+                      ;  my new balance so someone can check whole ring balance
                       (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
-                      (c (list REMARK my_coin_id new_amount LAUNCHER_ID)
+                      (c (list REMARK my_coin_id new_amount LAUNCHER_ID) ; for driver code
                         conditions
                       )
                     )

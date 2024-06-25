@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 ;;; this coin is controlled by the surplus auction coin, and is used to transfer funds to the winner of the surplus auction
 ; coin is created with zero amount, and when it's first spent it's filled with the lot amount and puzzle hash
 ; if the coin is spent again, it's transferred to the winner of the surplus auction

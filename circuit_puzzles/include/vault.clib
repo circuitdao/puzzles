@@ -57,7 +57,6 @@
         (/ (* -1 (* (/ (* -1 debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
   )
 
-  ; LATER: no need to use negative byc principal to melt. pass in the positive value
   (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
     (- discounted_principal
       (/

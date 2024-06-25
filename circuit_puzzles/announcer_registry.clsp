@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 (mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_MOD_HASH ANNOUNCER_REGISTRY CLAIM_ITERATION
       lineage_proof mint_or_register . args)
 

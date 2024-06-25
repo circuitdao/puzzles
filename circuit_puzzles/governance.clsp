@@ -1,3 +1,4 @@
+; REVIEW: Optimize chialisp and then audit
 ;; a governance puzzle used to propose, enact, and veto bills that change the statutes if enacted
 ;; this puzzle is to be used with CRT tail
 (mod (OPERATIONS
@@ -72,7 +73,6 @@
            (assert_debug
              ; not just filter out announcements with our prefix namespace
              ; but raise an error if someone is trying to be cheeky
-             ; FIXME: we should filter out message conditions too
              (not
                  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
              )
@@ -84,21 +84,24 @@
                (c (f conditions) filtered_conditions)
              )
            )
-           (if (= condition_code REMARK)
-             ; filter out remarks since we use them for driver puzzle reveals
-             (filter-conditions
-               MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
-               final_bill bill_operation
-               rest_of_conditions
-               found_create_coin
-               filtered_conditions
-             )
-             (filter-conditions
-               MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
-               final_bill bill_operation
-               rest_of_conditions
-               found_create_coin
-               (c (f conditions) filtered_conditions)
+           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+             (x) ; no message conditions allowed in governance mode
+             (if (= condition_code REMARK)
+               ; filter out remarks since we use them for driver puzzle reveals
+               (filter-conditions
+                 MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                 final_bill bill_operation
+                 rest_of_conditions
+                 found_create_coin
+                 filtered_conditions
+               )
+               (filter-conditions
+                 MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                 final_bill bill_operation
+                 rest_of_conditions
+                 found_create_coin
+                 (c (f conditions) filtered_conditions)
+               )
              )
            )
          )
