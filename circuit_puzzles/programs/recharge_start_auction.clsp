@@ -11,11 +11,13 @@
   (include utils.clib)
   (include recharge_auction.clib)
   (assign
-    (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0)
+    (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (assert
+      (> treasury_coins_count 0)
       LAUNCHER_ID
       ; can't run if LAST_BID is set
       (= LAST_BID ())
+      (> start_time START_TIME)
       ; can only (re-)start auction if it hasn't started yet
       (any
         (= START_TIME 0)
@@ -61,28 +63,19 @@
                         (list ASSERT_MY_COIN_ID my_coin_id)
                         (c
                           (list ASSERT_MY_PARENT_ID
-                            (sha256
+                            (calculate-coin-id
                               (f lineage_proof)
                               (curry_hashes
                                 CAT_MOD_HASH
-                                (sha256tree CAT_MOD_HASH)
-                                (sha256tree CAT_TAIL_HASH)
-                                (curry_hashes
-                                  MOD_HASH
-                                  (sha256tree MOD_HASH)
-                                  (sha256tree CAT_MOD_HASH)
-                                  (sha256tree CAT_TAIL_HASH)
-                                  (sha256tree (f (r (r lineage_proof)))) ; launcher_id
-                                  (sha256tree STATUTES_STRUCT)
-                                  (sha256tree (f (r (r (r lineage_proof))))) ; start_time
-                                  (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
-                                )
+                                (sha256 ONE CAT_MOD_HASH)
+                                (sha256 ONE CAT_TAIL_HASH)
+                                (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
                               )
                               ; parent bid amount
                               (f (r lineage_proof))
                             )
                           )
-                          (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+                          (deposit-to-treasury
                             p2_treasury_hash
                             CAT_MOD_HASH
                             CAT_TAIL_HASH

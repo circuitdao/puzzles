@@ -6,8 +6,6 @@
     )
   )
 
-  (include condition_codes.clib)
-
   ; can only reset if in proposal mode (BILL is not empty)
   (if BILL
     (list

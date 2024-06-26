@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -40,10 +40,10 @@
     )
     undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
     min_collateral_amount (get-min-collateral-amount
-                            undiscounted_principal
-                            liquidation_ratio
-                            (f price_info)
-                          )
+      undiscounted_principal
+      liquidation_ratio
+      (f price_info)
+    )
     ; start_price -> last_price * starting_price_factor
     start_price (/ (* (f price_info) starting_price_factor) PERCENT_PRECISION)
     prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
@@ -61,22 +61,18 @@
     )
     (list
       ; auction_state -> (start_time start_price last_auction_price)
-      (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT auction_state INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
-      (assert_debug
+      (list TRANSFERRED_FEES COLLATERAL PRINCIPAL auction_state INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
+      (assert
         ; is previous auction still running by checking if auction_start_time hasn't timed out
         (any
           (> (- auction_start_time prev_auction_start_time) auction_timeout)
           (not AUCTION_STATE)
         )
         ; we should be below min collateral ratio to start an auction
-        (if (> min_collateral_amount DEPOSITED_AMOUNT)
-          1
-          (x min_collateral_amount DEPOSITED_AMOUNT DISCOUNTED_PRINCIPAL BYC_MINTED_AMOUNT undiscounted_principal)
-        )
+        (> min_collateral_amount COLLATERAL)
         ; there should be deposit to auction off
-        (> DEPOSITED_AMOUNT 0)
+        (> COLLATERAL 0)
         (list
-          (list REMARK 'starting auction->' 'auction_state=' auction_state 'min_collateral_amount=' min_collateral_amount ' deposited_amount=' DEPOSITED_AMOUNT )
           (list ASSERT_SECONDS_ABSOLUTE (- auction_start_time MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ auction_start_time MAX_TX_BLOCK_TIME))
           ; assert collateralization ratio

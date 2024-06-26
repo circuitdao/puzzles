@@ -21,14 +21,14 @@
 
   (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
     (curry_hashes CAT_MOD_HASH
-      (sha256tree CAT_MOD_HASH)
-      (sha256tree TAIL_MOD_HASH)
+      (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE TAIL_MOD_HASH)
       (curry_hashes MOD_HASH
-        (sha256tree MOD_HASH)
-        (sha256tree CAT_MOD_HASH)
-        (sha256tree TAIL_MOD_HASH)
+        (sha256 ONE MOD_HASH)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE TAIL_MOD_HASH)
         (sha256tree STATUTES_STRUCT)
-        (sha256tree inner_puzzle_hash)
+        (sha256 ONE inner_puzzle_hash)
         bill_hash
       )
     )
@@ -44,11 +44,14 @@
       new_delay_seconds
       new_max_delta
     ) BILL
-    (assert_debug
+    (assert
       ; can only veto if in proposal mode (BILL is not empty)
       BILL
+      (size_b32 veto_inner_puzzle_hash)
+      (size_b32 veto_bill_hash)
       (> veto_amount amount)
       (> veto_seconds 0)
+
       (list
         ()
         (list
@@ -59,7 +62,6 @@
           )
           (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_VETOED))
           ; assert announcement from another CRT coin with higher amount than this one
-          ; LATER: we'd need to loop over those and add veto coin amounts up (can take multiple veto coins to pump up the amount)
           (list RECEIVE_MESSAGE
             0x3f
             (concat ANN_PREFIX ANN_VETO (sha256tree BILL))

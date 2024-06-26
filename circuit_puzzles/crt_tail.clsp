@@ -12,6 +12,14 @@
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
+
+  (defun-inline get-statutes-puzzle-hash (statutes_struct statutes_inner_puzzle_hash)
+    (c
+      (sha256tree statutes_struct)
+      (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash)
+    )
+  )
+
   (if delta
     (if (> 0 delta)
       ; melting only by surplus auction
@@ -19,7 +27,7 @@
         (crt_tail_hash byc_tail_hash surplus_mod_hash
         launcher_id byc_lot_amount last_bid
         statutes_inner_puzzle_hash approved_mod_hashes) solution
-        statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+        (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         puzzle_hash (
           curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
@@ -27,7 +35,7 @@
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
               (sha256 ONE CAT_MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
+              statutes_struct_hash
               (sha256 ONE launcher_id)
               (sha256 ONE byc_lot_amount)
               (sha256 ONE byc_tail_hash)
@@ -61,7 +69,7 @@
         )
       )
       ; no minting
-      (x 'no minting')
+      (x)
     )
     (if (= (my_parent_cat_truth Truths) GENESIS_ID)
       () ; issuance at launch
@@ -79,21 +87,20 @@
           approved_mod_hashes
           statutes_inner_puzzle_hash
         ) solution
-        statutes_struct_hash (sha256tree STATUTES_STRUCT)
-        statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+        (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         approving_coin_id (calculate-coin-id
           parent_id
           (if byc_tail_hash
             (curry_hashes CAT_MOD_HASH
-              (sha256tree CAT_MOD_HASH)
-              (sha256tree byc_tail_hash)
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE byc_tail_hash)
               (tree_hash_of_apply mod_hash curried_mod_args)
             )
             (tree_hash_of_apply mod_hash curried_mod_args)
           )
           amount
         )
-        (assert_debug
+        (assert
           ; recharge auction mod is the third in approved mod hash list
           ; can also be announcer registry
           (any

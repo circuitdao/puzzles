@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -13,11 +13,9 @@
     )
   )
 
-  (include *standard-cl-23*)
-  (include utils.clib)
 
   (list
-    (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
+    (list TRANSFERRED_FEES COLLATERAL PRINCIPAL AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
     ; nothing else to assert here, just create a coin with new inner puzzle (target_puzzle_hash)
     (list )
   )

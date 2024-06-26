@@ -1,8 +1,8 @@
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
-    ( (byc_bid_amount . crt_bid_amount) target_puzzle_hash current_timestamp minimum_byc_bid_amount
-    offer_mod_hash auction_timeout ttl my_coin_id min_crt_price raw_announcements)
+    ((byc_bid_amount . crt_bid_amount) target_puzzle_hash current_timestamp minimum_byc_bid_amount
+    offer_mod_hash auction_timeout ttl my_coin_id min_crt_price)
   )
 
   (include *standard-cl-23*)
@@ -20,6 +20,7 @@
     crt_price (/ (* byc_bid_amount PRECISION) crt_bid_amount)
     last_crt_price (if last_byc_bid_amount (/ (* last_byc_bid_amount PRECISION) last_crt_bid_amount) 0)
     conditions (assert
+      (size_b32 target_puzzle_hash)
       LAUNCHER_ID ; can't bid if auction hasn't started yet
       (> crt_price min_crt_price)
       (any
@@ -75,22 +76,13 @@
                           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
                           (c
                             (list ASSERT_MY_PARENT_ID
-                              (sha256
+                              (calculate-coin-id
                                 (f lineage_proof)
                                 (curry_hashes
                                   CAT_MOD_HASH
-                                  (sha256tree CAT_MOD_HASH)
-                                  (sha256tree CAT_TAIL_HASH)
-                                  (curry_hashes
-                                    MOD_HASH
-                                    (sha256tree MOD_HASH)
-                                    (sha256tree CAT_MOD_HASH)
-                                    (sha256tree CAT_TAIL_HASH)
-                                    (sha256tree (f (r (r lineage_proof)))) ; launcher_id
-                                    (sha256tree STATUTES_STRUCT)
-                                    (sha256tree (f (r (r (r lineage_proof))))) ; start_time
-                                    (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
-                                  )
+                                  (sha256 ONE CAT_MOD_HASH)
+                                  (sha256 ONE CAT_TAIL_HASH)
+                                  (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
                                 )
                                 ; parent bid amount
                                 (f (r lineage_proof))
@@ -116,8 +108,8 @@
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               (curry_hashes CAT_MOD_HASH
-                (sha256tree CAT_MOD_HASH)
-                (sha256tree CAT_TAIL_HASH)
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CAT_TAIL_HASH)
                 offer_mod_hash
               )
               (sha256tree

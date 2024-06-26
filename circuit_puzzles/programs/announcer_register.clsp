@@ -1,0 +1,53 @@
+; register the announcer with announcer registry coin
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+      ; solution
+      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      (registry_mod_hash registry_args_hash approved_mod_hashes statutes_inner_puzzle_hash)
+     )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include *standard-cl-23*)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include announcer.clib)
+  (assign
+    announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    (assert
+      inner_puzzle_hash ; must be owner
+      APPROVED
+      (size_b32 registry_mod_hash)
+      (l approved_mod_hashes)
+      (= registry_mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry
+      (c
+        (list SEND_MESSAGE 0x12
+          (concat
+            ANN_PREFIX
+            INNER_PUZZLE_HASH
+            APPROVED
+            (sha256tree STATUTES_STRUCT)
+          )
+          announcer_registry_puzhash
+        )
+        ; should not be expired
+        (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+          (c
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
+            (recreate-myself-condition MOD_HASH
+              STATUTES_STRUCT
+              LAUNCHER_ID
+              INNER_PUZZLE_HASH
+              APPROVED
+              DEPOSIT
+              DELAY
+              ATOM_VALUE
+              TIMESTAMP_EXPIRES
+              input_conditions
+            )
+          )
+        )
+      )
+    )
+  )
+)
