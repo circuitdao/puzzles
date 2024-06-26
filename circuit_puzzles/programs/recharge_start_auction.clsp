@@ -17,6 +17,7 @@
       LAUNCHER_ID
       ; can't run if LAST_BID is set
       (= LAST_BID ())
+      (> start_time START_TIME)
       ; can only (re-)start auction if it hasn't started yet
       (any
         (= START_TIME 0)

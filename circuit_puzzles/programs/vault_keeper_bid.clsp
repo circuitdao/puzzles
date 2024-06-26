@@ -228,7 +228,6 @@
               )
             )
             ; announce that we transferred collateral to target puzzle hash
-            ;(list REMARK ANN_PREFIX "$" target_puzzle_hash bid_xch_collateral_amount)
             (if (> initiator_incentive 0)
               ; get an announcement from offer module that BYC was paid to initiator
               (list ASSERT_PUZZLE_ANNOUNCEMENT

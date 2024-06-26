@@ -15,7 +15,10 @@
 
   (assert
     LAUNCHER_ID
-    (> deposit (- DEPOSIT 1))
+    (if (all APPROVED (not deactivate))
+      (> deposit (- DEPOSIT 1))
+      (> deposit -1)
+    )
     inner_puzzle_hash  ; must be owner
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
