@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -33,7 +33,7 @@
       byc_to_repay
       cumulative_stability_fee_rate
       DISCOUNTED_PRINCIPAL
-      BYC_MINTED_AMOUNT
+      PRINCIPAL
       0 ; no liquidation penalty when repaying
     )
     fees_to_pay (if (> TRANSFERRED_FEES calculated_stability_fee)
@@ -43,8 +43,8 @@
     fees_to_not_pay (- calculated_stability_fee fees_to_pay)
     ; burn the byc that's left after fees are paid
     negative_byc_principal_to_melt (* -1 (- byc_to_repay calculated_stability_fee))
-    new_byc_minted_amount (+
-      BYC_MINTED_AMOUNT
+    new_principal (+
+      PRINCIPAL
       negative_byc_principal_to_melt
     )
     undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
@@ -89,18 +89,18 @@
       (> undiscounted_principal (- byc_to_repay 1))
       ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
       ; vault liquidation costs at healthy levels
-      (any (= new_byc_minted_amount 0) (> new_byc_minted_amount minimum_principal_amount))
-      (any (> new_byc_minted_amount 0)  (all (= new_byc_minted_amount 0) (= new_discounted_principal 0)))
+      (any (= new_principal 0) (> new_principal minimum_principal_amount))
+      (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
       ; current time must be at least after last oracle update
       (> current_timestamp (f price_info))
-      (any (> new_byc_minted_amount 0)  (all (= new_byc_minted_amount 0) (= new_discounted_principal 0)))
+      (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
       (list
         (list
           (if (> TRANSFERRED_FEES calculated_stability_fee)
             (- TRANSFERRED_FEES calculated_stability_fee)
             0
           ) ; final_transferred_fees in collateral_vault.clsp
-          DEPOSITED_AMOUNT new_byc_minted_amount AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
+          COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
         (assign
           conditions (c
             (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)

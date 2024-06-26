@@ -46,19 +46,17 @@
     (if conditions
       (if (= condition_code REMARK)
         (if found_remark
-          (x)
-          (if (= 'v' (f condition_body))
+          (x) ; can't have multiple remarks
+          (assert (= 'v' (f condition_body))
             (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
-            (x)
           )
         )
         (if via_solution
           (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
           ; keeper mode, only coin announcements are allowed
           (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
-            (if (is-valid-ann-cond condition_body)
+            (assert (is-valid-ann-cond condition_body)
               (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
-              (x)
             )
             ; ignore other conditions if in keeper mode
             (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
@@ -74,18 +72,16 @@
     ; filter out any cheeky announcements, and skip remarks/create coin
     (if conditions
       (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-        (if (is-valid-ann-cond condition_body)
+        (assert (is-valid-ann-cond condition_body)
           (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-          (x)
         )
         (if (= condition_code SEND_MESSAGE)
-          (if (is-valid-msg-cond condition_body)
+          (assert (is-valid-msg-cond condition_body)
             (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-            (x)
           )
           ; filter out remarks since we use them for driver puzzle reveals and create coins
           (if (any (= condition_code REMARK) (= condition_code CREATE_COIN))
-            (filter-conditions rest_of_conditions filtered_conditions)
+            (x)
             (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
           )
         )

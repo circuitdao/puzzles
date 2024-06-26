@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -61,7 +61,7 @@
     )
     (list
       ; auction_state -> (start_time start_price last_auction_price)
-      (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT auction_state INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
+      (list TRANSFERRED_FEES COLLATERAL PRINCIPAL auction_state INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
       (assert
         ; is previous auction still running by checking if auction_start_time hasn't timed out
         (any
@@ -69,9 +69,9 @@
           (not AUCTION_STATE)
         )
         ; we should be below min collateral ratio to start an auction
-        (> min_collateral_amount DEPOSITED_AMOUNT)
+        (> min_collateral_amount COLLATERAL)
         ; there should be deposit to auction off
-        (> DEPOSITED_AMOUNT 0)
+        (> COLLATERAL 0)
         (list
           (list ASSERT_SECONDS_ABSOLUTE (- auction_start_time MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ auction_start_time MAX_TX_BLOCK_TIME))

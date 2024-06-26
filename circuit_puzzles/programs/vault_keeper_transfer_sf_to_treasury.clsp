@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -29,7 +29,7 @@
   (include curry.clib)
 
   (assign
-    byc_principal_to_melt BYC_MINTED_AMOUNT
+    byc_principal_to_melt PRINCIPAL
     cumulative_stability_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_df
       current_stability_df
@@ -40,7 +40,7 @@
       byc_principal_to_melt
       cumulative_stability_df
       DISCOUNTED_PRINCIPAL
-      BYC_MINTED_AMOUNT
+      PRINCIPAL
       0 ; no liquidation penalty
     )
     fees (- full_fees TRANSFERRED_FEES)
@@ -76,12 +76,12 @@
       ; only if it hasn't entered liquidation yet
       (not AUCTION_STATE)
       ; if there are byc minted, meaning there is something to run SF on
-      (> BYC_MINTED_AMOUNT 0)
+      (> PRINCIPAL 0)
       (list
         (list
           (+ TRANSFERRED_FEES fees)
-          DEPOSITED_AMOUNT
-          BYC_MINTED_AMOUNT ; fees still need to be paid, just not to treasury
+          COLLATERAL
+          PRINCIPAL ; fees still need to be paid, just not to treasury
           AUCTION_STATE
           INNER_PUZZLE_HASH
           DISCOUNTED_PRINCIPAL
