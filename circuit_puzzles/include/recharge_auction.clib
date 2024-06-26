@@ -1,6 +1,7 @@
 (
   (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
+  (defconst EQUALS '=')
 
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
     (if conditions
@@ -82,61 +83,50 @@
             treasury_coin_id
           )
           (c
-            (list REMARK
-                'assert prev treasury coin='
-                (c prev_treasury_coin_id treasury_coin_id)
+            ; check that whole ring is deposited
+            (list ASSERT_COIN_ANNOUNCEMENT
+              (sha256
+                prev_treasury_coin_id
                 TREASURY_COIN_ANN_PREFIX
-                '=' ; as in '$=amount', to avoid collisions
-                (c current_amount next_current_amount)
+                EQUALS ; as in '$=amount', to avoid collisions
+                new_prev_amount
                 ; link the coins, this previous coin to treasury_coin_id
-                (c  launcher_id next_launcher_id)
+                launcher_id
+              )
             )
             (c
-              ; check that whole ring is deposited
               (list ASSERT_COIN_ANNOUNCEMENT
                 (sha256
-                  prev_treasury_coin_id
+                  treasury_coin_id
                   TREASURY_COIN_ANN_PREFIX
-                  '=' ; as in '$=amount', to avoid collisions
-                  new_prev_amount
+                  EQUALS ; as in '$=amount', to avoid collisions
+                  new_amount
                   ; link the coins, this previous coin to treasury_coin_id
-                  launcher_id
+                  next_launcher_id
                 )
               )
-              (c
-                (list ASSERT_COIN_ANNOUNCEMENT
-                  (sha256
-                    treasury_coin_id
-                    TREASURY_COIN_ANN_PREFIX
-                    '=' ; as in '$=amount', to avoid collisions
-                    new_amount
-                    ; link the coins, this previous coin to treasury_coin_id
-                    next_launcher_id
-                  )
-                )
-                (deposit-to-treasury
-                  P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
-                  treasury_minimum
-                  statutes_puzzle_hash
-                  final_treasury_amount
-                  (+ amount_deposited new_amount)
-                  deposit_amount
-                  potential_remainder
-                  first_treasury_coin
-                  (r treasury_coins)
-                  my_coin_id
-                  announcements
-                )
+              (deposit-to-treasury
+                P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                treasury_minimum
+                statutes_puzzle_hash
+                final_treasury_amount
+                (+ amount_deposited new_amount)
+                deposit_amount
+                potential_remainder
+                first_treasury_coin
+                (r treasury_coins)
+                my_coin_id
+                announcements
               )
             )
           )
         )
       )
-      (assert_debug
+      (assert
         (= amount_deposited final_treasury_amount)
         (if (all (= deposit_amount 0) (= potential_remainder 0))
           ; this is assert balance of treasury coins, point is to prove  that recharge auction can be started
-          (assert_debug (> treasury_minimum final_treasury_amount)
+          (assert (> treasury_minimum final_treasury_amount)
             announcements
           )
           announcements
@@ -152,7 +142,7 @@
         (+ 1 count)
         (+ total (f (r (r (r (f treasury_coins))))))
         (if (contains uniques (f (r (f treasury_coins))))
-          (x "bad count")
+          (x)
           (c (f (r (f treasury_coins))) uniques)
         )
       )

@@ -38,23 +38,140 @@
     )
   )
 
-  (defun generate-ann-conditions (STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY price_announcers)
+  (defun generate-ann-conditions (STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY price_announcers)
     (if price_announcers
       (assign
         announcer (f price_announcers)
         ; price_announcers -> ((inner_puzzle_hash_sha256 args_hash price))
         (inner_puzzle_hash args_hash price) announcer
-        announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_PUZZLE_HASH args_hash)
+        announcer_puzzle_hash (assert
+          (size_b32 inner_puzzle_hash)
+          (size_b32 args_hash)
+          (tree_hash_of_apply ATOM_ANNOUNCER_PUZZLE_HASH args_hash)
+        )
         ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             ; ONE value represents that announcer is enabled
-            (sha256 announcer_puzzle_hash (sha256 (sha256tree STATUTES_STRUCT) inner_puzzle_hash ONE DEPOSIT DELAY price))
+            (sha256 announcer_puzzle_hash (sha256 statutes_struct_hash inner_puzzle_hash ONE DEPOSIT DELAY price))
           )
-          (generate-ann-conditions STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY (r price_announcers))
+          (generate-ann-conditions STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY (r price_announcers))
         )
       )
       ()
+    )
+  )
+  (defun filter (pred (@ lst (first . rest)))
+    (if lst
+      (assign item (a pred (list first))
+        (if item
+          (c item (filter pred rest))
+          (filter pred rest)
+        )
+      )
+      ()
+    )
+  )
+
+  (defun list-length (lst count)
+    (if lst
+      (list-length (r lst) (+ count 1))
+      count
+    )
+  )
+
+  (defun not-contains (lst item)
+    (if lst
+      (if (= (f (f lst)) item)
+        (x)
+        (not-contains (r lst) item)
+      )
+      1
+    )
+  )
+
+  (defun unique (lst)
+    (if (r lst)
+      (if (not-contains (r lst) (f (f lst)))
+        (unique (r lst))
+        (x)
+      )
+      1
+    )
+  )
+
+  (defun _reverse (L R)
+    (if L
+      (_reverse
+        (r L)
+        (c (f L) R)
+      )
+      R
+    )
+  )
+
+
+  (defun-inline endp (L)
+    (if L
+      (if (r L)
+        0
+        1
+      )
+      1
+    )
+  )
+
+  (defun _split (Z L R)
+    (if (endp R)
+        (c (_reverse L ()) Z)
+        (_split (r Z) (c (f Z) L) (r (r R))))
+    )
+
+
+  (defun _merge ((@ L ((_ _ L_price) . L_rest)) (@ R ((_ _ R_price) . R_rest)) A)
+    (if (any L R)
+      (if L
+        (if R
+          (if (> R_price L_price)
+            (_merge L_rest R (c (f L) A))
+            (_merge L R_rest (c (f R) A))
+          )
+          (_merge L_rest () (c (f L) A))
+        )
+        (_merge () R_rest (c (f R) A))
+      )
+      (_reverse A ())
+    )
+  )
+
+
+  ; thanks @geoff for the mergesort implementation on https://aggsig.me/mergesort.html
+  (defun mergesort (Z)
+    (if Z
+      (if (r Z)
+        (assign
+          (L . R) (_split Z () Z)
+          (_merge (mergesort L) (mergesort R) ())
+        )
+        Z
+      )
+      ()
+    )
+  )
+
+
+  (defun-inline get-median-index (length)
+    ; if odd, we return the middle value
+    ; if even, we return the one smaller since prices are sorted in descending order
+    (/ length 2)
+  )
+  (defun get-price (prices index curr_index)
+    (if prices
+      (if (= index curr_index)
+        (f prices)
+        (get-price (r prices) index (+ curr_index 1))
+      )
+      (x)
     )
   )
 )

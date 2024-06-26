@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
     statutes_puzzle_hash lineage_proof announcements
@@ -13,7 +12,7 @@
   (include recharge_auction.clib)
   (assign
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
-    (assert_debug
+    (assert
       (> treasury_coins_count 0)
       LAUNCHER_ID
       ; can't run if LAST_BID is set
@@ -67,19 +66,9 @@
                               (f lineage_proof)
                               (curry_hashes
                                 CAT_MOD_HASH
-                                (sha256tree CAT_MOD_HASH)
-                                (sha256tree CAT_TAIL_HASH)
-                                (curry_hashes
-                                  MOD_HASH
-                                  (sha256tree MOD_HASH)
-                                  (sha256tree CAT_MOD_HASH)
-                                  (sha256tree CAT_TAIL_HASH)
-                                  ; we need lineage to provide launcher id as parent might have been a launcher
-                                  (sha256tree (f (r (r lineage_proof)))) ; launcher_id
-                                  (sha256tree STATUTES_STRUCT)
-                                  (sha256tree (f (r (r (r lineage_proof))))) ; start_time
-                                  (sha256tree (f (r (r (r (r lineage_proof)))))) ; bid
-                                )
+                                (sha256 ONE CAT_MOD_HASH)
+                                (sha256 ONE CAT_TAIL_HASH)
+                                (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
                               )
                               ; parent bid amount
                               (f (r lineage_proof))

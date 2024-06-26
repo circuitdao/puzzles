@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
@@ -45,11 +44,14 @@
       new_delay_seconds
       new_max_delta
     ) BILL
-    (assert_debug
+    (assert
       ; can only veto if in proposal mode (BILL is not empty)
       BILL
+      (size_b32 veto_inner_puzzle_hash)
+      (size_b32 veto_bill_hash)
       (> veto_amount amount)
       (> veto_seconds 0)
+
       (list
         ()
         (list

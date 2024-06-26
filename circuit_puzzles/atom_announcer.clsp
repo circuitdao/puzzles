@@ -1,4 +1,3 @@
-; REVIEW: audit the code for correctness and security
 (mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES
      (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
      inner_puzzle
@@ -10,16 +9,6 @@
   (include utils.clib)
   (include statutes_utils.clib)
   (defconst ANN_PREFIX 'A')
-
-  (defun-inline is-invalid-ann-cond (cond_body)
-    (all
-        (=
-          (substr (f cond_body) 0 ONE)
-          ANN_PREFIX
-        )
-        (any (= (strlen (f cond_body)) 2) (> (strlen (f cond_body)) 64))
-      )
-  )
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
                               found_create_coin final_conditions)
@@ -63,11 +52,14 @@
         ; assert parent to ensure someone is not messing with values without approving with pubkey
         ; ensuring that parent was indeed spent with our puzzle and pubkey
         (if lineage
-          (list ASSERT_MY_PARENT_ID
-            (calculate-coin-id
-              parent_id
-              (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
-              prev_deposit
+          (assert
+            (size_b32 prev_puzzle_args_hash)
+            (list ASSERT_MY_PARENT_ID
+              (calculate-coin-id
+                parent_id
+                (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
+                prev_deposit
+              )
             )
           )
           ; launch

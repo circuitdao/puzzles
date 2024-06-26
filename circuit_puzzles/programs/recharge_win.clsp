@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
@@ -12,12 +11,17 @@
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
-  (assign
+  (assign-lambda
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
-    (assert_debug
+    (assert
+      ; must have something to deposit
+      (> treasury_deposit_per_coin 0)
+      (> treasury_coins_count 0)
+      (> winning_byc_bid_amount 0)
+      (> winning_crt_bid_amount 0)
       ; ttl should've expired
       (> (- current_timestamp timestamp) ttl)
       (c
@@ -26,13 +30,13 @@
           CREATE_COIN
           (curry_hashes
             MOD_HASH
-            (sha256tree MOD_HASH)
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree CAT_TAIL_HASH)
-            (sha256tree LAUNCHER_ID)
+            (sha256 ONE MOD_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE LAUNCHER_ID)
             (sha256tree STATUTES_STRUCT)
-            (sha256tree 0)
-            (sha256tree ())
+            (sha256 ONE 0)
+            (sha256 ONE ())
           )
           0
         )
@@ -63,18 +67,9 @@
                             (f lineage_proof)
                             (curry_hashes
                               CAT_MOD_HASH
-                              (sha256tree CAT_MOD_HASH)
-                              (sha256tree CAT_TAIL_HASH)
-                              (curry_hashes
-                                MOD_HASH
-                                (sha256tree MOD_HASH)
-                                (sha256tree CAT_MOD_HASH)
-                                (sha256tree CAT_TAIL_HASH)
-                                (sha256tree LAUNCHER_ID)
-                                (sha256tree STATUTES_STRUCT)
-                                (sha256tree START_TIME)
-                                (sha256tree (f (r (r lineage_proof)))) ; bid
-                              )
+                              (sha256 ONE CAT_MOD_HASH)
+                              (sha256 ONE CAT_TAIL_HASH)
+                              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
                             )
                             ; parent bid amount
                             (f (r lineage_proof))

@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -14,8 +13,6 @@
     )
   )
 
-  (include *standard-cl-23*)
-  (include utils.clib)
 
   (list
     (list TRANSFERRED_FEES DEPOSITED_AMOUNT BYC_MINTED_AMOUNT AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)

@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       _
@@ -9,20 +8,6 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-
-  (defun calculate-cumulative-stability-fee-rate (past_cumulative_stability_fee current_stability_fee current_timestamp previous_timestamp)
-    (if (> previous_timestamp current_timestamp)
-      past_cumulative_stability_fee
-      (calculate-cumulative-discount-factor
-        (/ (* past_cumulative_stability_fee current_stability_fee) PRECISION)
-        current_stability_fee
-        current_timestamp
-        ; per minute calculation
-        (+ previous_timestamp 60)
-      )
-    )
-  )
-
 
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
@@ -60,14 +45,13 @@
       oracle_launcher_id (f (f STATUTES))
       ; we need prev price to assert that latest one is fresher
       (prev_price . prev_last_updated) PRICE_INFO
-      (assert_debug
+      (assert
         (> last_updated prev_last_updated)
         (size_b32 oracle_inner_puz_hash)
         (size_b32 oracle_launcher_id)
         (size_uint32 price)
         ; confirm to oracle price announcement to update the price
         (list
-          (list REMARK (list price last_updated))
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               ; generate oracle singleton puzzle hash

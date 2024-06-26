@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (MUTATION_PROGRAM_HASH MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES LAST_UPDATED
       ; solution
       (@ oracle_mutation
@@ -53,7 +52,7 @@
               (sha256 ONE LAST_UPDATED)
           )
           ; min singleton amount, force it to be this
-          1
+          ONE
         )
         (assign
           (last_price . last_updated) (f (cut-prices PRICES 0))

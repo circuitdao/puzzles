@@ -14,28 +14,9 @@
   (include *standard-cl-23*)
   (include condition_codes.clib)
   (include utils.clib)
+  (include recharge_auction.clib)
 
   (defconst ANN_PREFIX '^')
-  ; LATER: filter function identical to the one in recharge_auction.clib (apart from ANN_PREFIX). Reuse code?
-  (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
-    (if conditions
-      (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (filter-announcements
-          rest_of_conditions
-          (c (f conditions) filtered_announcements)
-        )
-        (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
-          (filter-announcements
-            rest_of_conditions
-            (c (f conditions) filtered_announcements)
-          )
-          ; no other conditions please
-          (x )
-        )
-      )
-      filtered_announcements
-    )
-  )
   (if (contains OPERATIONS (sha256tree operation))
     (a
       operation

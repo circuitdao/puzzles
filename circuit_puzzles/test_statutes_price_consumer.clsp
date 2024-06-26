@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (STATUTES_STRUCT statutes_inner_puzzle_hash price)
   (include *standard-cl-23*)
   (include condition_codes.clib)

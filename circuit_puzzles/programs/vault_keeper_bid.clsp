@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -138,12 +137,12 @@
           treasury_amount
           (curry_hashes
             p2_treasury_mod_hash
-            (sha256tree p2_treasury_mod_hash)
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree BYC_TAIL_HASH)
+            (sha256 ONE p2_treasury_mod_hash)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256tree treasury_prev_launcher_id)
-            (sha256tree treasury_launcher_id)
+            (sha256 ONE treasury_prev_launcher_id)
+            (sha256 ONE treasury_launcher_id)
           )
         )
       )
@@ -251,14 +250,14 @@
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_TIME_INTERVAL step_time_interval)
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR step_price_decrease_factor)
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
-            ; assert cumulative stability fee rate
-            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
             ; assert liquidation penalty percent
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_PERCENT liquidation_penalty_percent)
             (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
             (assert-price-info statutes_puzzle_hash price_info)
             (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
+            ; assert cumulative stability fee rate
+            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
           )
           (if (> fees_for_treasury 0)
             ; get an announcement that BYC was paid into treasury

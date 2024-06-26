@@ -1,8 +1,8 @@
-; REVIEW: Optimize chialisp and then audit
 
 (mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
       mutation_index mutation_value crt_inner_puzzle_hash)
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)

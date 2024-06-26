@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
@@ -29,35 +28,39 @@
       delay_seconds
       max_delta
     ) (if BILL BILL (list (c 0 0) () () () () () ()))
-    (list
-      (if BILL
-        (list
-          ; we allow votes that are in proposal mode to veto other votes, we just need
-          ; to update the enact seconds to whatever is passed with relative_time_spent
-          ; it's up to the user to make this time as close to current time as possible
-          (c
-            (if (> relative_time_spent veto_seconds)
-              1
-              (- veto_seconds relative_time_spent)
-            )
-            (if (> relative_time_spent enact_seconds)
-              1
-              (- enact_seconds relative_time_spent)
-            )
-          )
-          statute_index
-          statute_value
-          threshold_amount_to_propose
-          new_veto_seconds
-          delay_seconds
-          max_delta
-        )
-        ()
-      )
+    (assert
+      (size_b32 target_bill_hash)
+      (size_b32 target_coin_id)
       (list
-        ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
-        (list ASSERT_SECONDS_RELATIVE relative_time_spent)
-        (list SEND_MESSAGE 0x3f (concat ANN_PREFIX ANN_VETO target_bill_hash) target_coin_id)
+        (if BILL
+          (list
+            ; we allow votes that are in proposal mode to veto other votes, we just need
+            ; to update the enact seconds to whatever is passed with relative_time_spent
+            ; it's up to the user to make this time as close to current time as possible
+            (c
+              (if (> relative_time_spent veto_seconds)
+                1
+                (- veto_seconds relative_time_spent)
+              )
+              (if (> relative_time_spent enact_seconds)
+                1
+                (- enact_seconds relative_time_spent)
+              )
+            )
+            statute_index
+            statute_value
+            threshold_amount_to_propose
+            new_veto_seconds
+            delay_seconds
+            max_delta
+          )
+          ()
+        )
+        (list
+          ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
+          (list ASSERT_SECONDS_RELATIVE relative_time_spent)
+          (list SEND_MESSAGE 0x3f (concat ANN_PREFIX ANN_VETO target_bill_hash) target_coin_id)
+        )
       )
     )
   )

@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -15,8 +14,13 @@
   )
   (if (> deposit_amount 0)
     (list
-      (list TRANSFERRED_FEES (+ deposit_amount DEPOSITED_AMOUNT) BYC_MINTED_AMOUNT
-             AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
+      (list
+        TRANSFERRED_FEES
+        (+ deposit_amount DEPOSITED_AMOUNT)
+        BYC_MINTED_AMOUNT
+        AUCTION_STATE
+        INNER_PUZZLE_HASH
+        DISCOUNTED_PRINCIPAL)
       ; nothing else to assert here, just create a coin with new amount
       (list )
     )

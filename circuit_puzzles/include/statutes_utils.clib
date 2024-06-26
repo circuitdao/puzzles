@@ -51,7 +51,8 @@
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
       (curry_hashes (f STATUTES_STRUCT)
-                    (sha256tree STATUTES_STRUCT)
+                    ; we can also provide a hash of the statutes struct to make it more efficient
+                    (if (l (r STATUTES_STRUCT)) (sha256tree STATUTES_STRUCT) (r STATUTES_STRUCT))
                     inner_puzzle_hash
       )
   )

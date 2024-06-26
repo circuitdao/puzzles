@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -9,7 +8,7 @@
     )
     (@ args
       (
-         byc_to_repay my_coin_id statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_principal_amount
+         byc_to_repay statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_principal_amount
          byc_treasury_coin_info p2_treasury_mod_hash price_info current_stability_fee_rate current_timestamp
       )
     )
@@ -85,7 +84,7 @@
       BYC_TAIL_HASH
       byc_melting_coin_info
     )
-    (assert_debug
+    (assert
       (> byc_to_repay 0)
       (> undiscounted_principal (- byc_to_repay 1))
       ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
@@ -104,39 +103,32 @@
           DEPOSITED_AMOUNT new_byc_minted_amount AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
         (assign
           conditions (c
-            (list REMARK "melting ann->" fees_to_pay fees_to_not_pay TRANSFERRED_FEES byc_to_repay negative_byc_principal_to_melt cumulative_stability_fee_rate calculated_stability_fee
-                                       new_treasury_amount new_byc_minted_amount undiscounted_principal DISCOUNTED_PRINCIPAL new_discounted_principal)
+            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-                (c (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_VAULT_DEBT_AMOUNT minimum_principal_amount)
+              (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+              (c (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_VAULT_DEBT_AMOUNT minimum_principal_amount)
+                (c
+                  (assert-price-info statutes_puzzle_hash price_info)
                   (c
-                    (assert-price-info statutes_puzzle_hash price_info)
+                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
                     (c
-                      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
                       (c
-                        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-                        (c
-                          (list ASSERT_MY_COIN_ID my_coin_id)
-                          (c
-                            (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
-                            (if (> negative_byc_principal_to_melt -1)
-                              (list )
-                              (list
-                                ; signal to tail that it can melt the BYC
-                                (list SEND_MESSAGE
-                                  0x3f
-                                  (concat
-                                    VAULT_ANN_PREFIX
-                                    'x'
-                                    byc_coin_id_to_melt
-                                    (- negative_byc_principal_to_melt fees_to_not_pay)
-                                    (sha256tree STATUTES_STRUCT)
-                                  )
-                                  byc_coin_id_to_melt
-                                )
+                        (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
+                        (if (> negative_byc_principal_to_melt -1)
+                          (list )
+                          (list
+                            ; signal to tail that it can melt the BYC
+                            (list SEND_MESSAGE
+                              0x3f
+                              (concat
+                                VAULT_ANN_PREFIX
+                                'x'
+                                byc_coin_id_to_melt
+                                (- negative_byc_principal_to_melt fees_to_not_pay)
+                                (sha256tree STATUTES_STRUCT)
                               )
+                              byc_coin_id_to_melt
                             )
                           )
                         )

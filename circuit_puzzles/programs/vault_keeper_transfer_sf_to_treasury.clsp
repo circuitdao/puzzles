@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -23,10 +22,10 @@
   )
 
   (include *standard-cl-23*)
+  (include utils.clib)
   (include vault.clib)
   (include statutes_utils.clib)
   (include condition_codes.clib)
-  (include utils.clib)
   (include curry.clib)
 
   (assign
@@ -69,7 +68,7 @@
         )
       )
     )
-    (assert_debug
+    (assert
       ; only if there are fees to be paid
       (> fees 0)
       ; to avoid keepers dusting and hogging treasury coins
@@ -88,7 +87,6 @@
           DISCOUNTED_PRINCIPAL
         )
         (list
-          (list REMARK VAULT_ANN_PREFIX "i" byc_issuing_coin_id fees new_treasury_amount TRANSFERRED_FEES)
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat

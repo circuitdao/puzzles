@@ -1,10 +1,9 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
     (ttl current_timestamp my_amount crt_tail_puzzle p2_surplus_auction_coin_parent_id
-             my_coin_id p2_surplus_auction_hash lot_amount limitation_solution)
+     p2_surplus_auction_hash lot_amount limitation_solution)
   )
   (include *standard-cl-23*)
   (include curry.clib)
@@ -18,15 +17,14 @@
     crt_tail_hash (sha256tree crt_tail_puzzle)
     p2_surplus_puzzle_hash (
       curry_hashes CAT_MOD_HASH
-        (sha256tree CAT_MOD_HASH)
-        (sha256tree CAT_TAIL_HASH)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE CAT_TAIL_HASH)
         (curry_hashes p2_surplus_auction_hash
-          (sha256tree p2_surplus_auction_hash)
-          (sha256tree CAT_MOD_HASH)
-          (sha256tree CAT_TAIL_HASH)
-          (sha256tree CRT_TAIL_HASH)
-          (sha256tree MOD_HASH)
-          (sha256tree LAUNCHER_ID)
+          (sha256 ONE p2_surplus_auction_hash)
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE CRT_TAIL_HASH)
+          (sha256 ONE MOD_HASH)
+          (sha256 ONE LAUNCHER_ID)
         )
     )
     p2_surplus_auction_coin_id (calculate-coin-id
@@ -35,6 +33,7 @@
         CAT_LOT_AMOUNT
     )
     (assert
+      (size_b32 p2_surplus_auction_hash)
       ; ensure correct tail reveal is passed
       (= crt_tail_hash CRT_TAIL_HASH)
       ; ttl should've expired
@@ -66,8 +65,8 @@
                           (f lineage_proof)
                           (curry_hashes
                             CAT_MOD_HASH
-                            (sha256tree CAT_MOD_HASH)
-                            (sha256tree CRT_TAIL_HASH)
+                            (sha256 ONE CAT_MOD_HASH)
+                            (sha256 ONE CRT_TAIL_HASH)
                             (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
                           )
                           ; parent bid amount

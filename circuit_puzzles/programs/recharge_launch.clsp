@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (
     (MOD_WITH_OPERATIONS_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash

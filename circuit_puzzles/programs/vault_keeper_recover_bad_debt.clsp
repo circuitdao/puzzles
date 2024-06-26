@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod
   (
     (@ VAULT_STATE
@@ -65,9 +64,6 @@
       (list
         (list TRANSFERRED_FEES DEPOSITED_AMOUNT (- BYC_MINTED_AMOUNT reconcile_amount) updated_auction_state INNER_PUZZLE ())
         (list
-            (list REMARK (list 'updated state->'  " byc principal=" (- BYC_MINTED_AMOUNT reconcile_amount)
-                         'inner_puzzle=' INNER_PUZZLE)
-                                            )
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)

@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
@@ -11,15 +10,12 @@
 
   (defconstant ANN_PREFIX 0x24) ; -> '$'
 
-
-  (defun print (to-show result) (if (all "$print$" to-show result) result result))
-
   (defun filter-ann-conditions ( (@ ann_conditions ( (condition_code . condition_rest) . rest)) filtered_announcements)
     (if ann_conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
         (if  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
           ; bad announcement found, error
-          (x "bad announcement" (f condition_rest))
+          (x)
           (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
         )
         (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
@@ -38,7 +34,7 @@
               ; if it's paying into our puzzle hash, increase the sum (they're depositing)
               (if my_create_coin_exists
                 ; can't pay into our own puzzle hash twice
-                (x "already paid into our own puzzle hash")
+                (x)
                 (parse-conditions (r input_conditions) my_puzzle_hash 1 (c (f input_conditions) return_conditions) (+ new_amount (f rest_condition)) withdraw_amount)
               )
               ; if it's paying into a different puzzle hash, decrease the sum (they're withdrawing)
@@ -54,48 +50,48 @@
     )
   )
 
-      ; filter conditions to only those that are allowed
+  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+                                     RING_PREV_LAUNCHER_ID LAUNCHER_ID prev_launcher_id launcher_id)
+
+    (curry_hashes CAT_MOD_HASH
+      (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE CAT_TAIL_HASH)
+      (curry_hashes MOD_HASH ; puzzle hash
+        (sha256 ONE MOD_HASH)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE CAT_TAIL_HASH)
+        statutes_struct_hash
+        (if prev_launcher_id
+          (sha256 ONE prev_launcher_id)
+          (sha256 ONE RING_PREV_LAUNCHER_ID)
+        )
+        (if launcher_id
+          (sha256 ONE launcher_id)
+          (sha256 ONE LAUNCHER_ID)
+        )
+      )
+    )
+  )
+
   (assign
     filtered_conditions (filter-ann-conditions input_conditions ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    statutes_struct_hash (sha256tree STATUTES_STRUCT)
     ; 1. we're withdrawing/depositing/announcing, lineage proof is parent_id of parent coin and amount, we need to assert
     ;    that assert_parent_id is `(parent_id . previous_amount)`
     ; 2. we're changing lineage, lineage proof is `(parent_id . prev_launcher_id)` and
     ;    asserts announcement from statutes vote
-    generate-puzzle-hash (lambda ((& MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
-                                     RING_PREV_LAUNCHER_ID LAUNCHER_ID)
-                                     prev_launcher_id launcher_id)
-        (curry_hashes CAT_MOD_HASH
-          (sha256tree CAT_MOD_HASH)
-          (sha256tree CAT_TAIL_HASH)
-          (curry_hashes MOD_HASH ; puzzle hash
-            (sha256tree MOD_HASH)
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree CAT_TAIL_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (if prev_launcher_id
-              (sha256tree prev_launcher_id)
-              (sha256tree RING_PREV_LAUNCHER_ID)
-            )
-            (if launcher_id
-              (sha256tree launcher_id)
-              (sha256tree LAUNCHER_ID)
-            )
-          )
-        )
-    )
     (my_puzzle_hash parent_id) (if (= (strlen (r lineage_proof)) 32)
       ; we're changing lineage
       (list
-        ;(a generate-puzzle-hash (list (r lineage_proof))) ; we can only change ring formation
         (curry_hashes MOD_HASH ; inner puzzle hash
-          (sha256tree MOD_HASH)
-          (sha256tree CAT_MOD_HASH)
-          (sha256tree CAT_TAIL_HASH)
-          (sha256tree STATUTES_STRUCT)
+          (sha256 ONE MOD_HASH)
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE CAT_TAIL_HASH)
+          statutes_struct_hash
           ; we can only change ring formation
-          (sha256tree (r lineage_proof))
-          (sha256tree LAUNCHER_ID)
+          (sha256 ONE (r lineage_proof))
+          (sha256 ONE LAUNCHER_ID)
         )
         (if (= (f lineage_proof) LAUNCHER_ID)
           ; this is initial launch, assert launcher coin
@@ -103,7 +99,8 @@
           ; not launch, just update, assert previous coin spend
           (calculate-coin-id
             (f lineage_proof) ; parent id
-            (a generate-puzzle-hash (list () ()))
+            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+                                  RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
             ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
             current_amount ; previous amount
           )
@@ -112,17 +109,18 @@
       ; we're spending/announcing
       (list
         (curry_hashes MOD_HASH ; inner puzzle hash
-          (sha256tree MOD_HASH)
-          (sha256tree CAT_MOD_HASH)
-          (sha256tree CAT_TAIL_HASH)
-          (sha256tree STATUTES_STRUCT)
-          (sha256tree RING_PREV_LAUNCHER_ID)
-          (sha256tree LAUNCHER_ID)
+          (sha256 ONE MOD_HASH)
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE CAT_TAIL_HASH)
+          statutes_struct_hash
+          (sha256 ONE RING_PREV_LAUNCHER_ID)
+          (sha256 ONE LAUNCHER_ID)
         )
         ; this ensures that we're keeping lineage the same
         (calculate-coin-id
           (f lineage_proof)
-          (a generate-puzzle-hash (list () ()))
+          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+                                RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
           ; pass through previous amount
           (r lineage_proof)
         )
@@ -146,7 +144,7 @@
           ; withdraw is set, use that
           (if (> withdraw_amount_pre 0)
             withdraw_amount_pre
-            (x "negative")
+            (x)
           )
         )
         withdraw_amount_pre
@@ -210,15 +208,20 @@
                   ; we want to ensure that the approving puzzle is using the correct mod
                   (if (l approving_mod_curried_args_hash)
                     ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
-                    (assert (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
+                    (assert
+                      (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
+                      (size_b32 (f (r (r approving_mod_curried_args_hash))))
+                      (size_b32 (f (r approving_mod_curried_args_hash)))
                       (curry_hashes CAT_MOD_HASH
-                        (sha256tree CAT_MOD_HASH)
-                        (sha256tree (f (r approving_mod_curried_args_hash)))
+                        (sha256 ONE CAT_MOD_HASH)
+                        (sha256 ONE (f (r approving_mod_curried_args_hash)))
                         (tree_hash_of_apply approving_mod_hash (f (r (r approving_mod_curried_args_hash))))
                       )
                     )
                     ; ELSE;
-                    (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
+                    (assert (size_b32 approving_mod_curried_args_hash)
+                      (tree_hash_of_apply approving_mod_hash approving_mod_curried_args_hash)
+                    )
                   )
                   approver_amount
                 )

@@ -1,4 +1,3 @@
-; REVIEW: Optimize chialisp and then audit
 (mod (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
@@ -30,7 +29,7 @@
   (defconst ANN_PREFIX 'G')
   (defconst ANN_PROPOSED '^')
 
-  (assert_debug
+  (assert
     (> amount threshold_amount_to_propose)
     (> new_threshold_amount_to_propose 0)
     (> new_veto_seconds 0)
