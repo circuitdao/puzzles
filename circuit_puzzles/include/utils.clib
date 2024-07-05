@@ -1,13 +1,16 @@
-
 (
 
   (defconst ONE 1)
+  (defconst TWO 2)
   (defconst MOJOS 1000000000000)
   (defconst PERCENT_PRECISION 10000)
   (defconst MAX_TX_BLOCK_TIME 120)
   (defconst PRECISION 10000000000)
   (defconst ONE_MINUTE 60)
   (defconst b32 32)
+  (defconst TRUE 1)
+  (defconst FALSE 0)
+
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
   )
@@ -26,12 +29,7 @@
     (= (strlen var) ONE)
   )
 
-  (defun calculate-cumulative-discount-factor
-      (past_cumulative_discount_factor
-       current_discount_factor
-       current_timestamp
-       previous_timestamp
-      )
+  (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
     (if (> previous_timestamp current_timestamp)
       past_cumulative_discount_factor
       (calculate-cumulative-discount-factor
@@ -54,7 +52,7 @@
           )
         )
         (if (= (f (r (r condition_rest))) coin_id)
-          (x "bad msg cond" condition_code)
+          (x)
           (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
         )
         (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
@@ -64,9 +62,8 @@
   )
 
   (defun-inline calculate-coin-id (parent puzzle_hash amount)
-    (if (all (size_b32 parent) (size_b32 puzzle_hash) (> amount -1))
+    (assert (size_b32 parent) (size_b32 puzzle_hash) (> amount -1)
       (sha256 parent puzzle_hash amount)
-      (x "bad coin id")
     )
   )
 
@@ -87,6 +84,7 @@
       (f items)
     )
   )
+
   ; this also shows which part of assert failed
   (defmac assert_debug items (assert_debug_ items))
 
@@ -101,23 +99,22 @@
 
   (defun sha256tree (TREE)
     (if (l TREE)
-      (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-      (sha256 1 TREE)
+      (sha256 TWO (sha256tree (f TREE)) (sha256tree (r TREE)))
+      (sha256 ONE TREE)
     )
   )
 
   (defun merge-lists (list_a list_b)
     (if list_a
-        (c (f list_a) (merge-lists (r list_a) list_b))
-        list_b
+      (c
+        (f list_a)
+        (merge-lists
+          (r list_a)
+          list_b)
+        )
+      list_b
     )
   )
-
-
-
-  (defconstant TRUE 1)
-  (defconstant FALSE 0)
-
 
   (defun filter (pred (@ lst (first . rest)))
     (if lst
@@ -134,5 +131,5 @@
 
   (defun print (to-show result) (if (all "$print$" to-show result) result result))
 
-
+  (defun-inline li x x)
 )

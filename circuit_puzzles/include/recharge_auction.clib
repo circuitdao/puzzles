@@ -1,6 +1,7 @@
 (
   (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
+  (defconst EQUALS '=')
 
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
     (if conditions
@@ -49,8 +50,10 @@
             )
             current_amount ; taking second of (launcher_id amount) pair
         )
-        treasury_coin_id (
-          calculate-coin-id
+        treasury_coin_id (assert
+          ; ensure first_treasury_coin is pointing to the same coin this coin is pointing to
+          (= launcher_id next_prev_launcher_id)
+          (calculate-coin-id
             next_parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
@@ -66,9 +69,10 @@
               )
             )
             next_current_amount ; taking second of (launcher_id amount) pair
+          )
         )
         (c
-          ; we also create a coin announcement for each treasury coin
+          ; we also send a message to each treasury coin so they can run
           (list SEND_MESSAGE 0x3f
             (concat
               ANN_PREFIX
@@ -79,24 +83,26 @@
             treasury_coin_id
           )
           (c
-            (list REMARK
+            ; check that whole ring is deposited
+            (list ASSERT_COIN_ANNOUNCEMENT
+              (sha256
                 prev_treasury_coin_id
                 TREASURY_COIN_ANN_PREFIX
-                '=' ; as in '$=amount', to avoid collisions
+                EQUALS ; as in '$=amount', to avoid collisions
                 new_prev_amount
                 ; link the coins, this previous coin to treasury_coin_id
                 launcher_id
+              )
             )
             (c
-              ; check that whole ring is deposited
               (list ASSERT_COIN_ANNOUNCEMENT
                 (sha256
-                  prev_treasury_coin_id
+                  treasury_coin_id
                   TREASURY_COIN_ANN_PREFIX
-                  '=' ; as in '$=amount', to avoid collisions
-                  new_prev_amount
+                  EQUALS ; as in '$=amount', to avoid collisions
+                  new_amount
                   ; link the coins, this previous coin to treasury_coin_id
-                  launcher_id
+                  next_launcher_id
                 )
               )
               (deposit-to-treasury
@@ -129,12 +135,16 @@
     )
   )
 
-  (defun count-treasury-coins (treasury_coins count total)
+  (defun count-treasury-coins (treasury_coins count total uniques)
     (if treasury_coins
       (count-treasury-coins
         (r treasury_coins)
         (+ 1 count)
         (+ total (f (r (r (r (f treasury_coins))))))
+        (if (contains uniques (f (r (f treasury_coins))))
+          (x)
+          (c (f (r (f treasury_coins))) uniques)
+        )
       )
       (list count total)
     )

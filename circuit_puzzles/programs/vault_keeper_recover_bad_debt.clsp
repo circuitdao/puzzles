@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       DEPOSITED_AMOUNT CAT_MOD_HASH BYC_TAIL_HASH BYC_MINTED_AMOUNT AUCTION_STATE INNER_PUZZLE
+       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -49,24 +49,20 @@
     (auction_start_time
      start_price step_price_decrease_factor
      step_time_interval initiator_puzzle_hash initiator_incentive_balance) (assert AUCTION_STATE AUCTION_STATE)
-    updated_auction_state (if (= BYC_MINTED_AMOUNT reconcile_amount)
+    updated_auction_state (if (= PRINCIPAL reconcile_amount)
       ()
       AUCTION_STATE
     )
     (assert
-      ; check that this auction has finished, and that there is no collateral left
-      (= DEPOSITED_AMOUNT 0)
-      ; time should be in the future and auction should be finished
-      (> current_timestamp (+ auction_start_time auction_timeout))
+      ; check that this auction has finished or that there is no collateral left
+      (= COLLATERAL 0)
+      (> PRINCIPAL 0)
       ; if there are byc minted, so we can't reconcile
-      (> BYC_MINTED_AMOUNT (- reconcile_amount 1))
+      (> PRINCIPAL (- reconcile_amount 1))
       (> reconcile_amount 0)
       (list
-        (list TRANSFERRED_FEES DEPOSITED_AMOUNT (- BYC_MINTED_AMOUNT reconcile_amount) updated_auction_state INNER_PUZZLE ())
+        (list TRANSFERRED_FEES COLLATERAL (- PRINCIPAL reconcile_amount) updated_auction_state INNER_PUZZLE ())
         (list
-            (list REMARK (list 'updated state->'  " byc principal=" (- BYC_MINTED_AMOUNT reconcile_amount)
-                         'inner_puzzle=' INNER_PUZZLE)
-                                            )
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)

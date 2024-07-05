@@ -1,0 +1,51 @@
+; penalize announcer for not updating the price
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+      ; solution
+      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes announcer_min_deposit current_timestamp)
+     )
+
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include *standard-cl-23*)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include announcer.clib)
+
+  (assign
+    expired_for_minutes (/ (- current_timestamp TIMESTAMP_EXPIRES) 60)
+    penalized_deposit (/ (* announcer_min_deposit (* (/ expired_for_minutes penalty_interval_in_minutes) penalty_factor_per_interval)) PERCENT_PRECISION)
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    (assert
+      (> current_timestamp TIMESTAMP_EXPIRES)
+      APPROVED
+      LAUNCHER_ID
+      (> DEPOSIT penalized_deposit)
+      (> penalized_deposit 0)
+      (c
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+          (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL_MINUTES penalty_interval_in_minutes)
+            (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL penalty_factor_per_interval)
+              (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_min_deposit)
+                (c (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+                  (recreate-myself-condition MOD_HASH
+                    STATUTES_STRUCT
+                    LAUNCHER_ID
+                    INNER_PUZZLE_HASH
+                    APPROVED
+                    (- DEPOSIT penalized_deposit)
+                    DELAY
+                    ATOM_VALUE
+                    TIMESTAMP_EXPIRES
+                    input_conditions
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

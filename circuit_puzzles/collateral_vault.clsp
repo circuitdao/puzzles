@@ -33,13 +33,12 @@
   )
 
   (defun-inline is-valid-msg-cond (cond_body)
-    1
-;    (not
-;      (=
-;        (substr (f (r cond_body)) 0 1)
-;        ANN_PREFIX
-;      )
-;    )
+    (not
+      (=
+        (substr (f (r cond_body)) 0 1)
+        ANN_PREFIX
+      )
+    )
   )
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)
@@ -47,28 +46,20 @@
     (if conditions
       (if (= condition_code REMARK)
         (if found_remark
-          (x)
-          (if (= 'v' (f condition_body))
+          (x) ; can't have multiple remarks
+          (assert (= 'v' (f condition_body))
             (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
-            (x)
           )
         )
         (if via_solution
           (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
-          ; keeper mode, only coin announcements and messages are allowed
+          ; keeper mode, only coin announcements are allowed
           (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
-            (if (is-valid-ann-cond condition_body)
+            (assert (is-valid-ann-cond condition_body)
               (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
-              (x)
             )
-            (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-              (if (is-valid-msg-cond condition_body)
-                (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
-                (x)
-              )
-              ; ignore other conditions if in keeper mode
-              (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
-            )
+            ; ignore other conditions if in keeper mode
+            (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
           )
         )
       )
@@ -81,18 +72,16 @@
     ; filter out any cheeky announcements, and skip remarks/create coin
     (if conditions
       (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-        (if (is-valid-ann-cond condition_body)
+        (assert (is-valid-ann-cond condition_body)
           (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-          (x)
         )
         (if (= condition_code SEND_MESSAGE)
-          (if (is-valid-msg-cond condition_body)
+          (assert (is-valid-msg-cond condition_body)
             (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-            (x)
           )
-          ; filter out remarks since we use them for driver puzzle reveals
+          ; filter out remarks since we use them for driver puzzle reveals and create coins
           (if (any (= condition_code REMARK) (= condition_code CREATE_COIN))
-            (filter-conditions rest_of_conditions filtered_conditions)
+            (x)
             (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
           )
         )
@@ -106,9 +95,10 @@
   )
 
   (assign
+    statutes_struct_hash (sha256tree STATUTES_STRUCT)
     ; generate tail hash from curried params to avoid any malicious currying
     BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
-      (sha256tree STATUTES_STRUCT)
+      statutes_struct_hash
     )
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
     (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
@@ -120,18 +110,18 @@
         (assert
           (not AUCTION_STATE)
           (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
-          ;(contains OWNER_OPERATIONS operation_mod_hash)
+          (contains OWNER_OPERATIONS operation_mod_hash)
           (list conditions_pre vault_operation_condition_pre)
         )
         ; keeper mode
         (assert
           keeper_operation_info
-          ;(contains KEEPER_OPERATIONS operation_mod_hash)
+          (contains KEEPER_OPERATIONS operation_mod_hash)
           (list conditions_pre vault_operation_condition_pre)
         )
       )
     (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
     (
       (
         final_transferred_fees
@@ -152,7 +142,6 @@
     )
 
     inner_conditions (filter-conditions conditions vault_conditions)
-    ; WARNING: we should always check that byc minted is above collateral and there is enough collateral
     ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
     ; then they would be able to liquidate that vault immediately and inflate amount of BYC, but wait!
     ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place
@@ -165,7 +154,7 @@
           (curry_hashes MOD_HASH
             (sha256tree MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
-            (sha256tree STATUTES_STRUCT)
+            statutes_struct_hash
             (sha256 ONE BYC_TAIL_MOD_HASH)
             (sha256 ONE final_transferred_fees)
             (sha256 ONE final_collateral_amount)
@@ -214,7 +203,7 @@
             (curry_hashes MOD_HASH
               (sha256tree MOD_HASH)
               (sha256 ONE CAT_MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
+              statutes_struct_hash
               (sha256 ONE BYC_TAIL_MOD_HASH)
               (sha256 ONE 0)
               (sha256 ONE 0)

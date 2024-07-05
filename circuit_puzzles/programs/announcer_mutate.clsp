@@ -1,0 +1,74 @@
+; mutation of announcers curried values by owner
+; can mutate the atom value only, or also deactivate itself or topup deposit
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+      ; solution
+      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      (current_timestamp atom_value delay deactivate melt)
+     )
+
+  (defconst MAX_TX_BLOCK_TIME 120)
+
+  (defconst ONE 1)
+  (include condition_codes.clib)
+  (include curry.clib)
+
+  (defun sha256tree (TREE)
+    (if (l TREE)
+      (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+      (sha256 ONE TREE)
+    )
+  )
+  (if (all
+    LAUNCHER_ID
+    (if (all APPROVED (not deactivate))
+      (> deposit (- DEPOSIT 1))
+      (> deposit -1)
+    )
+    inner_puzzle_hash  ; must be owner
+    )
+
+    (c
+      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+      (c
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+        (c
+          (if melt
+            ; melt the announcer if they want to bail out
+            (if (any (not APPROVED) deactivate)
+              (list CREATE_COIN INNER_PUZZLE_HASH deposit)
+              (x)
+            )
+            (list CREATE_COIN
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE LAUNCHER_ID)
+                (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
+                (sha256 ONE (if deactivate 0 APPROVED))
+                (sha256 ONE deposit)
+                (sha256 ONE delay)
+                (sha256 ONE atom_value)
+                (sha256 ONE (+ current_timestamp delay))
+              )
+              deposit
+              (list (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
+            )
+          )
+          (c
+            (list REMARK
+              LAUNCHER_ID
+              (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
+              deposit
+              (if deactivate 0 APPROVED)
+              delay
+              atom_value
+              (+ current_timestamp delay)
+            )
+            input_conditions
+          )
+        )
+      )
+    )
+    (x)
+  )
+)

@@ -32,6 +32,7 @@
       count
     )
   )
+
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     (announcer_registry claim_interval_number operation_conditions) (if (= mint_or_register 'm')
@@ -43,16 +44,18 @@
         current_iteration (/ statutes_price_updates claim_interval)
         announcers_count (list-length ANNOUNCER_REGISTRY 0)
         change_amount (r (divmod crt_credits_per_interval announcers_count))
+        issuance_ph (f (r issuance_coin_info))
         issuance_coin_id (calculate-coin-id
           (f issuance_coin_info)
           (curry_hashes cat_mod_hash
             (sha256 ONE cat_mod_hash)
             (sha256 ONE crt_tail_hash)
-            (f (r issuance_coin_info))
+            issuance_ph
           )
           (f (r (r issuance_coin_info)))
         )
-        (assert_debug
+        (assert
+          (size_b32 issuance_ph)
           (> current_iteration CLAIM_ITERATION)
           (> claim_interval MIN_CLAIM_INTERVAL)
           (> announcers_count 0)
@@ -78,7 +81,8 @@
                       offer_mod_hash
                   )
                   (sha256tree
-                    (c (sha256 my_coin_id funding_coin_id) ; nonce
+                    (c
+                      (sha256 my_coin_id funding_coin_id) ; nonce
                       (generate-offer-assert
                         ANNOUNCER_REGISTRY
                         (/ crt_credits_per_interval announcers_count)
@@ -107,7 +111,7 @@
         (assign
           (announcer_inner_puzzle_hash puzzle_args_hash) args
           announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH puzzle_args_hash)
-          (assert_debug
+          (assert
             (size_b32 puzzle_args_hash)
             (size_b32 announcer_inner_puzzle_hash)
             (not (contains ANNOUNCER_REGISTRY announcer_inner_puzzle_hash))

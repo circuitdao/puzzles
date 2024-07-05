@@ -8,9 +8,7 @@
   (include utils.clib)
   (include recharge_auction.clib)
 
-
-
-  (assign
+  (assign-inline
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     announcements (filter-announcements (f op_args) ())
     (assert (contains OPERATIONS (sha256tree operation))

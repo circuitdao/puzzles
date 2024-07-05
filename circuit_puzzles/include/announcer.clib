@@ -1,0 +1,29 @@
+(
+  (defconst ANN_PREFIX 'A')
+
+  (defun-inline recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
+                                    deposit delay atom_value timestamp_expires input_conditions)
+    (c
+      (list CREATE_COIN
+        (curry_hashes MOD_HASH
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256 ONE LAUNCHER_ID)
+          (sha256 ONE inner_puzzle_hash)
+          (sha256 ONE approved)
+          (sha256 ONE deposit)
+          (sha256 ONE delay)
+          (sha256 ONE atom_value)
+          (sha256 ONE timestamp_expires)
+        )
+        deposit
+        (list inner_puzzle_hash)
+      )
+      ; driver remark to reveal the puzzle hash
+      (c
+        (list REMARK LAUNCHER_ID inner_puzzle_hash deposit approved delay atom_value timestamp_expires)
+        input_conditions
+      )
+    )
+  )
+)

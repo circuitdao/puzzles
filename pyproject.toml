@@ -10,11 +10,10 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.11"
 chialisp_loader = "^0.1.0"
 chialisp_builder = "^0.1.2"
-clvm_rs = "^0.7"
-
+clvm_tools_rs= "^0.1.43"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

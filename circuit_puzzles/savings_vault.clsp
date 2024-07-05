@@ -5,11 +5,11 @@
       statutes_inner_puzzle_hash
       current_amount
       my_coin_id
-      statutes_cumulative_interest_df current_timestamp current_interest_df price_info
+      statutes_cumulative_interest_df current_timestamp current_interest_df price_info minimum_interest_amount
       inner_solution
       .
       (@ treasury_coin_info ((p2_treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
-                             treasury_coin_prev_launcher_id treasury_coin_amount minimum_interest_amount)))
+                             treasury_coin_prev_launcher_id treasury_coin_amount )))
      )
 
   (include *standard-cl-23*)
@@ -20,7 +20,6 @@
 
   (defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
   (defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
-  (defconstant PRECISION 10000000000)
 
 
 
@@ -29,7 +28,7 @@
                             filtered_conditions)
     (if conditions
       (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-        (x "bad announcement" (f condition_rest) (strlen (f condition_rest)))
+        (x)
         (if (= condition_code CREATE_COIN)
           (if found_first_create_coin
             (filter-conditions
@@ -59,50 +58,48 @@
           )
         )
       )
-      (assert_debug found_first_create_coin
+      (assert found_first_create_coin
         (list found_first_create_coin filtered_conditions)
       )
     )
   )
 
-  (defun-inline calculate-interests (discounted_deposit principal cumulative_interest_df)
-    (assign
-      value (- (/ (* discounted_deposit cumulative_interest_df) PRECISION) principal)
-      (if (> value -1)
-        value
-        0
-      )
-    )
+  (defun-inline calculate-interest (discounted_deposit principal cumulative_interest_df)
+    (- (/ (* discounted_deposit cumulative_interest_df) PRECISION) principal)
   )
 
   (assign
+    statutes_struct_hash (sha256tree STATUTES_STRUCT)
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
     cumulative_deposit_interest_df (calculate-cumulative-discount-factor
       statutes_cumulative_interest_df
       current_interest_df
       current_timestamp
       (r price_info)
     )
-    cumulative_withdrawal_interest_df (calculate-cumulative-discount-factor
-      statutes_cumulative_interest_df
-      current_interest_df
-      (- current_timestamp (* 3 MAX_TX_BLOCK_TIME))
-      (r price_info)
-    )
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (create_coin_body conditions) (filter-conditions
       (a INNER_PUZZLE inner_solution)
       0 ; found first coin set to false
       ()
     )
-    interests_amount (if treasury_coin_info
-      (calculate-interests DISCOUNTED_DEPOSIT current_amount cumulative_withdrawal_interest_df)
+    interest_amount (if treasury_coin_info
+      (calculate-interest
+        DISCOUNTED_DEPOSIT
+        current_amount
+        (calculate-cumulative-discount-factor ; cumulative withdrawal interest
+          statutes_cumulative_interest_df
+          current_interest_df
+          (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest
+          (r price_info)
+        )
+      )
       0
     )
     new_amount (f (r create_coin_body))
     delta_amount (- new_amount current_amount)
     new_discounted_deposit (if treasury_coin_info
-      ; discount with interests
-      (+ (/ (* (- delta_amount interests_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
+      ; discount with interest
+      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
       (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
 
@@ -110,22 +107,22 @@
       (calculate-coin-id
         treasury_coin_parent_id
         (curry_hashes CAT_MOD_HASH
-          (sha256tree CAT_MOD_HASH)
-          (sha256tree CAT_TAIL_HASH)
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE CAT_TAIL_HASH)
           (curry_hashes p2_treasury_hash
-            (sha256tree p2_treasury_hash)
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree CAT_TAIL_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (sha256tree treasury_coin_prev_launcher_id)
-            (sha256tree treasury_coin_launcher_id)
+            (sha256 ONE p2_treasury_hash)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CAT_TAIL_HASH)
+            statutes_struct_hash
+            (sha256 ONE treasury_coin_prev_launcher_id)
+            (sha256 ONE treasury_coin_launcher_id)
           )
         )
         treasury_coin_amount
       )
       ()
     )
-    new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interests_amount) 0)
+    new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
     pre_final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_deposit, inner_puzzle_hash)
       (c
@@ -133,14 +130,14 @@
           (calculate-coin-id
             (f lineage_proof)
             (curry_hashes CAT_MOD_HASH
-              (sha256tree CAT_MOD_HASH)
-              (sha256tree CAT_TAIL_HASH)
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CAT_TAIL_HASH)
               (curry_hashes MOD_HASH
-                (sha256tree MOD_HASH)
-                (sha256tree CAT_MOD_HASH)
-                (sha256tree CAT_TAIL_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256tree (f (r (r lineage_proof)))) ; discounted deposit
+                (sha256 ONE MOD_HASH)
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CAT_TAIL_HASH)
+                statutes_struct_hash
+                (sha256 ONE (f (r (r lineage_proof)))) ; discounted deposit
                 (f (r (r (r lineage_proof)))) ; inner puzzle hash
               )
             )
@@ -153,14 +150,14 @@
       (c
         (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
-            (sha256tree CAT_MOD_HASH)
-            (sha256tree CAT_TAIL_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CAT_TAIL_HASH)
             (curry_hashes MOD_HASH
-              (sha256tree MOD_HASH)
-              (sha256tree CAT_MOD_HASH)
-              (sha256tree CAT_TAIL_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256tree 0)
+              (sha256 ONE MOD_HASH)
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CAT_TAIL_HASH)
+              statutes_struct_hash
+              (sha256 ONE 0)
               (sha256tree INNER_PUZZLE)
             )
           )
@@ -178,9 +175,12 @@
       )
       pre_final_conditions
     )
-    (assert_debug
-      (size_b32 (f create_coin_body))
-      (c (list REMARK new_discounted_deposit new_amount (f create_coin_body) (r (r create_coin_body)))
+    inner_puzzle_hash (f create_coin_body)
+    memos (r (r create_coin_body))
+    (assert
+      (> interest_amount -1)
+      (size_b32 inner_puzzle_hash)
+      (c (list REMARK new_discounted_deposit new_amount inner_puzzle_hash memos)
         (c
           (list ASSERT_MY_COIN_ID my_coin_id)
           (c
@@ -192,36 +192,36 @@
                 (c
                   (assert-price-info statutes_puzzle_hash price_info)
                   (c
-                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp 60))
+                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
                     (c
-                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp 120))
+                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
                       (c
                         (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
                           (c
                             (curry_hashes MOD_HASH ; puzzle hash
-                              (sha256tree MOD_HASH)
-                              (sha256tree CAT_MOD_HASH)
-                              (sha256tree CAT_TAIL_HASH)
-                              (sha256tree STATUTES_STRUCT)
-                              (sha256tree new_discounted_deposit)
-                              (f create_coin_body)
+                              (sha256 ONE MOD_HASH)
+                              (sha256 ONE CAT_MOD_HASH)
+                              (sha256 ONE CAT_TAIL_HASH)
+                              statutes_struct_hash
+                              (sha256 ONE new_discounted_deposit)
+                              inner_puzzle_hash
                             )
                             (c new_amount
-                              (r (r create_coin_body)) ; memos
+                              memos
                             )
                           )
                         )
                         (if treasury_coin_id
-                          (assert_debug
+                          (assert
                             ; treasury coin should have enough amount to cover interest
-                            (> new_treasury_amount 0)
-                            ; we limit the amount of interests to the treasury coin amount to avoid dusting the treasury coins
-                            (> interests_amount minimum_interest_amount)
+                            (> new_treasury_amount interest_amount)
+                            ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
+                            (> interest_amount minimum_interest_amount)
                             (c
                               (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_AMOUNT_TO_WITHDRAW minimum_interest_amount)
                               (c
                                 (list SEND_MESSAGE 0x3f
-                                  (concat ANN_PREFIX treasury_coin_id (* -1 interests_amount) new_treasury_amount)
+                                  (concat ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
                                   treasury_coin_id
                                 )
                                 final_conditions

@@ -1,63 +1,18 @@
 (
 
-
   (defconst VAULT_ANN_PREFIX 0x56) ; chr(86) -> "V"
   (defconst TREASURY_ANN_PREFIX 0x24) ; -> "$"
   (defconst BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
 
-  (defun rpow_percent (base exponent)
-    ; Raise a number to a power with fixed-point arithmetic, using recursion.
-    (if (= exponent 0)
-      PERCENT_PRECISION
-      (if (all (l (divmod exponent 2)) (= (r (divmod exponent 2)) 1))
-        (/ (* base (rpow_percent base (- exponent 1))) PERCENT_PRECISION)
-        (rpow_percent (/ (* base base) PERCENT_PRECISION) (/ exponent 2))
-      )
-    )
-  )
-
-  (defun get-vault-operation-lambda (vault_operations vault_operation)
-    (if vault_operations
-      (if (= (f (f vault_operations)) vault_operation)
-        (f (r (f vault_operations)))
-        (get-vault-operation-lambda (r vault_operations) vault_operation)
-      )
-      ()
-    )
-  )
-
-
-
   (defun-inline available-to-mint (collateral debt liquidation_ratio xch_price)
-    (assign
-      max_to_mint (/ (/ (* collateral xch_price 1000) liquidation_ratio) MOJOS)
-      (assert (> (- max_to_mint debt) -1)
-        ; reduce max to mint by what we already have
-        (- max_to_mint debt)
-      )
-    )
-  )
-
-  (defun-inline percent-value (value percent)
-    (assign percent_val (* (/ value 100) percent)
-      (if percent_val
-        percent_val
-        ; value is smaller than 100, just return percent of what we want
-        (if (> value 0)
-          percent
-          ; return zero if we're working with zero amounts
-          value
-        )
-      )
-    )
+    (- (/ (/ (* collateral xch_price 1000) liquidation_ratio) MOJOS) debt)
   )
 
   (defun-inline get-min-collateral-amount (debt liquidation_ratio xch_price)
-        ; returns min collateral value for threshold coll ratio, multiplying with -1 to ceil the division
-        (/ (* -1 (* (/ (* -1 debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
+    ; returns min collateral value for threshold coll ratio, multiplying with -1 to ceil the division
+    (/ (* -1 (* (/ (* -1 debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
   )
 
-  ; LATER: no need to use negative byc principal to melt. pass in the positive value
   (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
     (- discounted_principal
       (/
@@ -68,15 +23,15 @@
   )
 
 
-  (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate
-                         discounted_principal
-                         principal liquidation_penalty_percent)
+  (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate discounted_principal principal liquidation_penalty_percent)
     (assign
-      undiscounted_principal (/ (* discounted_principal cumulative_stability_fee_rate) PRECISION)
-      calculated_outstanding_fees (if (> undiscounted_principal (- principal 1)) (- undiscounted_principal principal) (x "fees are negative"))
-      liquidation_penalty (/ (* (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION)
-      total_debt (+ principal liquidation_penalty calculated_outstanding_fees)
-      total_repayment_percentage (/ (* byc_amount PRECISION) total_debt)
+      undiscounted_principal (* -1 (/ (* -1 discounted_principal cumulative_stability_fee_rate) PRECISION))
+      calculated_outstanding_fees (if (> undiscounted_principal principal)
+        (- undiscounted_principal principal)
+        0
+      )
+      liquidation_penalty (* -1 (/ (* -1 (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION))
+      total_repayment_percentage (/ (* byc_amount PRECISION) (+ principal liquidation_penalty calculated_outstanding_fees))
       (if (= total_repayment_percentage PRECISION)
         (c (+ calculated_outstanding_fees liquidation_penalty) liquidation_penalty)
         (c
@@ -86,7 +41,7 @@
               PRECISION
             )
           )
-          (/ (* liquidation_penalty total_repayment_percentage) PRECISION)
+          (* -1 (/ (* -1 liquidation_penalty total_repayment_percentage) PRECISION))
         )
       )
     )
@@ -95,25 +50,25 @@
 
   (defun-inline calculate-stability-fee-puzzle (CAT_MOD_HASH BYC_TAIL_HASH OFFER_MOD_HASH)
     (curry_hashes CAT_MOD_HASH
-                  (sha256 ONE CAT_MOD_HASH)
-                  (sha256 ONE BYC_TAIL_HASH)
-                  OFFER_MOD_HASH
+      (sha256 ONE CAT_MOD_HASH)
+      (sha256 ONE BYC_TAIL_HASH)
+      OFFER_MOD_HASH
     )
   )
 
   (defun-inline calculate-byc-coin-id (CAT_MOD_HASH BYC_TAIL_HASH (parent_id amount inner_puzzle_hash))
-    (if (size_b32 inner_puzzle_hash)
+    (assert
+      (size_b32 inner_puzzle_hash)
       (calculate-coin-id
         parent_id
         (curry_hashes CAT_MOD_HASH
-                      (sha256 ONE CAT_MOD_HASH)
-                      (sha256 ONE BYC_TAIL_HASH)
-                      ; inner puzzle for cat coin
-                      inner_puzzle_hash
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
+          ; inner puzzle for cat coin
+          inner_puzzle_hash
         )
         amount
       )
-      (x)
     )
   )
 
