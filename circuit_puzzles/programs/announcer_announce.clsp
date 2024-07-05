@@ -3,12 +3,17 @@
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       _
      )
+  (defconst ONE 1)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23*)
-  (include utils.clib)
-  (include statutes_utils.clib)
-  (include announcer.clib)
+
+  (defun sha256tree (TREE)
+    (if (l TREE)
+      (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+      (sha256 ONE TREE)
+    )
+  )
+
   (c
     (list CREATE_PUZZLE_ANNOUNCEMENT
       (sha256
@@ -22,17 +27,27 @@
     )
     (c
       (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
-      (recreate-myself-condition MOD_HASH
-        STATUTES_STRUCT
-        LAUNCHER_ID
-        INNER_PUZZLE_HASH
-        APPROVED
-        DEPOSIT
-        DELAY
-        ; if approved, atom value must > 0
-        (if (all APPROVED (> 1 ATOM_VALUE)) (x) ATOM_VALUE)
-        TIMESTAMP_EXPIRES
-        input_conditions
+      (c
+        (list CREATE_COIN
+          (curry_hashes MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE INNER_PUZZLE_HASH)
+            (sha256 ONE APPROVED)
+            (sha256 ONE DEPOSIT)
+            (sha256 ONE DELAY)
+            (sha256 ONE (if (all APPROVED (> 1 ATOM_VALUE)) (x) ATOM_VALUE))
+            (sha256 ONE TIMESTAMP_EXPIRES)
+          )
+          deposit
+          (list INNER_PUZZLE_HASH)
+        )
+        ; driver remark to reveal the puzzle hash
+        (c
+          (list REMARK LAUNCHER_ID INNER_PUZZLE_HASH DEPOSIT APPROVED DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+          input_conditions
+        )
       )
     )
   )

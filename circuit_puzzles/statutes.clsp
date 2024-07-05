@@ -2,7 +2,7 @@
       OPERATIONS
       MOD_HASH
       (
-        TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
+        TREASURY_APPROVAL_MOD_HASHES_HASH ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
         P2_TREASURY_MOD_HASH
         OFFER_MOD_HASH
         P2_SURPLUS_AUCTION_MOD_HASH
@@ -54,7 +54,7 @@
     )
   )
 
-  (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES
+  (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES_HASH
                                         P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
@@ -65,7 +65,7 @@
         (sha256 ONE MOD_HASH)
         (sha256tree
           (list
-            TREASURY_APPROVAL_MOD_HASHES
+            TREASURY_APPROVAL_MOD_HASHES_HASH
             P2_TREASURY_MOD_HASH
             OFFER_MOD_HASH
             P2_SURPLUS_AUCTION_MOD_HASH
@@ -89,15 +89,10 @@
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
     (operation_mod . operation_mod_hash) (if operation (c operation (sha256tree operation)) (c () ()))
     (statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates mutation_conditions)
-      (if (= operation_mod_hash ())
-        ; default to existing values
-        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
+      (if operation_mod_hash
         ; mutate statutes
         (assert
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
-          (> mutation_index -3)
-          (> 2 (strlen mutation_index))
-          (l mutation_value)
           (a
             operation_mod
             (list
@@ -106,12 +101,14 @@
             )
           )
         )
+        ; default to existing values
+        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
       )
     (c (list REMARK statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
       (c
         (create-coin-condition
           MOD_HASH
-          TREASURY_APPROVAL_MOD_HASHES
+          TREASURY_APPROVAL_MOD_HASHES_HASH
           P2_TREASURY_MOD_HASH
           P2_SURPLUS_AUCTION_MOD_HASH
           CAT_MOD_HASH
@@ -123,6 +120,7 @@
           cumulative_interest_rate
           price_updates
         )
+        ; TODO: disable ephemeral spends to avoid conflicts with mutation spends
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
             (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -7 price_updates)
@@ -141,7 +139,7 @@
                 )
                 (c
                   (list CREATE_PUZZLE_ANNOUNCEMENT
-                    (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 (sha256tree TREASURY_APPROVAL_MOD_HASHES))
+                    (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES_HASH)
                   )
                   (c
                     (list CREATE_PUZZLE_ANNOUNCEMENT

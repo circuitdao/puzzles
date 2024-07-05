@@ -1,7 +1,7 @@
 (
   (defconst ANN_PREFIX 'A')
 
-  (defun recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
+  (defun-inline recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
                                     deposit delay atom_value timestamp_expires input_conditions)
     (c
       (list CREATE_COIN

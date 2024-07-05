@@ -25,10 +25,12 @@
 
   (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate discounted_principal principal liquidation_penalty_percent)
     (assign
-      calculated_outstanding_fees (assert (> (/ (* discounted_principal cumulative_stability_fee_rate) PRECISION) (- principal 1))
-        (- (/ (* discounted_principal cumulative_stability_fee_rate) PRECISION) principal)
+      undiscounted_principal (* -1 (/ (* -1 discounted_principal cumulative_stability_fee_rate) PRECISION))
+      calculated_outstanding_fees (if (> undiscounted_principal principal)
+        (- undiscounted_principal principal)
+        0
       )
-      liquidation_penalty (/ (* (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION)
+      liquidation_penalty (* -1 (/ (* -1 (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION))
       total_repayment_percentage (/ (* byc_amount PRECISION) (+ principal liquidation_penalty calculated_outstanding_fees))
       (if (= total_repayment_percentage PRECISION)
         (c (+ calculated_outstanding_fees liquidation_penalty) liquidation_penalty)
@@ -39,7 +41,7 @@
               PRECISION
             )
           )
-          (/ (* liquidation_penalty total_repayment_percentage) PRECISION)
+          (* -1 (/ (* -1 liquidation_penalty total_repayment_percentage) PRECISION))
         )
       )
     )

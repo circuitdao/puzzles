@@ -5,11 +5,11 @@
       statutes_inner_puzzle_hash
       current_amount
       my_coin_id
-      statutes_cumulative_interest_df current_timestamp current_interest_df price_info
+      statutes_cumulative_interest_df current_timestamp current_interest_df price_info minimum_interest_amount
       inner_solution
       .
       (@ treasury_coin_info ((p2_treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
-                             treasury_coin_prev_launcher_id treasury_coin_amount minimum_interest_amount)))
+                             treasury_coin_prev_launcher_id treasury_coin_amount )))
      )
 
   (include *standard-cl-23*)

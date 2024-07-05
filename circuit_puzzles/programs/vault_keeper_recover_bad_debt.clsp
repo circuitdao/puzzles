@@ -54,10 +54,9 @@
       AUCTION_STATE
     )
     (assert
-      ; check that this auction has finished, and that there is no collateral left
+      ; check that this auction has finished or that there is no collateral left
       (= COLLATERAL 0)
-      ; time should be in the future and auction should be finished
-      (> current_timestamp (+ auction_start_time auction_timeout))
+      (> PRINCIPAL 0)
       ; if there are byc minted, so we can't reconcile
       (> PRINCIPAL (- reconcile_amount 1))
       (> reconcile_amount 0)

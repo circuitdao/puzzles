@@ -99,8 +99,8 @@
 
   (defun sha256tree (TREE)
     (if (l TREE)
-      (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-      (sha256 1 TREE)
+      (sha256 TWO (sha256tree (f TREE)) (sha256tree (r TREE)))
+      (sha256 ONE TREE)
     )
   )
 
@@ -131,4 +131,5 @@
 
   (defun print (to-show result) (if (all "$print$" to-show result) result result))
 
+  (defun-inline li x x)
 )

@@ -14,6 +14,7 @@ clsp_builder = chialisp_builder.ChialispBuild([Path(str(files(__package__) / "in
 for puzzle_path in PUZZLE_PATHS:
     try:
         clsp_builder(puzzle_path)
+        f = open(puzzle_path, 'r').read()
     except Exception as e:
         print(f"Failed to compile {puzzle_path}: {e}")
         raise

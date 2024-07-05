@@ -66,6 +66,8 @@
     ;  updating statutes, assert permission
     (assert
       (size_b32 crt_inner_puzzle_hash)
+      (> mutation_index -3)
+      (> 2 (strlen mutation_index))
       (if (= mutation_index -1)
         ; vote for announcements only, so this should just be a list
         (l mutation_value)

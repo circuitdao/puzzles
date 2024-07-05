@@ -73,7 +73,7 @@
     byc_principal_to_melt (- byc_to_bid fees)
     ; negative because we need negative value in the coin announcements later on
     negative_byc_principal_to_melt (* -1 byc_principal_to_melt)
-    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
+    undiscounted_principal (* -1 (/ (* -1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
     discounted_principal (if (= (- byc_to_bid liquidation_penalty) undiscounted_principal)
       0
       (discount-principal-for-melt

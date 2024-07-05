@@ -62,7 +62,7 @@
             )
             vault_coin_id
           )
-          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES (sha256tree approved_mod_hashes))
         )
       )
     )

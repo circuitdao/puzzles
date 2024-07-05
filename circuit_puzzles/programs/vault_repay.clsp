@@ -47,7 +47,7 @@
       PRINCIPAL
       negative_byc_principal_to_melt
     )
-    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
+    undiscounted_principal (* -1 (/ (* -1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
     new_discounted_principal (if (= byc_to_repay undiscounted_principal)
       0
       (discount-principal-for-melt
@@ -56,7 +56,6 @@
         cumulative_stability_fee_rate
       )
     )
-    new_undiscounted_principal (/ (* new_discounted_principal cumulative_stability_fee_rate) PRECISION)
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
@@ -93,7 +92,6 @@
       (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
       ; current time must be at least after last oracle update
       (> current_timestamp (f price_info))
-      (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
       (list
         (list
           (if (> TRANSFERRED_FEES calculated_stability_fee)

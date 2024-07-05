@@ -27,8 +27,6 @@
       (list final_conditions found_create_coin)
     )
   )
-
-
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
     raw_conditions (if inner_puzzle_hash
@@ -39,17 +37,15 @@
       solution_or_conditions
     )
 
-    (input_conditions (new_puzzle_hash deposit . operation_data))
+    (input_conditions (new_puzzle_hash deposit (operation . args)))
       (if raw_conditions
         (restrict-conditions raw_conditions () ())
         (list () (list INNER_PUZZLE_HASH DEPOSIT (list 0 0)))
       )
-    (operation . args ) (f operation_data)
     (assert
       (any inner_puzzle_hash (all (not inner_puzzle_hash) (= new_puzzle_hash INNER_PUZZLE_HASH)))
       (contains OPERATIONS (sha256tree operation))
       (c
-        ; assert parent to ensure someone is not messing with values without approving with pubkey
         ; ensuring that parent was indeed spent with our puzzle and pubkey
         (if lineage
           (assert
