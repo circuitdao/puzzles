@@ -1,4 +1,4 @@
-(mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES LAST_UPDATED
+(mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
       (@ oracle_mutation
               (
                 oracle_mutation_program
@@ -29,6 +29,7 @@
     price_announcers_length (if oracle_mutation (list-length price_announcers 0) ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     sorted_prices (mergesort price_announcers)
+    last_price_updated (r (last-item PRICES))
     ; get median price, divide length by 2 and add 1 to get the middle when length is even
     mean_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     announcer_conditions (generate-ann-conditions
@@ -52,9 +53,9 @@
       (> price_announcers_length (- m_of_n 1))
       ; check that prices are unique
       (unique price_announcers)
-      (> current_timestamp LAST_UPDATED)
+      (> current_timestamp last_price_updated)
       (any
-        (> (- current_timestamp LAST_UPDATED) price_updatable_after_seconds)
+        (> (- current_timestamp last_price_updated) price_updatable_after_seconds)
         (if (> last_price 0)
           (> (abs (/ (* (- last_price mean_price) PERCENT_PRECISION) last_price) ) price_updatable_threshold_percent)
           ; no prices in buffer, update now
@@ -63,49 +64,36 @@
         (not (r new_prices)) ; only latest price in the list, this is fine too as all other prices are expired
       )
       ; should be confirmed at least within 5 blocks since it was pushed to mempool
-      (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+      (li
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
         ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
         ; within a boundary of last_block > current_timestamp - 1 block < next block
-        (c (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-          (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
-            (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_AFTER_SECONDS price_updatable_after_seconds)
-              (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_PERCENT_THRESHOLD price_updatable_threshold_percent)
-                (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY announcer_delay)
-                  (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_deposit)
-                    (c (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_EXPIRATION_SECONDS price_expiration_seconds)
-                      (c
-                        (list CREATE_PUZZLE_ANNOUNCEMENT
-                          (if (> last_price -1)
-                            (sha256 next_price next_price_updated)
-                            (sha256 mean_price current_timestamp)
-                          )
-                        )
-                        (c
-                          (list
-                            CREATE_COIN
-                            (curry_hashes MOD_HASH
-                              (sha256 ONE MOD_HASH)
-                              (sha256tree STATUTES_STRUCT)
-                              (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
-                              (sha256tree new_prices)
-                              (sha256 ONE current_timestamp)
-                            )
-                            ; min singleton amount, force it to be ONE
-                            1
-                          )
-                          (c
-                            (list REMARK new_prices mean_price last_price current_timestamp)
-                            (verify-announcement-asserts input_announcement_asserts announcer_conditions)
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_AFTER_SECONDS price_updatable_after_seconds)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_PERCENT_THRESHOLD price_updatable_threshold_percent)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY announcer_delay)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_EXPIRATION_SECONDS price_expiration_seconds)
+        (list CREATE_PUZZLE_ANNOUNCEMENT
+          (if (> last_price -1)
+            (sha256 next_price next_price_updated)
+            (sha256 mean_price current_timestamp)
           )
         )
+        (list
+          CREATE_COIN
+          (curry_hashes MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
+            (sha256tree new_prices)
+          )
+          ; min singleton amount, force it to be ONE
+          1
+        )
+        (list REMARK new_prices mean_price last_price current_timestamp)
+        &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
       )
     )
   )
