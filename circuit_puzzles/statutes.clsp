@@ -60,7 +60,7 @@
                                         statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
     (list
       CREATE_COIN
-      ; puzzle
+      ; NOTE: we don't curry in operations here as they're already curried in mod hash
       (curry_hashes MOD_HASH
         (sha256 ONE MOD_HASH)
         (sha256tree

@@ -79,7 +79,7 @@
         (list SEND_MESSAGE 0x10
           (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
         )
-        (list ASSERT_HEIGHT_RELATIVE 0)
+        (list ASSERT_HEIGHT_RELATIVE 1)
         &rest
         (if (= mutation_index -1)
           (filter-ann-conditions (f mutation_value) ())

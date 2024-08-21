@@ -1,5 +1,5 @@
 ; penalize announcer for not updating the price
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes announcer_min_deposit current_timestamp)
@@ -37,6 +37,7 @@
                     (- DEPOSIT penalized_deposit)
                     DELAY
                     ATOM_VALUE
+                    COOLDOWN_START
                     TIMESTAMP_EXPIRES
                     input_conditions
                   )

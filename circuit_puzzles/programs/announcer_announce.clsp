@@ -1,4 +1,4 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       _
@@ -38,6 +38,7 @@
             (sha256 ONE DEPOSIT)
             (sha256 ONE DELAY)
             (sha256 ONE (if (all APPROVED (> 1 ATOM_VALUE)) (x) ATOM_VALUE))
+            (sha256 ONE COOLDOWN_START)
             (sha256 ONE TIMESTAMP_EXPIRES)
           )
           deposit
@@ -45,7 +46,7 @@
         )
         ; driver remark to reveal the puzzle hash
         (c
-          (list REMARK LAUNCHER_ID INNER_PUZZLE_HASH DEPOSIT APPROVED DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+          (list REMARK LAUNCHER_ID INNER_PUZZLE_HASH DEPOSIT APPROVED DELAY ATOM_VALUE COOLDOWN_START TIMESTAMP_EXPIRES)
           input_conditions
         )
       )

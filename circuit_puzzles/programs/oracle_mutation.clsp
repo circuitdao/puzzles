@@ -29,7 +29,6 @@
     price_announcers_length (if oracle_mutation (list-length price_announcers 0) ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     sorted_prices (mergesort price_announcers)
-    last_price_updated (r (last-item PRICES))
     ; get median price, divide length by 2 and add 1 to get the middle when length is even
     mean_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     announcer_conditions (generate-ann-conditions
@@ -40,12 +39,13 @@
       announcer_delay
       price_announcers
     )
+    ; we add latest price to the end of the list
     new_prices (merge-lists
       (cut-prices PRICES (- current_timestamp price_expiration_seconds))
       (list (c mean_price current_timestamp))
     )
     (next_price . next_price_updated) (f new_prices)
-    (last_price . _) (last-item PRICES)
+    (last_price . last_price_updated) (last-item PRICES)
     ;  new coin will have updated price, increase the counter of updates
     ;###  main expression
     ; check that we haven't updated the price recently OR new price is much higher than previous
