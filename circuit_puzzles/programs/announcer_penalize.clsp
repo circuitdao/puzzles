@@ -27,7 +27,7 @@
         (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL_MINUTES penalty_interval_in_minutes)
             (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL penalty_factor_per_interval)
-              (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_min_deposit)
+              (c (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DEPOSIT announcer_min_deposit)
                 (c (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
                   (recreate-myself-condition MOD_HASH
                     STATUTES_STRUCT

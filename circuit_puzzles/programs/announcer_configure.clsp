@@ -1,9 +1,7 @@
-; governance backdoor
-; we either activate this announcer or deactivate, can happen at any time via CRT vote
 (mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval delay new_price melt)
+      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval delay new_atom_value melt)
      )
   (include condition_codes.clib)
   (include curry.clib)
@@ -29,7 +27,7 @@
             (c 0 0)
             (if (= COOLDOWN_START 0)
               ; starting the cooldown
-              (c 1 (+ deactivation_cooldown_interval current_timestamp))
+              (c 1 current_timestamp)
               ; keep the current state
               (c 1 COOLDOWN_START)
             )
@@ -58,7 +56,7 @@
         toggle_activation ; current statutes price counter passed
         deposit
         delay
-        (if new_price new_price ATOM_VALUE)
+        (if new_atom_value new_atom_value ATOM_VALUE)
         cooldown_start
         (+ current_timestamp delay)
         input_conditions
@@ -68,7 +66,7 @@
       inner_puzzle_hash  ; must be owner
       (li
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY delay)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DEPOSIT deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
