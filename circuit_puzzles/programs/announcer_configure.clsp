@@ -1,7 +1,7 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval delay new_atom_value melt)
+      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval min_deposit delay new_atom_value melt)
      )
   (include condition_codes.clib)
   (include curry.clib)
@@ -58,15 +58,17 @@
         delay
         (if new_atom_value new_atom_value ATOM_VALUE)
         cooldown_start
+        LAST_PENALTY_INTERVAL
         (+ current_timestamp delay)
         input_conditions
       )
     )
-    (assert
+    (assert_debug
       inner_puzzle_hash  ; must be owner
+      (> deposit min_deposit) ; must be higher than the minimum deposit statute
       (li
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY delay)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DEPOSIT deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT min_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))

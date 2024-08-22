@@ -7,10 +7,8 @@
                 price_updatable_after_seconds
                 price_updatable_threshold_percent
                 price_expiration_seconds
-                announcer_delay
-                announcer_deposit
                 current_timestamp
-                ; price_announcers -> ((inner_puzzle_hash args_hash price))
+                ; price_announcers -> ((inner_puzzle_hash args_hash price deposit))
                 price_announcers
               )
 
@@ -35,8 +33,6 @@
       STATUTES_STRUCT
       (sha256tree STATUTES_STRUCT)
       ATOM_ANNOUNCER_PUZZLE_HASH
-      announcer_deposit
-      announcer_delay
       price_announcers
     )
     ; we add latest price to the end of the list
@@ -72,8 +68,6 @@
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_AFTER_SECONDS price_updatable_after_seconds)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATABLE_PERCENT_THRESHOLD price_updatable_threshold_percent)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY announcer_delay)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DEPOSIT announcer_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_EXPIRATION_SECONDS price_expiration_seconds)
         (list CREATE_PUZZLE_ANNOUNCEMENT
           (if (> last_price -1)

@@ -31,10 +31,10 @@
       (list
         (list CREATE_COIN
           (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
-              (sha256tree PRICES)
+            (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
+            (sha256tree PRICES)
           )
           ; min singleton amount, force it to be this
           ONE

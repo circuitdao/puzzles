@@ -1,6 +1,6 @@
 ; governance
 ; we either activate this announcer or deactivate, can happen at any time via CRT vote
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp statutes_inner_puzzle_hash input_toggle_activation max_disapproval_penalty_factor)
@@ -25,6 +25,7 @@
       DELAY
       ATOM_VALUE
       COOLDOWN_START
+      LAST_PENALTY_INTERVAL
       TIMESTAMP_EXPIRES
       (if (all (= toggle_activation 0) APPROVED)
         ; we're disapproving, use deposit for fees, but can't pay more than the penalty
