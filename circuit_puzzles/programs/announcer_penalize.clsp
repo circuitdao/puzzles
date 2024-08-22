@@ -2,7 +2,7 @@
 (mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes announcer_min_deposit announcer_min_delay current_timestamp)
+      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes announcer_min_deposit announcer_max_delay current_timestamp)
      )
 
   (include condition_codes.clib)
@@ -41,7 +41,7 @@
         ; we only penalize if announcers deposit is below min
         (> announcer_min_deposit DEPOSIT)
         ; we only penalize if announcers delay is above expected delay
-        (> DELAY announcer_min_delay)
+        (> DELAY announcer_max_delay)
       )
       APPROVED
       LAUNCHER_ID
@@ -53,7 +53,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL_MINUTES penalty_interval_in_minutes)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL penalty_factor_per_interval)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT announcer_min_deposit)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY announcer_min_delay)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY announcer_max_delay)
         (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
         &rest
         (recreate-myself-condition MOD_HASH
