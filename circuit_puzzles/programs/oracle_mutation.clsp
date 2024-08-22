@@ -8,7 +8,7 @@
                 price_updatable_threshold_percent
                 price_expiration_seconds
                 current_timestamp
-                ; price_announcers -> ((inner_puzzle_hash args_hash price deposit))
+                ; price_announcers -> ((inner_puzzle_hash args_hash price))
                 price_announcers
               )
 
