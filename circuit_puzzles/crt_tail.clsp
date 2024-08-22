@@ -90,23 +90,24 @@
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         approving_coin_id (calculate-coin-id
           parent_id
-          (if byc_tail_hash
+          (if (all byc_tail_hash (= mod_hash (f (r (r approved_mod_hashes)))))
+            ; either a CAT puzzle with recharge auction as inner puzzle
             (curry_hashes CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
               (sha256 ONE byc_tail_hash)
               (tree_hash_of_apply mod_hash curried_mod_args)
             )
-            (tree_hash_of_apply mod_hash curried_mod_args)
+            ; OR announcer registry
+            (assert
+              (= mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry
+              (tree_hash_of_apply mod_hash curried_mod_args)
+            )
           )
           amount
         )
         (assert
           ; recharge auction mod is the third in approved mod hash list
           ; can also be announcer registry
-          (any
-            (= mod_hash (f (r (r approved_mod_hashes)))) ; recharge auction
-            (= mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry
-          )
           (any (size_b32 byc_tail_hash) (not byc_tail_hash))
           (size_uint64 amount)
           (size_uint64 issuance_amount)

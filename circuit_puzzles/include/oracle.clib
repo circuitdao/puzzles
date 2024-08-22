@@ -38,7 +38,7 @@
     )
   )
 
-  (defun generate-ann-conditions (STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY price_announcers)
+  (defun generate-ann-conditions (STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH price_announcers)
     (if price_announcers
       (assign
         announcer (f price_announcers)
@@ -53,9 +53,9 @@
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             ; ONE value represents that announcer is enabled
-            (sha256 announcer_puzzle_hash (sha256 statutes_struct_hash inner_puzzle_hash ONE DEPOSIT DELAY price))
+            (sha256 announcer_puzzle_hash (sha256 statutes_struct_hash inner_puzzle_hash ONE price))
           )
-          (generate-ann-conditions STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH DEPOSIT DELAY (r price_announcers))
+          (generate-ann-conditions STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH (r price_announcers))
         )
       )
       ()

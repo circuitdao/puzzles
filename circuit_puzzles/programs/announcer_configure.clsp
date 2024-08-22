@@ -1,0 +1,89 @@
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+      ; solution
+      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval min_deposit delay max_delay new_atom_value melt)
+     )
+  (include condition_codes.clib)
+  (include curry.clib)
+  (include *standard-cl-23*)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include announcer.clib)
+
+  (assign
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    (toggle_activation . cooldown_start) (
+      if
+        (any (= input_toggle_activation 0) (= input_toggle_activation 1))
+        (if
+          (= input_toggle_activation 0)
+          (if
+            (all
+              APPROVED
+              (> COOLDOWN_START 0)
+              (> (- current_timestamp COOLDOWN_START) deactivation_cooldown_interval)
+            )
+            ; deactivating announcer
+            (c 0 0)
+            (if (= COOLDOWN_START 0)
+              ; starting the cooldown
+              (c 1 current_timestamp)
+              ; keep the current state
+              (c 1 COOLDOWN_START)
+            )
+          )
+          (if (= COOLDOWN_START 0)
+            ; keep the current state
+            (c APPROVED COOLDOWN_START)
+            ; disable the cooldown and keep the announcer approved
+            (c APPROVED 0)
+          )
+        )
+        (x)
+      )
+    operation_conditions (if melt
+      (if (not APPROVED)
+        ; melting into normal XCH coin
+        (list
+          (list CREATE_COIN INNER_PUZZLE_HASH DEPOSIT (list INNER_PUZZLE_HASH))
+        )
+        (x) ; can't melt approved announcer
+      )
+      (recreate-myself-condition MOD_HASH
+        STATUTES_STRUCT
+        LAUNCHER_ID
+        (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
+        toggle_activation ; current statutes price counter passed
+        deposit
+        delay
+        (if new_atom_value new_atom_value ATOM_VALUE)
+        cooldown_start
+        LAST_PENALTY_INTERVAL
+        (+ current_timestamp delay)
+        input_conditions
+      )
+    )
+    (assert
+      inner_puzzle_hash  ; must be owner
+      (> deposit min_deposit) ; must be higher than the minimum deposit statute
+      (> (+ max_delay 1) delay) ; must be lower or equal than the maximum delay statute
+      (li
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY max_delay)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT min_deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+        &rest
+        (if (> deposit (- DEPOSIT 1))
+          operation_conditions
+          ; we have change as we reduced the deposit requirements
+          (c
+            (list CREATE_COIN INNER_PUZZLE_HASH (- DEPOSIT deposit) (list INNER_PUZZLE_HASH))
+            input_conditions
+          )
+        )
+      )
+    )
+  )
+
+)

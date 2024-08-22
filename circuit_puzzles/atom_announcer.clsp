@@ -1,4 +1,4 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES
      (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
      inner_puzzle
      solution_or_conditions
@@ -61,9 +61,12 @@
           ; launch
           (assert
             (= DEPOSIT 0)
+            (= DELAY 0)
+            (= COOLDOWN_START 0)
             (= APPROVED 0)
             (= ATOM_VALUE 0)
             (= TIMESTAMP_EXPIRES 0)
+            (= LAST_PENALTY_INTERVAL 0)
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
           )
         )
@@ -72,7 +75,7 @@
           (a
             operation
             (list
-              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
               inner_puzzle_hash new_puzzle_hash deposit input_conditions
               args
             )

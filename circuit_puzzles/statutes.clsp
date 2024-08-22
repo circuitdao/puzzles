@@ -60,7 +60,7 @@
                                         statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
     (list
       CREATE_COIN
-      ; puzzle
+      ; NOTE: we don't curry in operations here as they're already curried in mod hash
       (curry_hashes MOD_HASH
         (sha256 ONE MOD_HASH)
         (sha256tree
@@ -104,65 +104,48 @@
         ; default to existing values
         (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
       )
-    (c (list REMARK statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
-      (c
-        (create-coin-condition
-          MOD_HASH
-          TREASURY_APPROVAL_MOD_HASHES_HASH
-          P2_TREASURY_MOD_HASH
-          P2_SURPLUS_AUCTION_MOD_HASH
-          CAT_MOD_HASH
-          OFFER_MOD_HASH
-          CRT_TAIL_HASH
-          statutes
-          price_info
-          cumulative_stability_fee
-          cumulative_interest_rate
-          price_updates
-        )
-        ; TODO: disable ephemeral spends to avoid conflicts with mutation spends
-        (c
-          (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -7 price_updates)
-          )
-          (c
-            (list CREATE_PUZZLE_ANNOUNCEMENT
-              (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)
-            )
-            (c
-              (list CREATE_PUZZLE_ANNOUNCEMENT
-                (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -5 OFFER_MOD_HASH)
-              )
-              (c
-                (list CREATE_PUZZLE_ANNOUNCEMENT
-                  (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
-                )
-                (c
-                  (list CREATE_PUZZLE_ANNOUNCEMENT
-                    (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES_HASH)
-                  )
-                  (c
-                    (list CREATE_PUZZLE_ANNOUNCEMENT
-                      (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -2 cumulative_interest_rate)
-                    )
-                    (c
-                      (list CREATE_PUZZLE_ANNOUNCEMENT
-                        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -1 cumulative_stability_fee)
-                      )
-                      (c
-                        (list CREATE_PUZZLE_ANNOUNCEMENT
-                          (concat STATUTES_ANN_PREFIX PRICE_PREFIX (sha256tree price_info))
-                        )
-                        (announce-statutes statutes 0 mutation_conditions)
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
+    (li
+      (list REMARK statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
+      (create-coin-condition
+        MOD_HASH
+        TREASURY_APPROVAL_MOD_HASHES_HASH
+        P2_TREASURY_MOD_HASH
+        P2_SURPLUS_AUCTION_MOD_HASH
+        CAT_MOD_HASH
+        OFFER_MOD_HASH
+        CRT_TAIL_HASH
+        statutes
+        price_info
+        cumulative_stability_fee
+        cumulative_interest_rate
+        price_updates
       )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -7 price_updates)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -5 OFFER_MOD_HASH)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES_HASH)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -2 cumulative_interest_rate)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -1 cumulative_stability_fee)
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat STATUTES_ANN_PREFIX PRICE_PREFIX (sha256tree price_info))
+      )
+      &rest
+      (announce-statutes statutes 0 mutation_conditions)
     )
   )
 )

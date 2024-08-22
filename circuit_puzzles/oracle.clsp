@@ -1,5 +1,4 @@
-; # TODO: last updated is not really needed since we can use price times?
-(mod (MUTATION_PROGRAM_HASH MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES LAST_UPDATED
+(mod (MUTATION_PROGRAM_HASH MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
       ; solution
       oracle_mutation
       input_announcement_asserts
@@ -18,7 +17,7 @@
       (a
         (f oracle_mutation)
         (list
-          MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES LAST_UPDATED
+          MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
           oracle_mutation
           input_announcement_asserts
         )
@@ -32,22 +31,17 @@
       (list
         (list CREATE_COIN
           (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
-              (sha256tree PRICES)
-              (sha256 ONE LAST_UPDATED)
+            (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
+            (sha256tree PRICES)
           )
           ; min singleton amount, force it to be this
           ONE
         )
         (assign
-          (last_price . last_updated) (f (cut-prices PRICES 0))
-          (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 last_price last_updated))
-        )
-        (assign
-          (last_price . last_updated) (f (cut-prices PRICES 0))
-          (list REMARK last_price last_updated)
+          (oldest_price . oldest_updated) (f (cut-prices PRICES 0))
+          (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 oldest_price oldest_updated))
         )
       )
     )

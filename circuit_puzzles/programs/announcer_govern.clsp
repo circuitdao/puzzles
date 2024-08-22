@@ -1,9 +1,9 @@
-; governance backdoor
+; governance
 ; we either activate this announcer or deactivate, can happen at any time via CRT vote
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation)
+      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation max_disapproval_penalty_factor)
      )
   (include condition_codes.clib)
   (include curry.clib)
@@ -15,6 +15,7 @@
   (assign
     toggle_activation (assert (any (= input_toggle_activation 0) (= input_toggle_activation 1)) input_toggle_activation)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    min_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor) PRECISION) PERCENT_PRECISION))
     operation_conditions (recreate-myself-condition MOD_HASH
       STATUTES_STRUCT
       LAUNCHER_ID
@@ -22,35 +23,37 @@
       input_toggle_activation ; current statutes price counter passed
       deposit
       DELAY
-      (if (= toggle_activation 0) ATOM_VALUE 0) ; on activation, atom value must be zero
-      ; on activation, we give the announcer some time to update the price before we penalize
-      ; it's activated but can't be announced until it updates the price
-      (if (= toggle_activation 0) TIMESTAMP_EXPIRES (+ current_timestamp DELAY))
-      (if (all (= toggle_activation 0) APPROVED (> (- DEPOSIT deposit) 0))
-        ; unallocated XCH goes to tx fee to ensure owner can't block us for long
-        (c (list RESERVE_FEE (- DEPOSIT deposit))
-          input_conditions
+      ATOM_VALUE
+      COOLDOWN_START
+      LAST_PENALTY_INTERVAL
+      TIMESTAMP_EXPIRES
+      (if (all (= toggle_activation 0) APPROVED)
+        ; we're disapproving, use deposit for fees, but can't pay more than the penalty
+        (if (all (> DEPOSIT deposit) (> deposit (- min_deposit 1)))
+          (c
+            (list RESERVE_FEE (- DEPOSIT deposit))
+            input_conditions
+          )
+          ; can't pay more than the penalty
+          (x)
         )
         input_conditions
       )
     )
-    (c
+    (li
+      (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAX_PENALTY_FACTOR max_disapproval_penalty_factor)
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-      (c
-        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-        (c
-          (list RECEIVE_MESSAGE 0x10
-            (concat
-              ANN_PREFIX
-              LAUNCHER_ID
-              toggle_activation
-            )
-            statutes_puzzle_hash
-          )
-          operation_conditions
+      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+      (list RECEIVE_MESSAGE 0x10
+        (concat
+          ANN_PREFIX
+          LAUNCHER_ID
+          toggle_activation
         )
+        statutes_puzzle_hash
       )
+      &rest
+      operation_conditions
     )
   )
-
 )
