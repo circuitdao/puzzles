@@ -1,17 +1,18 @@
-; Circuit CAT token (CRT)
+; Circuit CAT token (CRT) tail
 (mod (
       GENESIS_ID STATUTES_STRUCT CAT_MOD_HASH
       Truths parent_is_cat lineage_proof delta
       inner_conditions ; we don't check these as since they're checked in approved mod puzzles,
                        ; and those are the only ones that can send the message
       solution
-     ) 
+     )
+
   (include *standard-cl-23*)
-  (include condition_codes.clib)
   (include cat_truths.clib)
+  (include condition_codes.clib)
   (include curry.clib)
-  (include utils.clib)
   (include statutes_utils.clib)
+  (include utils.clib)
 
   (defun-inline get-statutes-puzzle-hash (statutes_struct statutes_inner_puzzle_hash)
     (c

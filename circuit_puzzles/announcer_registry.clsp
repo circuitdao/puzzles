@@ -1,12 +1,14 @@
 (mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_MOD_HASH ANNOUNCER_REGISTRY CLAIM_ITERATION
       lineage_proof mint_or_register . args)
 
+  (include *standard-cl-23*)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23*)
-  (include utils.clib)
   (include statutes_utils.clib)
+  (include utils.clib)
+
   (defconst ANN_PREFIX "R")
+  (defconst ANNOUNCER_ANN_PREFIX "A")
 
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry
@@ -123,7 +125,7 @@
                 (list RECEIVE_MESSAGE
                   0x12
                   (concat
-                    'A'
+                    ANNOUNCER_ANN_PREFIX
                     announcer_inner_puzzle_hash
                     1 ; must be an approved announcer
                     statutes_struct_hash ; must be on the same protocol

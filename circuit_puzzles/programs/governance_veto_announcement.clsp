@@ -2,7 +2,7 @@
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
-      _ ;
+      _
       target_bill_hash
       relative_time_spent
       target_coin_id
@@ -10,13 +10,13 @@
   )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
   (defconst ANN_PREFIX 'G')
-  (defconstant ANN_VETO 'v')
+  (defconst ANN_VETO 'v')
 
   (assign
     (

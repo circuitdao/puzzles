@@ -22,11 +22,14 @@
      )
 
   (include *standard-cl-23*)
-  (include condition_codes.clib)
   (include cat_truths.clib)
+  (include condition_codes.clib)
   (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
+  (defconst ANN_MELT "x")
+  (defconst ANN_ISSUANCE "i")
 
   (if (any (= delta 0) (> 0 delta))
     ; we're issuing or melting
@@ -55,7 +58,7 @@
             0x3f
             (concat
               cat_ann_prefix
-              (if (> 0 delta) "x" "i")
+              (if (> 0 delta) ANN_MELT ANN_ISSUANCE)
               my_coin_id
               (if (> 0 delta) delta new_melting_coin_amount)
               statutes_struct_hash ; need to tie it to statutes struct

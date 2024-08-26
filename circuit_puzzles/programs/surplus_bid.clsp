@@ -5,12 +5,13 @@
     (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl my_coin_id
           offer_mod_hash)
   )
+
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
-  (include utils.clib)
   (include surplus_auction.clib)
+  (include utils.clib)
 
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
@@ -22,63 +23,48 @@
       (any (all (= my_amount 0) (> bid_crt_amount 0)) (> bid_crt_amount my_amount))
       ; TTL for bid hasn't expired yet
       (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
-      (c
+      (li
         (list ASSERT_MY_AMOUNT my_amount)
-          ; recreate with new top bid and new timestamp
-        (c
-          (list
-            CREATE_COIN
-            (curry_hashes
-              MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE CAT_LOT_AMOUNT)
-              (sha256 ONE CAT_TAIL_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              (sha256tree (list target_puzzle_hash current_timestamp))
-            )
-            bid_crt_amount
+        ; recreate with new top bid and new timestamp
+        (list
+          CREATE_COIN
+          (curry_hashes
+            MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE CAT_LOT_AMOUNT)
+            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (sha256tree (list target_puzzle_hash current_timestamp))
           )
-          (c
-            (list REMARK LAUNCHER_ID CAT_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) CAT_TAIL_HASH CRT_TAIL_HASH)
-            (c
-              (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-                ; current_time minus one tx block time should already be in the past
-                (c
-                  (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-                  (c
-                    ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-                    (c
-                      (list ASSERT_MY_COIN_ID my_coin_id)
-                      ; ensure lineage so we don't lose track of the lot
-                      (c
-                        (list ASSERT_MY_PARENT_ID
-                          (sha256
-                            (f lineage_proof)
-                            (curry_hashes
-                              CAT_MOD_HASH
-                              (sha256 ONE CAT_MOD_HASH)
-                              (sha256 ONE CRT_TAIL_HASH)
-                              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
-                            )
-                            ; parent bid amount
-                            (f (r lineage_proof))
-                          )
-                        )
-                        announcements
-                      )
-                    )
-                  )
-                )
-              )
+          bid_crt_amount
+        )
+        (list REMARK LAUNCHER_ID CAT_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) CAT_TAIL_HASH CRT_TAIL_HASH)
+        (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
+        (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
+        ; current_time minus one tx block time should already be in the past
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        ; ensure lineage so we don't lose track of the lot
+        (list ASSERT_MY_PARENT_ID
+          (sha256
+            (f lineage_proof)
+            (curry_hashes
+              CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
+            ; parent bid amount
+            (f (r lineage_proof))
           )
         )
+        &rest
+        announcements
       )
     )
     (if last_target_puzzle_hash

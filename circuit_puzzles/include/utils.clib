@@ -1,15 +1,14 @@
 (
-
-  (defconst ONE 1)
-  (defconst TWO 2)
   (defconst MOJOS 1000000000000)
+  (defconst PRECISION 10000000000)
   (defconst PERCENT_PRECISION 10000)
   (defconst MAX_TX_BLOCK_TIME 120)
-  (defconst PRECISION 10000000000)
   (defconst ONE_MINUTE 60)
   (defconst b32 32)
   (defconst TRUE 1)
   (defconst FALSE 0)
+  (defconst ONE 1)
+  (defconst TWO 2)
 
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
@@ -27,6 +26,20 @@
 
   (defun-inline size_b1 (var)
     (= (strlen var) ONE)
+  )
+
+  (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
+    (if conditions
+      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
+        (filter-announcements
+          rest_of_conditions
+          (c (f conditions) filtered_announcements)
+        )
+        ; no other conditions please
+        (x)
+      )
+      filtered_announcements
+    )
   )
 
   (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
@@ -92,8 +105,8 @@
     (if (r items)
       (qq (if (unquote (f items)) (unquote (assert_ (r items))) (x)))
       (f items)
-      )
     )
+  )
 
   (defmac assert items (assert_ items))
 
@@ -127,7 +140,6 @@
       ()
     )
   )
-
 
   (defun print (to-show result) (if (all "$print$" to-show result) result result))
 

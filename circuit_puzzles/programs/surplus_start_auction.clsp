@@ -7,13 +7,13 @@
       start_time my_coin_id treasury_coins treasury_maximum
     )
   )
+
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include surplus_auction.clib)
   (include utils.clib)
-
 
   (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
                                            treasury_coins my_coin_id lot_amount sum_amount CAT_leftover announcements)
@@ -112,7 +112,7 @@
       ;     it can't be filled again, hence can be used as unique event in this coins history
       (= LAUNCHER_ID 0)
       (= CAT_LOT_AMOUNT 0)
-      (c
+      (li
         ; recreate itself setting the launcher_id, empty bid and coin amount is 0
         (list
           CREATE_COIN
@@ -129,48 +129,35 @@
           )
           0
         )
-        (c
-          ; it's important to force the amount to zero, since we don't want parent to create multiple coins
-          ; with the same amount and launcher_id, which would enable sibling coins to mess with the state and takeover
-          ; the auction and the lot
-          (list ASSERT_MY_AMOUNT 0)
-          (c
-            (list ASSERT_MY_COIN_ID my_coin_id)
-            (c
-              (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT_AMOUNT lot_amount)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
-                (c
-                  (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_mod_hash)
-                  ; start_time minus one tx block time should already be in the past
-                  (c (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
-                    ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                    (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
-                      ; assert p2_surplus_auction coin received the lot amount
-                      (c (list RECEIVE_MESSAGE 0x3f (concat p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id)
-                        (c (list REMARK my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
-                          (assert-treasury-coins-withdrawal
-                            p2_treasury_hash
-                            CAT_MOD_HASH
-                            CAT_TAIL_HASH
-                            STATUTES_STRUCT
-                            treasury_maximum
-                            statutes_puzzle_hash
-                            treasury_coins
-                            my_coin_id
-                            lot_amount ; lot amount of byc offered
-                            0 ; withdrawal sum amount
-                            0 ; leftover byc amount
-                            announcements
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
+        ; it's important to force the amount to zero, since we don't want parent to create multiple coins
+        ; with the same amount and launcher_id, which would enable sibling coins to mess with the state and takeover
+        ; the auction and the lot
+        (list ASSERT_MY_AMOUNT 0)
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT_AMOUNT lot_amount)
+        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_mod_hash)
+        ; start_time minus one tx block time should already be in the past
+        (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
+        ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
+        ; assert p2_surplus_auction coin received the lot amount
+        (list RECEIVE_MESSAGE 0x3f (concat p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id)
+        (list REMARK my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
+        &rest
+        (assert-treasury-coins-withdrawal
+          p2_treasury_hash
+          CAT_MOD_HASH
+          CAT_TAIL_HASH
+          STATUTES_STRUCT
+          treasury_maximum
+          statutes_puzzle_hash
+          treasury_coins
+          my_coin_id
+          lot_amount ; lot amount of byc offered
+          0 ; withdrawal sum amount
+          0 ; leftover byc amount
+          announcements
         )
       )
     )

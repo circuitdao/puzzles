@@ -5,12 +5,11 @@
      )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
+  (include oracle.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include oracle.clib)
-
 
   (if oracle_mutation
     (assert (= (sha256tree (f oracle_mutation)) MUTATION_PROGRAM_HASH)

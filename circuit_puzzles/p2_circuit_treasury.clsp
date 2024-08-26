@@ -3,12 +3,13 @@
       input_conditions . args)
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant ANN_PREFIX 0x24) ; -> '$'
+  (defconst ANN_PREFIX 0x24) ; -> '$'
+  (defconst EQUALS "=")
 
   (defun filter-ann-conditions ( (@ ann_conditions ( (condition_code . condition_rest) . rest)) filtered_announcements)
     (if ann_conditions
@@ -244,7 +245,7 @@
                   (c (list ASSERT_MY_COIN_ID my_coin_id)
                     (c
                       ;  my new balance so someone can check whole ring balance
-                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX EQUALS new_amount LAUNCHER_ID))
                       (c (list REMARK my_coin_id new_amount LAUNCHER_ID) ; for driver code
                         conditions
                       )

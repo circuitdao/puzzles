@@ -1,27 +1,26 @@
 (mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
-      (@ oracle_mutation
-              (
-                oracle_mutation_program
-                statutes_inner_puzzle_hash
-                m_of_n
-                price_updatable_after_seconds
-                price_updatable_threshold_percent
-                price_expiration_seconds
-                current_timestamp
-                ; price_announcers -> ((inner_puzzle_hash args_hash price))
-                price_announcers
-              )
+       (@ oracle_mutation
+         (
+           oracle_mutation_program
+           statutes_inner_puzzle_hash
+           m_of_n
+           price_updatable_after_seconds
+           price_updatable_threshold_percent
+           price_expiration_seconds
+           current_timestamp
+           ; price_announcers -> ((inner_puzzle_hash args_hash price))
+           price_announcers
+         )
+       )
+       input_announcement_asserts
+     )
 
-      )
-      input_announcement_asserts
-      )
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include oracle.clib)
-
+  (include oracle.clib) ; fails if this file is included before utils.clib
 
   (assign
     price_announcers_length (if oracle_mutation (list-length price_announcers 0) ())
@@ -43,7 +42,7 @@
     (next_price . next_price_updated) (f new_prices)
     (last_price . last_price_updated) (last-item PRICES)
     ;  new coin will have updated price, increase the counter of updates
-    ;###  main expression
+    ;### MAIN EXPRESSION ###
     ; check that we haven't updated the price recently OR new price is much higher than previous
     (assert
       (> price_announcers_length (- m_of_n 1))
@@ -87,7 +86,8 @@
           1
         )
         (list REMARK new_prices mean_price last_price current_timestamp)
-        &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
+        &rest
+        (verify-announcement-asserts input_announcement_asserts announcer_conditions)
       )
     )
   )

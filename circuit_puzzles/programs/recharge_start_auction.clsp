@@ -4,12 +4,14 @@
     (start_time my_coin_id treasury_minimum auction_timeout
      p2_treasury_hash treasury_coins)
   )
+
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
+  (include recharge_auction.clib) ; fails if included before utils.clib
+
   (assign
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (assert
@@ -23,7 +25,7 @@
         (= START_TIME 0)
         (> (- start_time START_TIME) auction_timeout)
       )
-      (c
+      (li
         (list
           CREATE_COIN
           (curry_hashes
@@ -38,67 +40,50 @@
           )
           0
         )
-        (c
-          (list REMARK
-            LAUNCHER_ID
-            start_time
-            () ; no bids
-          )
-          (c
-            (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
-            (c
-              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
-                (c
-                  ; start_time minus one tx block time should already be in the past
-                  (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
-                  (c
-                    ; make sure that start_time hasn't happened yet, allow it to be in mempool for 5 tx blocks
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
-                    (c
-                      ; start balance should be zero
-                      (list ASSERT_MY_AMOUNT 0)
-                      (c
-                        (list ASSERT_MY_COIN_ID my_coin_id)
-                        (c
-                          (list ASSERT_MY_PARENT_ID
-                            (calculate-coin-id
-                              (f lineage_proof)
-                              (curry_hashes
-                                CAT_MOD_HASH
-                                (sha256 ONE CAT_MOD_HASH)
-                                (sha256 ONE CAT_TAIL_HASH)
-                                (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
-                              )
-                              ; parent bid amount
-                              (f (r lineage_proof))
-                            )
-                          )
-                          (deposit-to-treasury
-                            p2_treasury_hash
-                            CAT_MOD_HASH
-                            CAT_TAIL_HASH
-                            STATUTES_STRUCT
-                            treasury_minimum
-                            statutes_puzzle_hash
-                            treasury_coins_total ; expected balance after deposit of lot
-                            0 ; amount deposited
-                            0
-                            0
-                            (f treasury_coins)
-                            treasury_coins
-                            my_coin_id
-                            announcements
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
+        (list REMARK
+          LAUNCHER_ID
+          start_time
+          () ; no bids
+        )
+        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
+        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+        ; start_time minus one tx block time should already be in the past
+        (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
+        ; make sure that start_time hasn't happened yet, allow it to be in mempool for 5 tx blocks
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
+        ; start balance should be zero
+        (list ASSERT_MY_AMOUNT 0)
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (list ASSERT_MY_PARENT_ID
+          (calculate-coin-id
+            (f lineage_proof)
+            (curry_hashes
+              CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CAT_TAIL_HASH)
+              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
+            ; parent bid amount
+            (f (r lineage_proof))
           )
+        )
+        &rest
+        (deposit-to-treasury
+          p2_treasury_hash
+          CAT_MOD_HASH
+          CAT_TAIL_HASH
+          STATUTES_STRUCT
+          treasury_minimum
+          statutes_puzzle_hash
+          treasury_coins_total ; expected balance after deposit of lot
+          0 ; amount deposited
+          0
+          0
+          (f treasury_coins)
+          treasury_coins
+          my_coin_id
+          announcements
         )
       )
     )

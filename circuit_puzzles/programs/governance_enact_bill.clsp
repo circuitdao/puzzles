@@ -10,10 +10,11 @@
   )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
   (defconst ANN_ENACTED '$')
   (defconst ANN_PREFIX 'G')
 

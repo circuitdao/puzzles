@@ -6,60 +6,48 @@
       (current_timestamp atom_value)
      )
 
-  (defconst MAX_TX_BLOCK_TIME 120)
-
-  (defconst ONE 1)
+  (include *standard-cl-23*)
   (include condition_codes.clib)
   (include curry.clib)
+  (include utils.clib)
 
-  (defun sha256tree (TREE)
-    (if (l TREE)
-      (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-      (sha256 ONE TREE)
-    )
-  )
   (if (all
-    LAUNCHER_ID
-    inner_puzzle_hash  ; must be owner
+      LAUNCHER_ID
+      inner_puzzle_hash  ; must be owner
     )
-    (c
+    (li
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-      (c
-        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-        (c
-          (list CREATE_COIN
-            (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
-              (sha256 ONE APPROVED)
-              (sha256 ONE DEPOSIT)
-              (sha256 ONE DELAY)
-              (sha256 ONE atom_value)
-              (sha256 ONE COOLDOWN_START)
-              (sha256 ONE LAST_PENALTY_INTERVAL)
-              (sha256 ONE (+ current_timestamp DELAY))
-            )
-            DEPOSIT
-            (list (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
-          )
-          (c
-            (list REMARK
-              LAUNCHER_ID
-              (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
-              DEPOSIT
-              APPROVED
-              DELAY
-              atom_value
-              COOLDOWN_START
-              LAST_PENALTY_INTERVAL
-              (+ current_timestamp DELAY)
-            )
-            input_conditions
-          )
+      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+      (list CREATE_COIN
+        (curry_hashes MOD_HASH
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256 ONE LAUNCHER_ID)
+          (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
+          (sha256 ONE APPROVED)
+          (sha256 ONE DEPOSIT)
+          (sha256 ONE DELAY)
+          (sha256 ONE atom_value)
+          (sha256 ONE COOLDOWN_START)
+          (sha256 ONE LAST_PENALTY_INTERVAL)
+          (sha256 ONE (+ current_timestamp DELAY))
         )
+        DEPOSIT
+        (list (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
       )
+      (list REMARK
+        LAUNCHER_ID
+        (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
+        DEPOSIT
+        APPROVED
+        DELAY
+        atom_value
+        COOLDOWN_START
+        LAST_PENALTY_INTERVAL
+        (+ current_timestamp DELAY)
+      )
+      &rest
+      input_conditions
     )
     (x)
   )

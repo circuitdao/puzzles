@@ -16,12 +16,15 @@
       )
     )
   )
+
   (include *standard-cl-23*)
-  (include utils.clib)
-  (include vault.clib)
-  (include statutes_utils.clib)
   (include condition_codes.clib)
   (include curry.clib)
+  (include statutes_utils.clib)
+  (include utils.clib)
+  (include vault.clib)
+  
+  (defconst ANN_ISSUANCE "i")
 
   (assign
     ; calculate the latest cumulative stability fee rate
@@ -59,7 +62,7 @@
             0x3f
             (concat
               VAULT_ANN_PREFIX
-              "i"
+              ANN_ISSUANCE
               byc_issuing_coin_id
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)

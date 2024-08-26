@@ -11,10 +11,11 @@
   )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
   (defconst ANN_PREFIX 'G')
   (defconst ANN_VETO 'v')
   (defconst ANN_VETOED 'x')
@@ -51,7 +52,6 @@
       (size_b32 veto_bill_hash)
       (> veto_amount amount)
       (> veto_seconds 0)
-
       (list
         ()
         (list

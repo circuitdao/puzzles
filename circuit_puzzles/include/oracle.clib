@@ -24,6 +24,7 @@
       conditions
     )
   )
+
   (defun-inline abs (number)
     (if (> number -1) number (* number -1))
   )
@@ -61,6 +62,7 @@
       ()
     )
   )
+
   (defun filter (pred (@ lst (first . rest)))
     (if lst
       (assign item (a pred (list first))
@@ -110,7 +112,6 @@
     )
   )
 
-
   (defun-inline endp (L)
     (if L
       (if (r L)
@@ -123,10 +124,10 @@
 
   (defun _split (Z L R)
     (if (endp R)
-        (c (_reverse L ()) Z)
-        (_split (r Z) (c (f Z) L) (r (r R))))
+      (c (_reverse L ()) Z)
+      (_split (r Z) (c (f Z) L) (r (r R)))
     )
-
+  )
 
   (defun _merge ((@ L ((_ _ L_price) . L_rest)) (@ R ((_ _ R_price) . R_rest)) A)
     (if (any L R)
@@ -144,7 +145,6 @@
     )
   )
 
-
   ; thanks @geoff for the mergesort implementation on https://aggsig.me/mergesort.html
   (defun mergesort (Z)
     (if Z
@@ -159,12 +159,12 @@
     )
   )
 
-
   (defun-inline get-median-index (length)
     ; if odd, we return the middle value
     ; if even, we return the one smaller since prices are sorted in descending order
     (/ length 2)
   )
+
   (defun get-price (prices index curr_index)
     (if prices
       (if (= index curr_index)
@@ -174,4 +174,5 @@
       (x)
     )
   )
+
 )

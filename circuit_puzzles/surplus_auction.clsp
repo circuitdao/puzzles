@@ -14,9 +14,7 @@
   (include *standard-cl-23*)
   (include condition_codes.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
 
-  (defconst ANN_PREFIX '^')
   (if (contains OPERATIONS (sha256tree operation))
     (a
       operation
