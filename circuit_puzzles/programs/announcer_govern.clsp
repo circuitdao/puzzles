@@ -5,12 +5,13 @@
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp statutes_inner_puzzle_hash input_toggle_activation max_disapproval_penalty_factor)
      )
+
+  (include *standard-cl-23*)
+  (include announcer.clib)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23*)
-  (include utils.clib)
   (include statutes_utils.clib)
-  (include announcer.clib)
+  (include utils.clib)
 
   (assign
     toggle_activation (assert (any (= input_toggle_activation 0) (= input_toggle_activation 1)) input_toggle_activation)

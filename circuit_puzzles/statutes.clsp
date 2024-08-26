@@ -26,11 +26,10 @@
      )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-
 
   (defun announce-statutes (statutes start_index rest)
     (if statutes

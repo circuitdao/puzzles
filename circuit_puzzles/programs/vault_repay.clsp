@@ -15,11 +15,13 @@
   )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include vault.clib)
+
+  (defconst ANN_MELT 'x')
 
   (assign
     cumulative_stability_fee_rate (calculate-cumulative-discount-factor
@@ -117,7 +119,7 @@
                   0x3f
                   (concat
                     VAULT_ANN_PREFIX
-                    'x'
+                    ANN_MELT
                     byc_coin_id_to_melt
                     (- negative_byc_principal_to_melt fees_to_not_pay)
                     (sha256tree STATUTES_STRUCT)

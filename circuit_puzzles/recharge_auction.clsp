@@ -2,11 +2,10 @@
       statutes_inner_puzzle_hash lineage_proof operation . op_args)
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
 
   (assign-inline
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)

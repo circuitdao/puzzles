@@ -25,10 +25,10 @@
   )
 
   (include *standard-cl-23*)
-  (include vault.clib)
-  (include statutes_utils.clib)
   (include condition_codes.clib)
+  (include statutes_utils.clib)
   (include utils.clib)
+  (include vault.clib)
 
   (assign
     cumulative_stability_fee_rate (calculate-cumulative-discount-factor

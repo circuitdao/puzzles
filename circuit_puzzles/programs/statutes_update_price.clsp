@@ -3,9 +3,10 @@
       _
       (@ mutation_value (oracle_inner_puz_hash price last_updated))
       crt_inner_puzzle_hash)
+
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 

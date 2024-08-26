@@ -8,9 +8,10 @@
       my_coin_id puzzle_hash amount)
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include utils.clib)
+
   (assign
     launcher_coin_id (assert
       (size_b32 surplus_auction_curried_args_hash)
@@ -19,7 +20,7 @@
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
-          ; we're asserting that launcher coin must be using surplus puzzle so we can trust it's announcements
+          ; we're asserting that launcher coin must be using surplus puzzle so we can trust its announcements
           (tree_hash_of_apply SURPLUS_AUCTION_MOD_HASH surplus_auction_curried_args_hash)
         )
         surplus_auction_amount
@@ -27,7 +28,7 @@
     )
     (if (all (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
-      (list  ;create / fill the coin from treasury
+      (list ; create / fill the coin from treasury
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee we locked them delegating control to launcher coin id
         (list SEND_MESSAGE 0x3f (concat my_coin_id amount puzzle_hash) launcher_coin_id)

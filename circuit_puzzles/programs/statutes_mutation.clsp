@@ -4,12 +4,12 @@
       mutation_index mutation_value crt_inner_puzzle_hash)
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant CRT_ANN_PREFIX 'G')
+  (defconst CRT_ANN_PREFIX 'G')
 
   (defun filter-ann-conditions (
     (@ ann_conditions

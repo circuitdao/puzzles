@@ -1,5 +1,4 @@
-;;; Savings vault for BYC, this is a inner BYC CAT puzzle
-;       collateral vaults and new treasury coin puzzle
+;;; Savings vault for BYC, this is an inner BYC CAT puzzle
 (mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
@@ -18,10 +17,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
-  (defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
-
-
+  (defconst ANN_PREFIX 0x53) ; chr(83) -> "S"
 
   (defun filter-conditions ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions))
                             found_first_create_coin
@@ -102,7 +98,6 @@
       (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
       (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
-
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
@@ -177,67 +172,54 @@
     )
     inner_puzzle_hash (f create_coin_body)
     memos (r (r create_coin_body))
+
     (assert
       (> interest_amount -1)
       (size_b32 inner_puzzle_hash)
-      (c (list REMARK new_discounted_deposit new_amount inner_puzzle_hash memos)
-        (c
-          (list ASSERT_MY_COIN_ID my_coin_id)
+      (li
+        (list REMARK new_discounted_deposit new_amount inner_puzzle_hash memos)
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (list ASSERT_MY_AMOUNT current_amount)
+        (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
+        (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
+        (assert-price-info statutes_puzzle_hash price_info)
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+        (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
           (c
-            (list ASSERT_MY_AMOUNT current_amount)
+            (curry_hashes MOD_HASH ; puzzle hash
+              (sha256 ONE MOD_HASH)
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CAT_TAIL_HASH)
+              statutes_struct_hash
+              (sha256 ONE new_discounted_deposit)
+              inner_puzzle_hash
+            )
+            (c new_amount
+              memos
+            )
+          )
+        )
+        &rest
+        (if treasury_coin_id
+          (assert
+            ; treasury coin should have enough amount to cover interest
+            (> new_treasury_amount interest_amount)
+            ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
+            (> interest_amount minimum_interest_amount)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
+              (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_AMOUNT_TO_WITHDRAW minimum_interest_amount)
               (c
-                (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
-                (c
-                  (assert-price-info statutes_puzzle_hash price_info)
-                  (c
-                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-                    (c
-                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-                      (c
-                        (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
-                          (c
-                            (curry_hashes MOD_HASH ; puzzle hash
-                              (sha256 ONE MOD_HASH)
-                              (sha256 ONE CAT_MOD_HASH)
-                              (sha256 ONE CAT_TAIL_HASH)
-                              statutes_struct_hash
-                              (sha256 ONE new_discounted_deposit)
-                              inner_puzzle_hash
-                            )
-                            (c new_amount
-                              memos
-                            )
-                          )
-                        )
-                        (if treasury_coin_id
-                          (assert
-                            ; treasury coin should have enough amount to cover interest
-                            (> new_treasury_amount interest_amount)
-                            ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
-                            (> interest_amount minimum_interest_amount)
-                            (c
-                              (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_AMOUNT_TO_WITHDRAW minimum_interest_amount)
-                              (c
-                                (list SEND_MESSAGE 0x3f
-                                  (concat ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
-                                  treasury_coin_id
-                                )
-                                final_conditions
-                              )
-                            )
-                          )
-                          ; return conditions as in, we assume driver is handling withdrawals and announcements properly
-                          final_conditions
-                        )
-                      )
-                    )
-                  )
+                (list SEND_MESSAGE 0x3f
+                  (concat ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
+                  treasury_coin_id
                 )
+                final_conditions
               )
             )
           )
+          ; return conditions as in, we assume driver is handling withdrawals and announcements properly
+          final_conditions
         )
       )
     )

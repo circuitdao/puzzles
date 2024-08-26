@@ -15,9 +15,10 @@
         keeper_operation_info
       )
      )
+
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 

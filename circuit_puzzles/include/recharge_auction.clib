@@ -1,21 +1,8 @@
 (
+
   (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
-
-  (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
-    (if conditions
-      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
-        (filter-announcements
-          rest_of_conditions
-          (c (f conditions) filtered_announcements)
-        )
-        ; no other conditions please
-        (x)
-      )
-      filtered_announcements
-    )
-  )
 
   (defun deposit-to-treasury (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
                               treasury_minimum statutes_puzzle_hash final_treasury_amount

@@ -3,12 +3,12 @@
      inner_puzzle
      solution_or_conditions
      )
+
+  (include *standard-cl-23*)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23*)
-  (include utils.clib)
   (include statutes_utils.clib)
-  (defconst ANN_PREFIX 'A')
+  (include utils.clib)
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
                               found_create_coin final_conditions)

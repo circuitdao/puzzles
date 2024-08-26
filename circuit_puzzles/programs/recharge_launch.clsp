@@ -7,11 +7,11 @@
   )
 
   (include *standard-cl-23*)
-  (include curry.clib)
   (include condition_codes.clib)
+  (include curry.clib)
+  (include recharge_auction.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
 
   (assert
     ; can't run if LAST_BID is set
@@ -19,7 +19,7 @@
     (= LAUNCHER_ID 0)
     (= START_TIME 0)
     (size_b32 statutes_puzzle_hash)
-    (c
+    (li
       (list
         CREATE_COIN
         (curry_hashes
@@ -34,25 +34,18 @@
         )
         0
       )
-      (c
-        (list REMARK
-          my_coin_id
-          0
-          () ; no bids
-        )
-        (c
-          (list ASSERT_MY_AMOUNT 0)
-          (c
-            (list ASSERT_MY_COIN_ID my_coin_id)
-            ; not LAUNCHER set, this is a launch, we need to get approval from statutes
-            (c
-              ; confirm back to statutes that we indeed updated the curried args
-              (list RECEIVE_MESSAGE 0x10 (concat ANN_PREFIX my_coin_id) statutes_puzzle_hash)
-              announcements
-            )
-          )
-        )
+      (list REMARK
+        my_coin_id
+        0
+        () ; no bids
       )
+      (list ASSERT_MY_AMOUNT 0)
+      (list ASSERT_MY_COIN_ID my_coin_id)
+      ; not LAUNCHER set, this is a launch, we need to get approval from statutes
+      ; confirm back to statutes that we indeed updated the curried args
+      (list RECEIVE_MESSAGE 0x10 (concat ANN_PREFIX my_coin_id) statutes_puzzle_hash)
+      &rest
+      announcements
     )
   )
 )
