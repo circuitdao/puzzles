@@ -2,7 +2,7 @@
       OPERATIONS
       MOD_HASH
       (
-        TREASURY_APPROVAL_MOD_HASHES_HASH ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
+        TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
         P2_TREASURY_MOD_HASH
         OFFER_MOD_HASH
         P2_SURPLUS_AUCTION_MOD_HASH
@@ -54,7 +54,7 @@
     )
   )
 
-  (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES_HASH
+  (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES
                                         P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
@@ -65,7 +65,7 @@
         (sha256 ONE MOD_HASH)
         (sha256tree
           (list
-            TREASURY_APPROVAL_MOD_HASHES_HASH
+            TREASURY_APPROVAL_MOD_HASHES
             P2_TREASURY_MOD_HASH
             OFFER_MOD_HASH
             P2_SURPLUS_AUCTION_MOD_HASH
@@ -108,7 +108,7 @@
       (list REMARK statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)
       (create-coin-condition
         MOD_HASH
-        TREASURY_APPROVAL_MOD_HASHES_HASH
+        TREASURY_APPROVAL_MOD_HASHES
         P2_TREASURY_MOD_HASH
         P2_SURPLUS_AUCTION_MOD_HASH
         CAT_MOD_HASH
@@ -133,7 +133,7 @@
         (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES_HASH)
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -2 cumulative_interest_rate)

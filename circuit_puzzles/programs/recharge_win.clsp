@@ -24,7 +24,7 @@
       (> winning_crt_bid_amount 0)
       ; ttl should've expired
       (> (- current_timestamp timestamp) ttl)
-      (c
+      (li
         ; restart the auction
         (list
           CREATE_COIN
@@ -40,67 +40,50 @@
           )
           0
         )
-        (c
-          (list REMARK
-            LAUNCHER_ID
-            0
-            ()
-          )
-          (c
-            (list ASSERT_MY_AMOUNT winning_byc_bid_amount)
-            (c
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
-                (c
-                  ; current_time minus one tx block time should already be in the past
-                  (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-                  (c
-                    ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-                    (c
-                      ; approve issuance of new CRT coins to target_puzzle_hash
-                      (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash funding_coin_id winning_crt_bid_amount) funding_coin_id)
-                      (c
-                        (list ASSERT_MY_PARENT_ID
-                          (calculate-coin-id
-                            (f lineage_proof)
-                            (curry_hashes
-                              CAT_MOD_HASH
-                              (sha256 ONE CAT_MOD_HASH)
-                              (sha256 ONE CAT_TAIL_HASH)
-                              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
-                            )
-                            ; parent bid amount
-                            (f (r lineage_proof))
-                          )
-                        )
-                        (c
-                          (list ASSERT_MY_COIN_ID my_coin_id)
-                          (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
-                            p2_treasury_hash
-                            CAT_MOD_HASH
-                            CAT_TAIL_HASH
-                            STATUTES_STRUCT
-                            treasury_minimum
-                            statutes_puzzle_hash
-                            (+ treasury_coins_total winning_byc_bid_amount) ; expected balance after deposit of lot
-                            0 ; amount deposited
-                            treasury_deposit_per_coin
-                            remainder
-                            (f treasury_coins)
-                            treasury_coins
-                            my_coin_id
-                            announcements
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
+        (list REMARK
+          LAUNCHER_ID
+          0
+          ()
+        )
+        (list ASSERT_MY_AMOUNT winning_byc_bid_amount)
+        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
+        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+        ; current_time minus one tx block time should already be in the past
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        ; approve issuance of new CRT coins to target_puzzle_hash
+        (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash funding_coin_id winning_crt_bid_amount) funding_coin_id)
+        (list ASSERT_MY_PARENT_ID
+          (calculate-coin-id
+            (f lineage_proof)
+            (curry_hashes
+              CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CAT_TAIL_HASH)
+              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
+            ; parent bid amount
+            (f (r lineage_proof))
           )
+        )
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        &rest
+        (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+          p2_treasury_hash
+          CAT_MOD_HASH
+          CAT_TAIL_HASH
+          STATUTES_STRUCT
+          treasury_minimum
+          statutes_puzzle_hash
+          (+ treasury_coins_total winning_byc_bid_amount) ; expected balance after deposit of lot
+          0 ; amount deposited
+          treasury_deposit_per_coin
+          remainder
+          (f treasury_coins)
+          treasury_coins
+          my_coin_id
+          announcements
         )
       )
     )

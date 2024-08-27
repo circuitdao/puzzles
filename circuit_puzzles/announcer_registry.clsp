@@ -68,6 +68,7 @@
             (list
               (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash issuance_coin_id crt_credits_per_interval) issuance_coin_id)
               (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee coin to
+              (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id '*'))
               (list ASSERT_MY_COIN_ID my_coin_id)
               (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CLAIM_INTERVAL claim_interval)

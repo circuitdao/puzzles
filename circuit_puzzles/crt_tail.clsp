@@ -2,8 +2,7 @@
 (mod (
       GENESIS_ID STATUTES_STRUCT CAT_MOD_HASH
       Truths parent_is_cat lineage_proof delta
-      inner_conditions ; we don't check these as since they're checked in approved mod puzzles,
-                       ; and those are the only ones that can send the message
+      _
       solution
      ) 
   (include *standard-cl-23*)
