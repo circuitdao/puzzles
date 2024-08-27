@@ -16,10 +16,9 @@
       if
         (any (= input_toggle_activation 0) (= input_toggle_activation 1))
         (if
-          (= input_toggle_activation 0)
+          (all (= input_toggle_activation 0) APPROVED)
           (if
             (all
-              APPROVED
               (> COOLDOWN_START 0)
               (> (- current_timestamp COOLDOWN_START) deactivation_cooldown_interval)
             )
@@ -74,14 +73,7 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         &rest
-        (if (> deposit (- DEPOSIT 1))
-          operation_conditions
-          ; we have change as we reduced the deposit requirements
-          (c
-            (list CREATE_COIN INNER_PUZZLE_HASH (- DEPOSIT deposit) (list INNER_PUZZLE_HASH))
-            input_conditions
-          )
-        )
+        operation_conditions
       )
     )
   )
