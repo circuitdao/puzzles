@@ -103,7 +103,7 @@
           conditions (li
             (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
             (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_VAULT_DEBT_AMOUNT minimum_principal_amount)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_principal_amount)
             (assert-price-info statutes_puzzle_hash price_info)
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))

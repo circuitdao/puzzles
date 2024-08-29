@@ -34,21 +34,21 @@
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
               (sha256 ONE APPROVED)
-              (sha256 ONE DEPOSIT)
+              (sha256 ONE deposit)
               (sha256 ONE DELAY)
               (sha256 ONE atom_value)
               (sha256 ONE COOLDOWN_START)
               (sha256 ONE LAST_PENALTY_INTERVAL)
               (sha256 ONE (+ current_timestamp DELAY))
             )
-            DEPOSIT
+            deposit
             (list (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
           )
           (c
             (list REMARK
               LAUNCHER_ID
               (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
-              DEPOSIT
+              deposit
               APPROVED
               DELAY
               atom_value

@@ -105,7 +105,7 @@
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_df)
           (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
-          (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_SF_TRANSFER_AMOUNT minimum_sf_transfer_amount)
+          (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_STABILITY_FEE_TRANSFER minimum_sf_transfer_amount)
           (list ASSERT_MY_COIN_ID my_coin_id)
           (assert-price-info statutes_puzzle_hash price_info)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))

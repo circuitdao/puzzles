@@ -247,11 +247,11 @@
               ; else NOOP as we don't need to pay the negative fee
               (list REMARK)
             )
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_TIME_INTERVAL step_time_interval)
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STEP_PRICE_DECREASE_FACTOR step_price_decrease_factor)
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TIMEOUT auction_timeout)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
             ; assert liquidation penalty percent
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_PERCENT liquidation_penalty_percent)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_percent)
             (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
             (assert-price-info statutes_puzzle_hash price_info)

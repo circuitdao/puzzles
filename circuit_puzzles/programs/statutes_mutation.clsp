@@ -1,6 +1,6 @@
 
 (mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
+      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
       mutation_index mutation_value crt_inner_puzzle_hash)
 
   (include *standard-cl-23*)
@@ -61,7 +61,7 @@
     ; don't change the rate
     PAST_CUMULATIVE_STABILITY_FEE_DF
     PAST_CUMULATIVE_INTEREST_DF
-    PRICE_UPDATES
+    PRICE_UPDATE_COUNTER
 
     ;  updating statutes, assert permission
     (assert

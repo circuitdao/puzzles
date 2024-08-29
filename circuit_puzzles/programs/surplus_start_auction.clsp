@@ -137,7 +137,7 @@
           (c
             (list ASSERT_MY_COIN_ID my_coin_id)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT_AMOUNT lot_amount)
+              (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
               (c
                 (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
                 (c

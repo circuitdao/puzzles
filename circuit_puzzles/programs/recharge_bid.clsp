@@ -59,11 +59,11 @@
           (c
             (list ASSERT_MY_AMOUNT last_byc_bid_amount)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MIN_CRT_PRICE min_crt_price)
+              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_CRT_PRICE min_crt_price)
               (c
-                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID_AMOUNT minimum_byc_bid_amount)
+                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID minimum_byc_bid_amount)
                 (c
-                  (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+                  (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
                   (c
                     (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
                     (c

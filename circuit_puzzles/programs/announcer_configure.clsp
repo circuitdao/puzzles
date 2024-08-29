@@ -67,8 +67,8 @@
       (> deposit min_deposit) ; must be higher than the minimum deposit statute
       (> (+ max_delay 1) delay) ; must be lower or equal than the maximum delay statute
       (li
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DELAY max_delay)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MIN_DEPOSIT min_deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PRICE_TTL max_delay)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))

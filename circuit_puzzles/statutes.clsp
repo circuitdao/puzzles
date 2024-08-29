@@ -18,7 +18,7 @@
       ; cumulative interest rate fee, same schedule as stability fee
       PAST_CUMULATIVE_INTEREST_DF
       ; counter of all price updates
-      PRICE_UPDATES
+      PRICE_UPDATE_COUNTER
 
       ; solution
       crt_inner_puzzle_hash 
@@ -96,13 +96,13 @@
           (a
             operation_mod
             (list
-              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
+              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
               mutation_index mutation_value crt_inner_puzzle_hash
             )
           )
         )
         ; default to existing values
-        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATES ())
+        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER ())
       )
     (li
       (list REMARK statutes price_info cumulative_stability_fee cumulative_interest_rate price_updates)

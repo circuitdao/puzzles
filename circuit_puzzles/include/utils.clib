@@ -128,7 +128,6 @@
     )
   )
 
-
   (defun print (to-show result) (if (all "$print$" to-show result) result result))
 
   (defun-inline li x x)

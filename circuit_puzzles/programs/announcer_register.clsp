@@ -33,7 +33,7 @@
         ; should not be expired
         (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)
             (recreate-myself-condition MOD_HASH
               STATUTES_STRUCT
               LAUNCHER_ID
