@@ -1,5 +1,5 @@
 ; register the announcer with announcer registry coin
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (registry_mod_hash registry_args_hash approved_mod_hashes statutes_inner_puzzle_hash)
@@ -42,6 +42,7 @@
               DEPOSIT
               DELAY
               ATOM_VALUE
+              MIN_DEPOSIT
               COOLDOWN_START
               LAST_PENALTY_INTERVAL
               TIMESTAMP_EXPIRES

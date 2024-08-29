@@ -1,4 +1,4 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval min_deposit delay max_delay new_atom_value melt)
@@ -56,6 +56,7 @@
         deposit
         delay
         (if new_atom_value new_atom_value ATOM_VALUE)
+        min_deposit
         cooldown_start
         LAST_PENALTY_INTERVAL
         (+ current_timestamp delay)

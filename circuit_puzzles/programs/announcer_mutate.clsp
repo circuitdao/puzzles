@@ -1,6 +1,6 @@
 ; mutation of announcers curried values by owner
 ; can mutate the atom value only, or also deactivate itself or topup deposit
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp atom_value)
@@ -21,6 +21,7 @@
   (if (all
     LAUNCHER_ID
     inner_puzzle_hash  ; must be owner
+    (> deposit MIN_DEPOSIT) ; deposit must be more than min deposit to pay for fees
     )
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
@@ -37,6 +38,7 @@
               (sha256 ONE deposit)
               (sha256 ONE DELAY)
               (sha256 ONE atom_value)
+              (sha256 ONE MIN_DEPOSIT)
               (sha256 ONE COOLDOWN_START)
               (sha256 ONE LAST_PENALTY_INTERVAL)
               (sha256 ONE (+ current_timestamp DELAY))
@@ -52,17 +54,12 @@
               APPROVED
               DELAY
               atom_value
+              MIN_DEPOSIT
               COOLDOWN_START
               LAST_PENALTY_INTERVAL
               (+ current_timestamp DELAY)
             )
-            (if (> DEPOSIT deposit)
-              ; force fee if they're reducing deposit
-              (c
-                (list RESERVE_FEE (- DEPOSIT deposit))
-                input_conditions
-              )
-              input_conditions)
+            input_conditions
           )
         )
       )
