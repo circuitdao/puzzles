@@ -56,7 +56,13 @@
               LAST_PENALTY_INTERVAL
               (+ current_timestamp DELAY)
             )
-            input_conditions
+            (if (> DEPOSIT deposit)
+              ; force fee if they're reducing deposit
+              (c
+                (list RESERVE_FEE (- DEPOSIT deposit))
+                input_conditions
+              )
+              input_conditions)
           )
         )
       )

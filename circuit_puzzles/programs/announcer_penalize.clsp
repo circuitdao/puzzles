@@ -12,13 +12,6 @@
   (include statutes_utils.clib)
   (include announcer.clib)
 
-  (defun pow (base exponent precision)
-    (if (> exponent 1)
-      (/ (* base (pow base (- exponent 1) precision)) precision)
-      base
-    )
-  )
-
   (assign
     current_penalty_interval (/ (/ current_timestamp 60) penalty_interval_in_minutes)
     penalized_deposit
