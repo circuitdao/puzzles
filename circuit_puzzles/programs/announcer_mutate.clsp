@@ -19,10 +19,13 @@
     )
   )
   (if (all
-    LAUNCHER_ID
-    inner_puzzle_hash  ; must be owner
-    (> deposit MIN_DEPOSIT) ; deposit must be more than min deposit to pay for fees
-    )
+        LAUNCHER_ID
+        inner_puzzle_hash  ; must be owner
+        (any
+          (= MIN_DEPOSIT 0)  ; launch
+          (> deposit MIN_DEPOSIT) ; deposit must be more than min deposit to pay for fees
+        )
+      )
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
       (c
