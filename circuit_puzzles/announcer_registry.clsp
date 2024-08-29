@@ -71,9 +71,9 @@
               (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id '*'))
               (list ASSERT_MY_COIN_ID my_coin_id)
               (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CLAIM_INTERVAL claim_interval)
-              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CRT_CREDITS_PER_INTERVAL crt_credits_per_interval)
-              (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATES statutes_price_updates)
+              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
+              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_PER_INTERVAL crt_credits_per_interval)
+              (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_updates)
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
                   (curry_hashes cat_mod_hash

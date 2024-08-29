@@ -1,5 +1,5 @@
 (mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATES
+      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
       _
       (@ mutation_value (oracle_inner_puz_hash price last_updated))
       crt_inner_puzzle_hash)
@@ -39,7 +39,7 @@
       (r PRICE_INFO)
     )
     ; increase the price updates counter to be used by announcers to claim rewards
-    (+ PRICE_UPDATES 1)
+    (+ PRICE_UPDATE_COUNTER 1)
     (assign
       ; first item is price oracle info on statues
       oracle_launcher_id (f (f STATUTES))

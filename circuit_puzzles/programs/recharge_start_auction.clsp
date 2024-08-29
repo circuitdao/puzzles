@@ -45,7 +45,7 @@
             () ; no bids
           )
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TIMEOUT auction_timeout)
+            (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
             (c
               (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
               (c

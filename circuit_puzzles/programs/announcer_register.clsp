@@ -1,5 +1,5 @@
 ; register the announcer with announcer registry coin
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (registry_mod_hash registry_args_hash approved_mod_hashes statutes_inner_puzzle_hash)
@@ -19,6 +19,7 @@
       APPROVED
       (size_b32 registry_mod_hash)
       (l approved_mod_hashes)
+      (> deposit MIN_DEPOSIT)  ; deposit must be more than min deposit to pay for fees
       (= registry_mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry
       (c
         (list SEND_MESSAGE 0x12
@@ -33,15 +34,16 @@
         ; should not be expired
         (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approved_mod_hashes)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)
             (recreate-myself-condition MOD_HASH
               STATUTES_STRUCT
               LAUNCHER_ID
               INNER_PUZZLE_HASH
               APPROVED
-              DEPOSIT
+              deposit
               DELAY
               ATOM_VALUE
+              MIN_DEPOSIT
               COOLDOWN_START
               LAST_PENALTY_INTERVAL
               TIMESTAMP_EXPIRES

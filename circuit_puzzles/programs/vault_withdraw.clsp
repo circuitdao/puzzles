@@ -48,7 +48,7 @@
         (list TRANSFERRED_FEES new_deposited_amount PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
         (list
           ; assert liquidation ratio
-          (assert-statute statutes_puzzle_hash STATUTE_LIQUIDATION_RATIO liquidation_ratio)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           ; assert collateral price
           (assert-price-info statutes_puzzle_hash price_info)
           (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_df)

@@ -1,6 +1,6 @@
 ; mutation of announcers curried values by owner
 ; can mutate the atom value only, or also deactivate itself or topup deposit
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp atom_value)
@@ -19,9 +19,13 @@
     )
   )
   (if (all
-    LAUNCHER_ID
-    inner_puzzle_hash  ; must be owner
-    )
+        LAUNCHER_ID
+        inner_puzzle_hash  ; must be owner
+        (any
+          (= MIN_DEPOSIT 0)  ; launch
+          (> deposit MIN_DEPOSIT) ; deposit must be more than min deposit to pay for fees
+        )
+      )
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
       (c
@@ -34,24 +38,26 @@
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
               (sha256 ONE APPROVED)
-              (sha256 ONE DEPOSIT)
+              (sha256 ONE deposit)
               (sha256 ONE DELAY)
               (sha256 ONE atom_value)
+              (sha256 ONE MIN_DEPOSIT)
               (sha256 ONE COOLDOWN_START)
               (sha256 ONE LAST_PENALTY_INTERVAL)
               (sha256 ONE (+ current_timestamp DELAY))
             )
-            DEPOSIT
+            deposit
             (list (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
           )
           (c
             (list REMARK
               LAUNCHER_ID
               (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
-              DEPOSIT
+              deposit
               APPROVED
               DELAY
               atom_value
+              MIN_DEPOSIT
               COOLDOWN_START
               LAST_PENALTY_INTERVAL
               (+ current_timestamp DELAY)

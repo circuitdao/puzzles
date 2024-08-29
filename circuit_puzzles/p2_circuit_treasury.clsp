@@ -239,7 +239,7 @@
                   approver_coin_id
                 )
                 ; assert that approving mod hashes are valid
-                (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_COIN_APPROVER_MOD_HASHES approving_mod_hashes)
+                (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approving_mod_hashes)
                 ; assert that passed coin id is ours
                   (c (list ASSERT_MY_COIN_ID my_coin_id)
                     (c
