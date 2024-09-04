@@ -11,7 +11,7 @@ exclude = [
 
 [tool.poetry.dependencies]
 python = ">=3.11"
-chialisp_loader = "^0.1.0"
+chialisp_loader = "^0.1.2"
 chialisp_builder = "^0.1.2"
 clvm_tools_rs= "0.1.43"
 

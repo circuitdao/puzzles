@@ -214,7 +214,7 @@
                         (if treasury_coin_id
                           (assert
                             ; treasury coin should have enough amount to cover interest
-                            (> new_treasury_amount interest_amount)
+                            (> treasury_coin_amount interest_amount)
                             ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
                             (> interest_amount minimum_interest_amount)
                             (c
