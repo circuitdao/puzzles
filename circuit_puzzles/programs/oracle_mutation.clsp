@@ -15,13 +15,13 @@
       )
       input_announcement_asserts
       )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include oracle.clib)
-
 
   (assign
     price_announcers_length (if oracle_mutation (list-length price_announcers 0) ())
@@ -86,7 +86,7 @@
           ; min singleton amount, force it to be ONE
           1
         )
-        (list REMARK new_prices mean_price last_price current_timestamp)
+        (list REMARK PROTOCOL_PREFIX new_prices mean_price last_price current_timestamp)
         &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
       )
     )

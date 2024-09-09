@@ -40,6 +40,7 @@
              (c
                ; REMARK condition to make it easy to generate puzzle reveal for drivers
                (list REMARK
+                 PROTOCOL_PREFIX
                  bill_operation
                  final_bill
                  (f condition_rest) ; inner puzzle hash

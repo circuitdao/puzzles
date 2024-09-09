@@ -58,6 +58,7 @@
           (list SEND_MESSAGE
             0x3f
             (concat
+              PROTOCOL_PREFIX
               VAULT_ANN_PREFIX
               "i"
               byc_issuing_coin_id

@@ -3,9 +3,10 @@
 
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23*)
+  (include *standard-cl-23*)  
   (include utils.clib)
   (include statutes_utils.clib)
+
   (defconst ANN_PREFIX "R")
 
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
@@ -66,7 +67,7 @@
             () ; clear the registry when minting
             current_iteration
             (list
-              (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash issuance_coin_id crt_credits_per_interval) issuance_coin_id)
+              (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX ANN_PREFIX statutes_struct_hash issuance_coin_id crt_credits_per_interval) issuance_coin_id)
               (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee coin to
               (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id '*'))
               (list ASSERT_MY_COIN_ID my_coin_id)
@@ -124,6 +125,7 @@
                 (list RECEIVE_MESSAGE
                   0x12
                   (concat
+                    PROTOCOL_PREFIX
                     'A'
                     announcer_inner_puzzle_hash
                     1 ; must be an approved announcer
@@ -147,10 +149,12 @@
         )
       )
     )
+
+    ;### MAIN EXPRESSION ###
     (c
       (list ASSERT_MY_AMOUNT 0)
-      ; prove lineage
       (c
+        ; prove lineage
         (if (l lineage_proof)
           (list ASSERT_MY_PARENT_ID (
             calculate-coin-id
@@ -175,7 +179,7 @@
             0 ; coin amount always zero since it only keeps the registry and mints new coins
           )
           (c
-            (list REMARK announcer_registry claim_interval_number)
+            (list REMARK PROTOCOL_PREFIX announcer_registry claim_interval_number)
             operation_conditions
           )
         )

@@ -1,4 +1,3 @@
-
 (mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
       mutation_index mutation_value crt_inner_puzzle_hash)
@@ -20,18 +19,24 @@
         . rest
       )
     ) filtered_announcements)
+
     (if ann_conditions
-      (if
-        (any
-          (= condition_code ASSERT_COIN_ANNOUNCEMENT)
-          (= condition_code CREATE_COIN_ANNOUNCEMENT)
-        )
+      (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
+        ; TODO: do we need to limit this to protocol announcements only? what are these needed for anyway?
         (filter-ann-conditions rest (c condition filtered_announcements))
-        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-          (if
-            (= (substr (f (r condition_body)) 0 ONE) STATUTES_ANN_PREFIX)
-            ; bad message, error
-            (x)
+        ; only protocol SENDs and RECEIVES allowed
+        (if (and
+              (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+              (> (strlen (f (r condition_body))) 2)
+              (= (substr (f (r condition_body)) 0 3) PROTOCOL_PREFIX)
+          )
+          ; unless they pretend to be from Statues
+          ; TODO: do we also need to check the length of the message as o/w a hash's first character(s) may match the prefix?
+          (if (and
+                (> (strlen (f (r condition_body))) 3)
+                (= (substr (f (r condition_body)) 3 4) STATUTES_ANN_PREFIX)
+            )
+            (x) ; bad message, error
             (filter-ann-conditions rest (c condition filtered_announcements))
           )
           (x)
@@ -77,7 +82,7 @@
       (li
         ; confirm to CRT voting coin that mutation was applied
         (list SEND_MESSAGE 0x10
-          (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+          (concat PROTOCOL_PREFIX STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
         )
         (list ASSERT_HEIGHT_RELATIVE 1)
         &rest

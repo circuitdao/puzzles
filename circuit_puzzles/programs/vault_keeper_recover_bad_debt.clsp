@@ -17,12 +17,14 @@
       )
     )
   )
+
   (include *standard-cl-23*)
   (include utils.clib)
   (include vault.clib)
   (include statutes_utils.clib)
   (include condition_codes.clib)
   (include curry.clib)
+
   ; NOTE: in a real-life loan agreement, if the lender seizes collateral, there’s no further interest being
   ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
   ; that does not allow the lender to seize collateral)
@@ -70,6 +72,7 @@
             ; signal to tail that it can melt BYC with certain amount
             (list SEND_MESSAGE 0x3f
               (concat
+                PROTOCOL_PREFIX
                 VAULT_ANN_PREFIX
                 "x"
                 treasury_coin_id
@@ -81,7 +84,7 @@
             ; approve treasury coin to receive a withdrawal
             (list SEND_MESSAGE 0x3f
               (concat
-                VAULT_ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
+                PROTOCOL_PREFIX VAULT_ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
               treasury_coin_id
             )
             (list ASSERT_MY_COIN_ID my_coin_id)

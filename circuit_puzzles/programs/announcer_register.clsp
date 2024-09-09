@@ -11,6 +11,7 @@
   (include utils.clib)
   (include statutes_utils.clib)
   (include announcer.clib)
+
   (assign
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
@@ -24,6 +25,7 @@
       (c
         (list SEND_MESSAGE 0x12
           (concat
+            PROTOCOL_PREFIX
             ANN_PREFIX
             INNER_PUZZLE_HASH
             APPROVED

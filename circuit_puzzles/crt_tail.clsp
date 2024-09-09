@@ -4,7 +4,8 @@
       Truths parent_is_cat lineage_proof delta
       _
       solution
-     ) 
+     )
+
   (include *standard-cl-23*)
   (include condition_codes.clib)
   (include cat_truths.clib)
@@ -120,6 +121,7 @@
             (list RECEIVE_MESSAGE
               0x3f
               (concat
+                PROTOCOL_PREFIX
                 ann_prefix
                 statutes_struct_hash
                 my_coin_id

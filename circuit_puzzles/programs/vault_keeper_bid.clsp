@@ -196,6 +196,7 @@
             ; signal to tail that it can melt the BYC
             (list SEND_MESSAGE 0x3f
               (concat
+                PROTOCOL_PREFIX
                 VAULT_ANN_PREFIX
                 'x'
                 byc_coin_id_to_melt
@@ -206,6 +207,7 @@
             )
             ; get a melt confirmation from BYC tail
             ; assert that keeper absorbed their collateral + left over mojos from melting
+            ; TODO: do we need PROTOCOL_PREFIX here?
             (list ASSERT_PUZZLE_ANNOUNCEMENT
               (sha256
                 offer_mod_hash
@@ -230,6 +232,7 @@
             ; announce that we transferred collateral to target puzzle hash
             (if (> initiator_incentive 0)
               ; get an announcement from offer module that BYC was paid to initiator
+              ; TODO: do we need PROTOCOL_PREFIX here?
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
                   (calculate-stability-fee-puzzle
@@ -263,7 +266,7 @@
             ; get an announcement that BYC was paid into treasury
             (c
               (list SEND_MESSAGE 0x3f
-                (concat VAULT_ANN_PREFIX treasury_coin_id fees_for_treasury new_treasury_amount)
+                (concat PROTOCOL_PREFIX VAULT_ANN_PREFIX treasury_coin_id fees_for_treasury new_treasury_amount)
                 treasury_coin_id
               )
               conditions

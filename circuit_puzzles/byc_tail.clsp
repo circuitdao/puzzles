@@ -54,6 +54,7 @@
             RECEIVE_MESSAGE
             0x3f
             (concat
+              PROTOCOL_PREFIX
               cat_ann_prefix
               (if (> 0 delta) "x" "i")
               my_coin_id

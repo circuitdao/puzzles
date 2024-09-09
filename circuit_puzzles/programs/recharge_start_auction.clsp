@@ -4,12 +4,14 @@
     (start_time my_coin_id treasury_minimum auction_timeout
      p2_treasury_hash treasury_coins)
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (assert
@@ -40,6 +42,7 @@
         )
         (c
           (list REMARK
+            PROTOCOL_PREFIX
             LAUNCHER_ID
             start_time
             () ; no bids

@@ -2,6 +2,7 @@
   (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
+  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
     (if conditions
@@ -75,6 +76,7 @@
           ; we also send a message to each treasury coin so they can run
           (list SEND_MESSAGE 0x3f
             (concat
+              PROTOCOL_PREFIX
               ANN_PREFIX
               treasury_coin_id
               delta

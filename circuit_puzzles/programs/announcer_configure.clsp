@@ -3,6 +3,7 @@
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp statutes_inner_puzzle_hash input_toggle_activation deactivation_cooldown_interval min_deposit delay max_delay new_atom_value melt)
      )
+
   (include condition_codes.clib)
   (include curry.clib)
   (include *standard-cl-23*)

@@ -1,5 +1,7 @@
 (
+
   (defconst ANN_PREFIX 'A')
+  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun-inline recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
                                     deposit delay atom_value min_deposit cooldown_start last_penalty_interval timestamp_expires input_conditions)
@@ -24,7 +26,7 @@
       )
       ; driver remark to reveal the puzzle hash
       (c
-        (list REMARK LAUNCHER_ID inner_puzzle_hash deposit approved delay atom_value min_deposit cooldown_start last_penalty_interval timestamp_expires)
+        (list REMARK PROTOCOL_PREFIX LAUNCHER_ID inner_puzzle_hash deposit approved delay atom_value min_deposit cooldown_start last_penalty_interval timestamp_expires)
         input_conditions
       )
     )

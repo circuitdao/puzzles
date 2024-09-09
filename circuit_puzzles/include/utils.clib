@@ -10,6 +10,7 @@
   (defconst b32 32)
   (defconst TRUE 1)
   (defconst FALSE 0)
+  (defconst PROTOCOL_PREFIX "CRT")
 
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
@@ -28,6 +29,16 @@
   (defun-inline size_b1 (var)
     (= (strlen var) ONE)
   )
+
+  (defun and_ (CLAUSES)
+    (if (r CLAUSES)
+      (qq (if (unquote (f CLAUSES)) (unquote (and_ (r CLAUSES))) ()))
+      (f CLAUSES)
+    )
+  )
+
+  ; logical AND function that evaluates clauses left to right
+  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
 
   (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
     (if (> previous_timestamp current_timestamp)

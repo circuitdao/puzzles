@@ -15,6 +15,7 @@
         keeper_operation_info
       )
      )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -24,19 +25,27 @@
   (defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
 
   (defun-inline is-valid-ann-cond (cond_body)
+  ; TODO: sufficient to check that it's not a protocol announcement (i.e. no need for ANN_PREFIX)?
     (not
-      (=
-        (substr (f cond_body) 0 1)
-        ANN_PREFIX
+      (and
+        (> (strlen (f cond_body)) 3)
+        (=
+          (substr (f cond_body) 0 4)
+          (concat PROTOCOL_PREFIX ANN_PREFIX)
+        )
       )
     )
   )
 
   (defun-inline is-valid-msg-cond (cond_body)
+  ; TODO: sufficient to check that it's not a protocol message (i.e. no need for ANN_PREFIX)?
     (not
-      (=
-        (substr (f (r cond_body)) 0 1)
-        ANN_PREFIX
+      (and
+        (> (strlen (f (r cond_body))) 3)
+        (=
+          (substr (f (r cond_body)) 0 4)
+          (concat PROTOCOL_PREFIX ANN_PREFIX)
+        )
       )
     )
   )
@@ -44,16 +53,22 @@
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)
   ; RETURNS (conditions vault_operation_condition)
     (if conditions
-      (if (= condition_code REMARK)
+      (if (and
+            (= condition_code REMARK)
+            (l condition_body)
+            (= (f condition_body) PROTOCOL_PREFIX)
+          )
+        ; can have only one protocol REMARK, which must have 'v' prefix
         (if found_remark
-          (x) ; can't have multiple remarks
-          (assert (= 'v' (f condition_body))
-            (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
+          (x) 
+          (assert (= 'v' (f (r condition_body)))
+            (restrict-conditions rest_of_conditions (r (r condition_body)) via_solution final_conditions)
           )
         )
         (if via_solution
           (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
           ; keeper mode, only coin announcements are allowed
+          ; TODO: do we want to allow other conditions too as long as they are not valid-ann-conds?
           (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
             (assert (is-valid-ann-cond condition_body)
               (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
@@ -72,17 +87,28 @@
     ; filter out any cheeky announcements, and skip remarks/create coin
     (if conditions
       (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-        (assert (is-valid-ann-cond condition_body)
+        (assert
+          (is-valid-ann-cond condition_body)
           (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
         )
-        (if (= condition_code SEND_MESSAGE)
-          (assert (is-valid-msg-cond condition_body)
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          (assert
+            (is-valid-msg-cond condition_body)
             (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
           )
-          ; filter out remarks since we use them for driver puzzle reveals and create coins
-          (if (any (= condition_code REMARK) (= condition_code CREATE_COIN))
+          ; filter out remarks since we use them for driver puzzle reveals
+          ; TODO: only filter out REMARKs that have PROTOCOL_PREFIX and 'v'? (would need to add 'v' to REMARK in main puzzle)
+          (if (and
+                (= condition_code REMARK)
+                (l condition_body)
+                (= (f condition_body) PROTOCOL_PREFIX)
+              )
             (x)
-            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            ; filter out create coins
+            (if (= condition_code CREATE_COIN)
+              (x)
+              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            )
           )
         )
       )
@@ -180,11 +206,12 @@
               (f (r (r lineage_proof)))
             )
           )
-          (c (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT)
+          (c (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT) ; TODO: is this needed? potentially dangerous as it can brick puzzle if COLLATERAL_AMOUNT was set to wrong value?
             (c
               (list
                 ; this is for driver code to make it easy to generate puzzle reveal
                 REMARK
+                PROTOCOL_PREFIX
                 final_transferred_fees
                 final_collateral_amount
                 final_principal_amount

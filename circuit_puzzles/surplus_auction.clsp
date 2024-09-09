@@ -17,6 +17,7 @@
   (include recharge_auction.clib)
 
   (defconst ANN_PREFIX '^')
+
   (if (contains OPERATIONS (sha256tree operation))
     (a
       operation

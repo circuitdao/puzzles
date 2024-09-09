@@ -15,6 +15,7 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
   (defconst ANN_PREFIX 'G')
   (defconst ANN_VETO 'v')
   (defconst ANN_VETOED 'x')
@@ -64,7 +65,7 @@
           ; assert announcement from another CRT coin with higher amount than this one
           (list RECEIVE_MESSAGE
             0x3f
-            (concat ANN_PREFIX ANN_VETO (sha256tree BILL))
+            (concat PROTOCOL_PREFIX ANN_PREFIX ANN_VETO (sha256tree BILL))
             (calculate-coin-id
               grandparent_veto_id
               (calculate-crt-puzzle

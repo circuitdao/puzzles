@@ -150,21 +150,21 @@
         withdraw_amount_pre
     )
     (assert
-     ; can't go into negative
-     (> new_amount -1) (> withdraw_amount -1)
-     ; no change allowed
-     ;(> (+ new_amount withdraw_amount) (- current_amount 1))
-     (any
-      ; we can't leave any change if withdrawing
-      (= current_amount (+ new_amount withdraw_amount))
-      ; or if depositing must be higher than previous value
-      (all (= withdraw_amount 0) (> new_amount current_amount))
-     )
-     ; we can't do both a withdrawal and a deposit at the same time
-     (not (all (> withdraw_amount 0) (> new_amount current_amount)))
-     ; must have at least one condition
-     (l conditions)
-     ; ---- all asserts passed, return conditions
+      ; can't go into negative
+      (> new_amount -1) (> withdraw_amount -1)
+      ; no change allowed
+      ;(> (+ new_amount withdraw_amount) (- current_amount 1))
+      (any
+       ; we can't leave any change if withdrawing
+       (= current_amount (+ new_amount withdraw_amount))
+       ; or if depositing must be higher than previous value
+       (all (= withdraw_amount 0) (> new_amount current_amount))
+      )
+      ; we can't do both a withdrawal and a deposit at the same time
+      (not (all (> withdraw_amount 0) (> new_amount current_amount)))
+      ; must have at least one condition
+      (l conditions)
+      ; ---- all asserts passed, return conditions
       (c
         (list ASSERT_MY_AMOUNT current_amount)
         (c (list
@@ -179,7 +179,8 @@
                 (list RECEIVE_MESSAGE 0x10  ; only check that statutes singleton sent this message
                   ; get approval from statutes
                   (concat
-                    ANN_PREFIX
+                    PROTOCOL_PREFIX
+                    ANN_PREFIX ; "$"
                     (f args) ; my_coin_id
                     LAUNCHER_ID
                     (r lineage_proof) ; prev ring launcher id
@@ -231,6 +232,7 @@
                 ; assert approver coin announcement is valid
                 (list RECEIVE_MESSAGE 0x3f
                   (concat
+                    PROTOCOL_PREFIX
                     approving_mod_ann_prefix
                     my_coin_id
                     (- new_amount current_amount)
@@ -245,7 +247,7 @@
                     (c
                       ;  my new balance so someone can check whole ring balance
                       (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
-                      (c (list REMARK my_coin_id new_amount LAUNCHER_ID) ; for driver code
+                      (c (list REMARK PROTOCOL_PREFIX my_coin_id new_amount LAUNCHER_ID) ; for driver code
                         conditions
                       )
                     )

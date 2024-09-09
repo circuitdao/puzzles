@@ -18,17 +18,20 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
-  (defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
-
+  (defconst ANN_PREFIX 0x53) ; chr(83) -> "S"
+  (defconst TREASURY_ANN_PREFIX 0x24) ; -> '$'
 
 
   (defun filter-conditions ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions))
                             found_first_create_coin
                             filtered_conditions)
     (if conditions
-      (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-        (x)
+      (if (and
+            (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (> (strlen (f (r condition_rest))) 2)
+            (= (substr (f (r condition_rest)) 0 3) PROTOCOL_PREFIX)
+        )
+        (x) ; no protocol SEND/RECEIVE messages allowed from inner puzzle
         (if (= condition_code CREATE_COIN)
           (if found_first_create_coin
             (filter-conditions
@@ -43,8 +46,12 @@
               filtered_conditions
             )
           )
-          (if (= condition_code REMARK)
-            ; skip REMARK conditions since we use them to generate reveals
+          (if (and
+                (= condition_code REMARK)
+                (l condition_rest)
+                (= (f condition_rest) PROTOCOL_PREFIX)
+            )
+            ; skip REMARK conditions from inner puzzle that could be confused with protocol REMARKs since we use them to generate reveals
             (filter-conditions
               rest_of_conditions
               found_first_create_coin
@@ -180,7 +187,7 @@
     (assert
       (> interest_amount -1)
       (size_b32 inner_puzzle_hash)
-      (c (list REMARK new_discounted_deposit new_amount inner_puzzle_hash memos)
+      (c (list REMARK PROTOCOL_PREFIX new_discounted_deposit new_amount inner_puzzle_hash memos)
         (c
           (list ASSERT_MY_COIN_ID my_coin_id)
           (c
@@ -221,7 +228,7 @@
                               (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_WITHDRAWAL minimum_interest_amount)
                               (c
                                 (list SEND_MESSAGE 0x3f
-                                  (concat ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
+                                  (concat PROTOCOL_PREFIX ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
                                   treasury_coin_id
                                 )
                                 final_conditions

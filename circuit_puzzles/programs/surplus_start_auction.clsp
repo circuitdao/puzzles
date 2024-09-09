@@ -7,13 +7,13 @@
       start_time my_coin_id treasury_coins treasury_maximum
     )
   )
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include surplus_auction.clib)
   (include utils.clib)
-
 
   (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
                                            treasury_coins my_coin_id lot_amount sum_amount CAT_leftover announcements)
@@ -51,6 +51,7 @@
           ; send a message to approve treasury coins for withdrawal
           (list SEND_MESSAGE 0x3f
             (concat
+              PROTOCOL_PREFIX
               ANN_PREFIX
               treasury_coin_id
               (* -1 withdraw_amount)
@@ -147,8 +148,8 @@
                     ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
                     (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
                       ; assert p2_surplus_auction coin received the lot amount
-                      (c (list RECEIVE_MESSAGE 0x3f (concat p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id)
-                        (c (list REMARK my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
+                      (c (list RECEIVE_MESSAGE 0x3f (concat PROTOCOL_PREFIX p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id)
+                        (c (list REMARK PROTOCOL_PREFIX my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
                           (assert-treasury-coins-withdrawal
                             p2_treasury_hash
                             CAT_MOD_HASH

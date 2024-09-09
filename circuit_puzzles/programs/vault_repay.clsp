@@ -116,6 +116,7 @@
                 (list SEND_MESSAGE
                   0x3f
                   (concat
+                    PROTOCOL_PREFIX
                     VAULT_ANN_PREFIX
                     'x'
                     byc_coin_id_to_melt
@@ -132,7 +133,7 @@
             ; approve treasury coin to receive a deposit
             (c
               (list SEND_MESSAGE 0x3f
-                (concat VAULT_ANN_PREFIX treasury_coin_id fees_to_pay new_treasury_amount)
+                (concat PROTOCOL_PREFIX VAULT_ANN_PREFIX treasury_coin_id fees_to_pay new_treasury_amount)
                 treasury_coin_id
               )
               conditions

@@ -3,9 +3,13 @@
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       _
      )
-  (defconst ONE 1)
+
+  ; not using cl-23 standard to save costs
   (include condition_codes.clib)
   (include curry.clib)
+
+  (defconst ONE 1)
+  (defconst PROTOCOL_PREFIX "CRT")
 
   (defun sha256tree (TREE)
     (if (l TREE)
@@ -13,7 +17,7 @@
       (sha256 ONE TREE)
     )
   )
-
+  
   (c
     (list CREATE_PUZZLE_ANNOUNCEMENT
       (sha256
@@ -41,12 +45,12 @@
             (sha256 ONE LAST_PENALTY_INTERVAL)
             (sha256 ONE TIMESTAMP_EXPIRES)
           )
-          deposit
+          DEPOSIT
           (list INNER_PUZZLE_HASH)
         )
         ; driver remark to reveal the puzzle hash
         (c
-          (list REMARK LAUNCHER_ID INNER_PUZZLE_HASH DEPOSIT APPROVED DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+          (list REMARK PROTOCOL_PREFIX LAUNCHER_ID INNER_PUZZLE_HASH DEPOSIT APPROVED DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
           input_conditions
         )
       )

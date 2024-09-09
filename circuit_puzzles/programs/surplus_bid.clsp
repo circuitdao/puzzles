@@ -42,7 +42,7 @@
             bid_crt_amount
           )
           (c
-            (list REMARK LAUNCHER_ID CAT_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) CAT_TAIL_HASH CRT_TAIL_HASH)
+            (list REMARK PROTOCOL_PREFIX LAUNCHER_ID CAT_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) CAT_TAIL_HASH CRT_TAIL_HASH)
             (c
               (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
               (c
