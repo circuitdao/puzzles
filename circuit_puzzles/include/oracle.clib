@@ -1,12 +1,17 @@
 (
 
-  (defun cut-prices (price_list expiration_timestamp)
+  (defun cut-prices (price_list expiration_timestamp last_matured_price_info)
     (if price_list
       (if (> expiration_timestamp  (r (f price_list)))
-        (cut-prices (r price_list) expiration_timestamp)
-        price_list
+        (cut-prices (r price_list) expiration_timestamp (f price_list))
+        (c last_matured_price_info
+          (if last_matured_price_info
+            (c last_matured_price_info price_list)
+            price_list
+          )
+        )
       )
-      ()
+      (c last_matured_price_info (list last_matured_price_info))
     )
   )
 
@@ -25,7 +30,7 @@
     )
   )
   (defun-inline abs (number)
-    (if (> number -1) number (* number -1))
+    (if (> number MINUS_ONE) number (* number MINUS_ONE))
   )
 
   (defun last-item (lst)
@@ -96,7 +101,7 @@
         (unique (r lst))
         (x)
       )
-      1
+      ONE
     )
   )
 
@@ -115,9 +120,9 @@
     (if L
       (if (r L)
         0
-        1
+        ONE
       )
-      1
+      ONE
     )
   )
 
@@ -163,13 +168,13 @@
   (defun-inline get-median-index (length)
     ; if odd, we return the middle value
     ; if even, we return the one smaller since prices are sorted in descending order
-    (/ length 2)
+    (/ length TWO)
   )
   (defun get-price (prices index curr_index)
     (if prices
       (if (= index curr_index)
         (f prices)
-        (get-price (r prices) index (+ curr_index 1))
+        (get-price (r prices) index (+ curr_index ONE))
       )
       (x)
     )

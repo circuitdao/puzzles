@@ -2,6 +2,7 @@
       ; solution
       oracle_mutation
       input_announcement_asserts
+      . announce_args
      )
 
   (include *standard-cl-23*)
@@ -28,20 +29,31 @@
     ; recreate yourself to conserve updates so far
     (verify-announcement-asserts
       input_announcement_asserts
-      (list
-        (list CREATE_COIN
-          (curry_hashes MOD_HASH
-            (sha256 ONE MOD_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
-            (sha256tree PRICES)
+      (assign
+        (current_timestamp price_expiration_seconds) announce_args
+        delayed_timestamp (if (all current_timestamp price_expiration_seconds) (- current_timestamp price_expiration_seconds) 0)
+        (last_matured_price . _) (cut-prices PRICES delayed_timestamp ())
+        (oldest_price . oldest_updated) (if last_matured_price last_matured_price (c () ()))
+        (list
+          (list CREATE_COIN
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
+              (sha256tree PRICES)
+            )
+            ; min singleton amount, force it to be this
+            ONE
           )
-          ; min singleton amount, force it to be this
-          ONE
-        )
-        (assign
-          (oldest_price . oldest_updated) (f (cut-prices PRICES 0))
-          (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 oldest_price oldest_updated))
+          (if oldest_updated
+            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 oldest_price oldest_updated current_timestamp price_expiration_seconds))
+            (x)  ; no matured prices available, fail, this only occurs on launch
+          )
+          (list REMARK oldest_price oldest_updated current_timestamp price_expiration_seconds)
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+          ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
+          ; within a boundary of last_block > current_timestamp - 1 block < next block
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         )
       )
     )

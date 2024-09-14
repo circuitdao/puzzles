@@ -3,7 +3,7 @@
     statutes_puzzle_hash  lineage_proof announcements
     (ttl current_timestamp treasury_coins
      p2_treasury_hash funding_coin_id treasury_minimum
-     my_coin_id)
+     my_coin_id target_puzzle_hash)
   )
   (include *standard-cl-23*)
   (include curry.clib)
@@ -11,6 +11,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign-lambda
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
@@ -53,7 +54,7 @@
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         ; approve issuance of new CRT coins to target_puzzle_hash
-        (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash funding_coin_id winning_crt_bid_amount) funding_coin_id)
+        (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash target_puzzle_hash winning_crt_bid_amount) funding_coin_id)
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
             (f lineage_proof)

@@ -34,7 +34,7 @@
            1 ; we found a create coin condition
            (assert
              ; amount should be >= 0
-             (> (f (r condition_rest)) -1 )
+             (> (f (r condition_rest)) MINUS_ONE )
              ; only one create coin allowed when in governance mode
              (= found_create_coin 0)
              (c
@@ -73,7 +73,7 @@
              ; not just filter out announcements with our prefix namespace
              ; but raise an error if someone is trying to be cheeky
              (not
-                 (= (substr (f condition_rest) 0 1) ANN_PREFIX)
+                 (= (substr (f condition_rest) 0 ONE) ANN_PREFIX)
              )
              (filter-conditions
                MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
@@ -155,7 +155,7 @@
            (find-bill-condition rest_of_conditions (r condition_body) create_coin_amount)
            (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
          )
-         (if (all (= condition_code CREATE_COIN) (= create_coin_amount -1))
+         (if (all (= condition_code CREATE_COIN) (= create_coin_amount MINUS_ONE))
            ; found CREATE_COIN
            (find-bill-condition rest_of_conditions bill_operation (f (r condition_body)))
            (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
@@ -173,7 +173,7 @@
        ; there should be specific create_coin in the conditions with same puzzle hash as curried in, announcements are allowed too
        (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions ())
      )
-     ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () -1)
+     ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () MINUS_ONE)
      statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
      ; find the bill operation lambda and execute it, with new coin amount prepended
      ; so can be used in bill operation while we later assert it's correct

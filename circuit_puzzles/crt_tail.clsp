@@ -1,8 +1,8 @@
 ; Circuit CAT token (CRT)
 (mod (
-      GENESIS_ID STATUTES_STRUCT CAT_MOD_HASH
+      GENESIS_ID STATUTES_STRUCT
       Truths parent_is_cat lineage_proof delta
-      _
+      inner_conditions
       solution
      ) 
   (include *standard-cl-23*)
@@ -19,21 +19,41 @@
     )
   )
 
+  (defun validate-target-coin ((@ conditions ((condition_code . condition_rest) . rest_of_conditions)) found_create_coin)
+    ; find all CREATE_COIN conditions, check that there's only one and return that, fail
+    ; if there's more CREATE_COIN conditions, but other conditions are fine
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (if found_create_coin
+          (x)
+          (validate-target-coin rest_of_conditions condition_rest)
+        )
+        (validate-target-coin rest_of_conditions found_create_coin)
+      )
+      (if found_create_coin
+        found_create_coin
+        (x)
+      )
+    )
+  )
+
   (if delta
     (if (> 0 delta)
       ; melting only by surplus auction
       (assign
+        CAT_MOD_HASH (cat_mod_hash_truth Truths)
+        CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
         (crt_tail_hash byc_tail_hash surplus_mod_hash
         launcher_id byc_lot_amount last_bid
         statutes_inner_puzzle_hash approved_mod_hashes) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         puzzle_hash (
           curry_hashes CAT_MOD_HASH
-            (sha256 ONE CAT_MOD_HASH)
+            CAT_MOD_HASH_HASH
             (sha256 ONE crt_tail_hash)
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
-              (sha256 ONE CAT_MOD_HASH)
+              CAT_MOD_HASH_HASH
               statutes_struct_hash
               (sha256 ONE launcher_id)
               (sha256 ONE byc_lot_amount)
@@ -74,6 +94,9 @@
       () ; issuance at launch
       ; third option is issuing by recharge auction or announcer registry
       (assign
+        CAT_MOD_HASH (cat_mod_hash_truth Truths)
+        CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
+        crt_tail_hash (cat_tail_program_hash_truth Truths)
         (
           mod_hash
           ann_prefix
@@ -85,6 +108,7 @@
           my_coin_id
           approved_mod_hashes
           statutes_inner_puzzle_hash
+          target_puzzle_hash  ; where this coin is going to
         ) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         approving_coin_id (calculate-coin-id
@@ -92,7 +116,7 @@
           (if (all byc_tail_hash (= mod_hash (f (r (r approved_mod_hashes)))))
             ; either a CAT puzzle with recharge auction as inner puzzle
             (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
+              CAT_MOD_HASH_HASH
               (sha256 ONE byc_tail_hash)
               (tree_hash_of_apply mod_hash curried_mod_args)
             )
@@ -104,6 +128,12 @@
           )
           amount
         )
+        (found_target_puzzle_hash found_target_amount . rest) (validate-target-coin inner_conditions 0)
+        curried_target_puzzle_hash (curry_hashes CAT_MOD_HASH
+          CAT_MOD_HASH_HASH
+          (sha256 ONE crt_tail_hash)
+          target_puzzle_hash
+        )
         (assert
           ; recharge auction mod is the third in approved mod hash list
           ; can also be announcer registry
@@ -114,6 +144,8 @@
           (size_b1 ann_prefix)
           (size_b32 curried_mod_args)
           (size_b32 approving_coin_id)
+          (= found_target_puzzle_hash curried_target_puzzle_hash)
+          (= found_target_amount issuance_amount)
           (= delta 0)
           (list
             (list ASSERT_MY_COIN_ID my_coin_id)
@@ -122,7 +154,7 @@
               (concat
                 ann_prefix
                 statutes_struct_hash
-                my_coin_id
+                target_puzzle_hash  ; get approval for target puzzle hash from approver
                 issuance_amount
               )
               approving_coin_id

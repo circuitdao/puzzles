@@ -139,7 +139,7 @@
         (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -2 cumulative_interest_rate)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -1 cumulative_stability_fee)
+        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX MINUS_ONE cumulative_stability_fee)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat STATUTES_ANN_PREFIX PRICE_PREFIX (sha256tree price_info))

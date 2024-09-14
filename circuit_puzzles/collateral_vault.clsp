@@ -26,7 +26,7 @@
   (defun-inline is-valid-ann-cond (cond_body)
     (not
       (=
-        (substr (f cond_body) 0 1)
+        (substr (f cond_body) 0 ONE)
         ANN_PREFIX
       )
     )
@@ -35,7 +35,7 @@
   (defun-inline is-valid-msg-cond (cond_body)
     (not
       (=
-        (substr (f (r cond_body)) 0 1)
+        (substr (f (r cond_body)) 0 ONE)
         ANN_PREFIX
       )
     )

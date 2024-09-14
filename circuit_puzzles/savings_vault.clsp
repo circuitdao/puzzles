@@ -178,7 +178,7 @@
     inner_puzzle_hash (f create_coin_body)
     memos (r (r create_coin_body))
     (assert
-      (> interest_amount -1)
+      (> interest_amount MINUS_ONE)
       (size_b32 inner_puzzle_hash)
       (c (list REMARK new_discounted_deposit new_amount inner_puzzle_hash memos)
         (c
@@ -213,7 +213,7 @@
                         )
                         (if treasury_coin_id
                           (assert
-                            ; treasury coin should have enough amount to cover interest
+                            ; current treasury coin should have enough amount to cover interest
                             (> treasury_coin_amount interest_amount)
                             ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
                             (> interest_amount minimum_interest_amount)
@@ -221,7 +221,7 @@
                               (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_WITHDRAWAL minimum_interest_amount)
                               (c
                                 (list SEND_MESSAGE 0x3f
-                                  (concat ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
+                                  (concat ANN_PREFIX treasury_coin_id (* MINUS_ONE interest_amount) new_treasury_amount)
                                   treasury_coin_id
                                 )
                                 final_conditions

@@ -71,7 +71,7 @@
           )
         )
         (c
-          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct
+          (list ASSERT_MY_AMOUNT DEPOSIT)
           (a
             operation
             (list

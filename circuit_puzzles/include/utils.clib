@@ -1,6 +1,7 @@
 (
 
   (defconst ONE 1)
+  (defconst MINUS_ONE -1)
   (defconst TWO 2)
   (defconst MOJOS 1000000000000)
   (defconst PERCENT_PRECISION 10000)
@@ -17,12 +18,12 @@
 
   (defun-inline size_uint32 (var)
     ; 5 bytes for uint32
-    (all (> var -1) (> 6 (strlen var)))
+    (all (> var MINUS_ONE) (> 6 (strlen var)))
   )
 
   (defun-inline size_uint64 (var)
     ; 9 bytes for uint64
-    (all (> var -1) (> 10 (strlen var)))
+    (all (> var MINUS_ONE) (> 10 (strlen var)))
   )
 
   (defun-inline size_b1 (var)
@@ -70,7 +71,7 @@
   (defun contains (lst item)
     (if lst
       (if (= (f lst) item)
-        1
+        ONE
         (contains (r lst) item)
       )
       ; not found

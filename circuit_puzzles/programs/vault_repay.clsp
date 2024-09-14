@@ -42,17 +42,17 @@
     )
     fees_to_not_pay (- calculated_stability_fee fees_to_pay)
     ; burn the byc that's left after fees are paid
-    negative_byc_principal_to_melt (* -1 (- byc_to_repay calculated_stability_fee))
+    negative_byc_principal_to_melt (* MINUS_ONE (- byc_to_repay calculated_stability_fee))
     new_principal (+
       PRINCIPAL
       negative_byc_principal_to_melt
     )
-    undiscounted_principal (* -1 (/ (* -1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
+    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
     new_discounted_principal (if (= byc_to_repay undiscounted_principal)
       0
       (discount-principal-for-melt
         DISCOUNTED_PRINCIPAL
-        (* -1 byc_to_repay)
+        (* MINUS_ONE byc_to_repay)
         cumulative_stability_fee_rate
       )
     )
@@ -85,7 +85,7 @@
     )
     (assert
       (> byc_to_repay 0)
-      (> undiscounted_principal (- byc_to_repay 1))
+      (> undiscounted_principal (- byc_to_repay ONE))
       ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
       ; vault liquidation costs at healthy levels
       (any (= new_principal 0) (> new_principal minimum_principal_amount))
@@ -109,7 +109,7 @@
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
             &rest
-            (if (> negative_byc_principal_to_melt -1)
+            (if (> negative_byc_principal_to_melt MINUS_ONE)
               (list )
               (list
                 ; signal to tail that it can melt the BYC

@@ -27,7 +27,7 @@
     )
     (if (all (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
-      (list  ;create / fill the coin from treasury
+      (list  ; create / fill the coin from treasury
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee we locked them delegating control to launcher coin id
         (list SEND_MESSAGE 0x3f (concat my_coin_id amount puzzle_hash) launcher_coin_id)
@@ -57,7 +57,7 @@
         ; and the winning bid amount to melt
         (list RECEIVE_MESSAGE 0x3f (concat amount puzzle_hash) launcher_coin_id)
         ; transfer out
-        (list CREATE_COIN puzzle_hash amount)
+        (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
       )
     )
   )
