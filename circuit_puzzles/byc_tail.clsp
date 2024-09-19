@@ -21,7 +21,7 @@
       )
      )
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include cat_truths.clib)
   (include curry.clib)

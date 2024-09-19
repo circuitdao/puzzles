@@ -1,5 +1,5 @@
 (mod (STATUTES_STRUCT statutes_inner_puzzle_hash price)
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
   (include statutes_utils.clib)

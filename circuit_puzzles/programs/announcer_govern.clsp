@@ -7,7 +7,7 @@
      )
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include utils.clib)
   (include statutes_utils.clib)
   (include announcer.clib)

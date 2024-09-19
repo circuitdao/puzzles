@@ -9,7 +9,7 @@
     )
   )
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)

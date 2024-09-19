@@ -1,7 +1,7 @@
 (mod (OPERATIONS MOD_WITH_OPERATIONS_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
       statutes_inner_puzzle_hash lineage_proof operation . op_args)
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)

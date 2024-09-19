@@ -5,7 +5,7 @@
       . announce_args
      )
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -47,7 +47,7 @@
           )
           (if oldest_updated
             (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 oldest_price oldest_updated current_timestamp price_expiration_seconds))
-            (x)  ; no matured prices available, fail, this only occurs on launch
+            (x)  ; no matured prices available, fail, this occurs on launch and increases of price_expiration_seconds
           )
           (list REMARK oldest_price oldest_updated current_timestamp price_expiration_seconds)
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))

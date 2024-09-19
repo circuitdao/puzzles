@@ -3,14 +3,15 @@
       _
       (@ mutation_value (oracle_inner_puz_hash price last_updated current_timestamp))
       crt_inner_puzzle_hash)
-  (include *standard-cl-23*)
+
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defun-inline price-expiration-statute statutes
-    (f (f (r (r (r (r (r (r (r (r (f statutes)))))))))))
+  (defun-inline price-delay-statute (statutes)
+    (f (f (r (r (r (r (r (r (r (r statutes))))))))))
   )
 
   ; we're updating prices
@@ -66,7 +67,7 @@
                 (sha256tree (c SINGLETON_MOD_HASH (c oracle_launcher_id SINGLETON_LAUNCHER_HASH)))
                 oracle_inner_puz_hash
               )
-              (sha256 price last_updated current_timestamp (price-expiration-statute STATUTES))
+              (sha256 price last_updated current_timestamp (price-delay-statute STATUTES))
             )
           )
         )

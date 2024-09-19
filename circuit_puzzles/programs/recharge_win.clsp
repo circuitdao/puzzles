@@ -3,9 +3,9 @@
     statutes_puzzle_hash  lineage_proof announcements
     (ttl current_timestamp treasury_coins
      p2_treasury_hash funding_coin_id treasury_minimum
-     my_coin_id target_puzzle_hash)
+     target_puzzle_hash)
   )
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -68,7 +68,6 @@
             (f (r lineage_proof))
           )
         )
-        (list ASSERT_MY_COIN_ID my_coin_id)
         &rest
         (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
           p2_treasury_hash
@@ -83,7 +82,6 @@
           remainder
           (f treasury_coins)
           treasury_coins
-          my_coin_id
           announcements
         )
       )

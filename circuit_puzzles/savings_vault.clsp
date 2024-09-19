@@ -12,7 +12,7 @@
                              treasury_coin_prev_launcher_id treasury_coin_amount )))
      )
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
