@@ -9,11 +9,11 @@
       )
       CAT_MOD_HASH
       CRT_TAIL_HASH
-      STATUTES ; list of Statute values. indexed by constants in statutes_utils.clib
-      PRICE_INFO ; (price . last_updated)
-      ; cumulative fee updated since start, updated whenever oracle prices are updated
+      STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
+      PRICE_INFO ; Statute price info. -> (price . last_updated)
+      ; cumulative stability fee discount factor as of last Statutes price info update
       PAST_CUMULATIVE_STABILITY_FEE_DF
-      ; cumulative interest rate fee, same schedule as stability fee
+      ; cumulative interest rate discount factor as of last Statutes price info update
       PAST_CUMULATIVE_INTEREST_DF
       ; counter of all price updates
       PRICE_UPDATE_COUNTER
@@ -23,25 +23,24 @@
       mutation
      )
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-
   (defun announce-statutes (statutes start_index rest)
     (if statutes
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT
-          (concat STATUTES_ANN_PREFIX
+          (concat PROTOCOL_PREFIX
             STATUTE_PREFIX start_index (f (f statutes))
           )
         )
         ; add a full statutes when announcing statutes
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (concat STATUTES_ANN_PREFIX
+            (concat PROTOCOL_PREFIX
               STATUTE_FULL_PREFIX start_index (sha256tree (f statutes))
             )
           )
@@ -55,7 +54,7 @@
   (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES
                                         P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
-                                        statutes price_info cumulative_stability_fee cumulative_interest_rate price_update_counter)
+                                        statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
     (list
       CREATE_COIN
       ; NOTE: we don't curry in operations here as they're already curried in mod hash
@@ -73,8 +72,8 @@
         (sha256 ONE CRT_TAIL_HASH)
         (sha256tree statutes)
         (sha256tree price_info)
-        (sha256 ONE cumulative_stability_fee)
-        (sha256 ONE cumulative_interest_rate)
+        (sha256 ONE cumulative_stability_fee_df)
+        (sha256 ONE cumulative_interest_df)
         (sha256 ONE price_update_counter)
       )
       ; amount, 1 mojo for singletons or any odd number
@@ -86,9 +85,9 @@
   (assign
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
     (operation_mod . operation_mod_hash) (if operation (c operation (sha256tree operation)) (c () ()))
-    (statutes price_info cumulative_stability_fee cumulative_interest_rate price_update_counter mutation_conditions)
+    (statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter mutation_conditions)
       (if operation_mod_hash
-        ; mutate statutes
+        ; mutate statutes or update price info
         (assert
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
           (a
@@ -99,7 +98,7 @@
             )
           )
         )
-        ; default to existing values
+        ; announce. default to existing state. no operation conditions
         (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER ())
       )
     (li
@@ -113,34 +112,34 @@
         CRT_TAIL_HASH
         statutes
         price_info
-        cumulative_stability_fee
-        cumulative_interest_rate
+        cumulative_stability_fee_df
+        cumulative_interest_df
         price_update_counter
       )
-      (list REMARK PROTOCOL_PREFIX statutes price_info cumulative_stability_fee cumulative_interest_rate price_update_counter)
+      (list REMARK PROTOCOL_PREFIX statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -7 price_update_counter)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX -7 price_update_counter)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -5 OFFER_MOD_HASH)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX -5 OFFER_MOD_HASH)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -2 cumulative_interest_rate)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX -2 cumulative_interest_df)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -1 cumulative_stability_fee)
+        (concat PROTOCOL_PREFIX STATUTE_PREFIX MINUS_ONE cumulative_stability_fee_df)
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat STATUTES_ANN_PREFIX PRICE_PREFIX (sha256tree price_info))
+        (concat PROTOCOL_PREFIX PRICE_PREFIX (sha256tree price_info))
       )
       &rest
       (announce-statutes statutes 0 mutation_conditions)

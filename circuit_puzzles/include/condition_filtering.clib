@@ -1,0 +1,37 @@
+(
+
+  ; true/false for non-protocol/protocol CREATE_..._ANNOUNCEMENT condition
+  (defun-inline is-valid-ann-cond (condition_body)
+    (not
+      (and
+        (l condition_body)
+        (> (strlen (f condition_body)) 2)
+        (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; true/false for non-protocol/protocol ..._MESSAGE condition
+  (defun-inline is-valid-msg-cond (condition_body)
+    (not
+      (and
+        (l condition_body)
+        (l (r condition_body))
+        (= (strlen (f (r condition_body))) 3)
+        (= (substr (f (r condition_body)) 0 3) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; true/false for non-protocol/protocol remark condition
+  (defun-inline is-valid-rmk-cond (condition_body)
+    (not
+      (and
+        (l condition_body)
+        (= (strlen (f condition_body)) 3)
+        (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+)
