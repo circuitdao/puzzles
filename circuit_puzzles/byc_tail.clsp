@@ -11,11 +11,11 @@
           vault_mod_hash
           vault_curried_args
           vault_amount
-          cat_ann_prefix
+          cat_ann_prefix ; TODO: hardcode as 'V' since this can never be anything but VAULT_ANN_PREFIX? Do we even need it at all, given that message below is guaranteed to come from a vault coin?
           statutes_inner_puzzle_hash
           approved_mod_hashes
           current_coin_amount
-          new_melting_coin_amount
+          new_melting_coin_amount ; TODO: unnecessary argument? can be calculated as current_coin_amount + delta
           my_coin_id
         )
       )
@@ -67,6 +67,6 @@
         )
       )
     )
-    (x)  ; no minting
+    (x) ; no minting
   )
 )

@@ -24,9 +24,16 @@
     (if (> 0 delta)
       ; melting only by surplus auction
       (assign
-        (crt_tail_hash byc_tail_hash surplus_mod_hash
-        launcher_id byc_lot_amount last_bid
-        statutes_inner_puzzle_hash approved_mod_hashes) solution
+        (
+          crt_tail_hash
+          byc_tail_hash
+          surplus_mod_hash
+          launcher_id
+          byc_lot_amount
+          last_bid
+          statutes_inner_puzzle_hash
+          approved_mod_hashes
+        ) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         puzzle_hash (
           curry_hashes CAT_MOD_HASH
@@ -49,21 +56,14 @@
           (size_b32 byc_tail_hash)
           (size_uint64 byc_lot_amount)
           (size_b32 surplus_mod_hash)
-          ; can't melt a non-cat
-          parent_is_cat
-          ; must be a launched surplus auction
-          launcher_id
-          ; must have a lot to exchange for melting
-          (> byc_lot_amount 0)
-          ; should have a winning bid
-          (> (f (r last_bid)) 0)
-          ; surplus mod hash is the second in approved mod hash list
-          (= surplus_mod_hash (f (r approved_mod_hashes)))
+          parent_is_cat ; can't melt a non-cat
+          launcher_id ; must be a launched surplus auction
+          (> byc_lot_amount 0) ; must have a lot to exchange for melting
+          (> (f (r last_bid)) 0) ; should have a winning bid
+          (= surplus_mod_hash (f (r approved_mod_hashes))) ; surplus mod hash is the second in approved mod hash list
           (list
-            ; if this is a surplus auction and it called for melting, melt
-            (list ASSERT_MY_PUZZLEHASH puzzle_hash)
-            ; we should be melting the whole coin value
-            (list ASSERT_MY_AMOUNT (* -1 delta))
+            (list ASSERT_MY_PUZZLEHASH puzzle_hash) ; if this is a surplus auction and it called for melting, melt
+            (list ASSERT_MY_AMOUNT (* -1 delta)) ; we should be melting the whole coin value
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)
           )
         )
@@ -90,7 +90,7 @@
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         approving_coin_id (calculate-coin-id
           parent_id
-          (if (all byc_tail_hash (= mod_hash (f (r (r approved_mod_hashes)))))
+          (if (all byc_tail_hash (= mod_hash (f (r (r approved_mod_hashes))))) ; recharge auction
             ; either a CAT puzzle with recharge auction as inner puzzle
             (curry_hashes CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)

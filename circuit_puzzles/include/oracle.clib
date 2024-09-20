@@ -1,10 +1,13 @@
 (
 
-  (defun cut-prices (price_list expiration_timestamp)
-    (if price_list
-      (if (> expiration_timestamp  (r (f price_list)))
-        (cut-prices (r price_list) expiration_timestamp)
-        price_list
+  ; drop all price infos before cut-off time from price_infos list
+  ; price_infos is expected to be a list of price info structs (price . timestamp) in chronologically ascending order
+  ; returns nil if price_infos list passed in is nil or all price infos get dropped
+  (defun cut-price-infos (price_infos cutoff_timestamp)
+    (if price_infos
+      (if (> cutoff_timestamp  (r (f price_infos)))
+        (cut-price-infos (r price_infos) cutoff_timestamp)
+        price_infos
       )
       ()
     )

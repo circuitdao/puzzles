@@ -7,7 +7,7 @@
   (defconst STATUTE_TREASURY_APPROVAL_MOD_HASHES -3)
   (defconst STATUTE_CUMULATIVE_INTEREST_DF -2)
   (defconst STATUTE_CUMULATIVE_STABILITY_FEE_DF -1)
-  (defconst STATUTE_PRICE_ORACLES 0) ; a list of (curried_oracle_mod) with missing price and last updated
+  (defconst STATUTE_PRICE_ORACLES 0) ; oracle launcher ID. rename accordingly? ; a list of (curried_oracle_mod) with missing price and last updated
   (defconst STATUTE_STABILITY_FEE_DF 1)
   (defconst STATUTE_INTEREST_DF 2)
   (defconst STATUTE_CUSTOM_ANNOUNCEMENTS 3)
@@ -83,13 +83,16 @@
     )
   )
 
-  (defun mutate-list (mutation_index new_value statutes index)
+  (defun mutate-list (mutation_index new_value statutes mutation_index_found index)
     (if statutes
       (c
         (if (= index mutation_index) new_value (f statutes))
-        (mutate-list mutation_index new_value (r statutes) (+ index ONE))
+        (mutate-list mutation_index new_value (r statutes) (if (any (= index mutation_index) mutation_index_found) 1 0) (+ index ONE))
       )
-      () ;x "can't mutate") ; no more statutes left and index is same as end of list
+      (if mutation_index_found
+        ()
+        (x) ; mutation index out of range
+      )
     )
   )
 

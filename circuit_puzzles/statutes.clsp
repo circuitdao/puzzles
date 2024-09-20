@@ -103,7 +103,6 @@
         (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER ())
       )
     (li
-      (list REMARK PROTOCOL_PREFIX statutes price_info cumulative_stability_fee cumulative_interest_rate price_update_counter)
       (create-coin-condition
         MOD_HASH
         TREASURY_APPROVAL_MOD_HASHES
@@ -118,6 +117,7 @@
         cumulative_interest_rate
         price_update_counter
       )
+      (list REMARK PROTOCOL_PREFIX statutes price_info cumulative_stability_fee cumulative_interest_rate price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat STATUTES_ANN_PREFIX STATUTE_PREFIX -7 price_update_counter)
       )

@@ -1,5 +1,16 @@
-(mod (OPERATIONS MOD_WITH_OPERATIONS_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
-      statutes_inner_puzzle_hash lineage_proof operation . op_args)
+(mod (OPERATIONS
+      MOD_HASH
+      CAT_MOD_HASH BYC_TAIL_HASH ; TODO: move before MOD_HASH as immutable
+      LAUNCHER_ID
+      STATUTES_STRUCT
+      START_TIME
+      LAST_BID
+      statutes_inner_puzzle_hash
+      lineage_proof
+      operation
+      input_conditions
+      . op_args
+    )
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -10,14 +21,13 @@
 
   (assign-inline
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    announcements (filter-announcements (f op_args) ())
     (assert (contains OPERATIONS (sha256tree operation))
       (a
         operation
         (list
-          (list MOD_WITH_OPERATIONS_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
-          statutes_puzzle_hash lineage_proof announcements
-          (r op_args)
+          (list MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+          statutes_puzzle_hash lineage_proof (filter-conditions input_conditions ())
+          op_args
         )
       )
     )

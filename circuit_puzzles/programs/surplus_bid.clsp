@@ -1,10 +1,13 @@
 (mod
   (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-    statutes_inner_puzzle_hash lineage_proof announcements
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
+    statutes_inner_puzzle_hash
+    lineage_proof ; -> (parent_id parent_amount parent_cat_inner_puzzle_hash)
+    announcements
     (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl my_coin_id
           offer_mod_hash)
   )
+  
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -24,7 +27,7 @@
       (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
       (c
         (list ASSERT_MY_AMOUNT my_amount)
-          ; recreate with new top bid and new timestamp
+        ; recreate with new top bid and new timestamp
         (c
           (list
             CREATE_COIN
@@ -34,15 +37,15 @@
               (sha256 ONE CAT_MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE CAT_LOT_AMOUNT)
-              (sha256 ONE CAT_TAIL_HASH)
+              (sha256 ONE BYC_LOT_AMOUNT)
+              (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE CRT_TAIL_HASH)
               (sha256tree (list target_puzzle_hash current_timestamp))
             )
             bid_crt_amount
           )
           (c
-            (list REMARK PROTOCOL_PREFIX LAUNCHER_ID CAT_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) CAT_TAIL_HASH CRT_TAIL_HASH)
+            (list REMARK PROTOCOL_PREFIX LAUNCHER_ID BYC_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) BYC_TAIL_HASH CRT_TAIL_HASH)
             (c
               (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
               (c

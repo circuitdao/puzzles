@@ -3,6 +3,7 @@
       _
       (@ mutation_value (oracle_inner_puz_hash price last_updated))
       crt_inner_puzzle_hash)
+
   (include *standard-cl-23*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -12,7 +13,7 @@
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
   (list
-    STATUTES
+    STATUTES  
     ; get the price, mutation value -> (oracle_inner_puz_hash statutes_struct price last_updated)
     (c price last_updated)
     ; second index on statutes is current stability_fee rate in 2 decimals eg 500 -> 5%

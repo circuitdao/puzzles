@@ -21,24 +21,22 @@
     ) filtered_announcements)
 
     (if ann_conditions
+      ; assert and create coin announcements are allowed
+      ; TODO: do we need to limit this to protocol announcements only?
+      ;   No, because Statutes doesn't issue a CREATE_COIN_ANNOUNCEMENT itself, and asserts are always fine
       (if (any (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        ; TODO: do we need to limit this to protocol announcements only? what are these needed for anyway?
         (filter-ann-conditions rest (c condition filtered_announcements))
-        ; only protocol SENDs and RECEIVES allowed
-        (if (and
-              (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-              (> (strlen (f (r condition_body))) 2)
-              (= (substr (f (r condition_body)) 0 3) PROTOCOL_PREFIX)
-          )
-          ; unless they pretend to be from Statues
-          ; TODO: do we also need to check the length of the message as o/w a hash's first character(s) may match the prefix?
-          (if (and
-                (> (strlen (f (r condition_body))) 3)
-                (= (substr (f (r condition_body)) 3 4) STATUTES_ANN_PREFIX)
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          ; non-protocol MESSAGES, and protocol MESSAGES that don't pretend to be from Statutes, are allowed
+          (if
+            (and
+              (> (strlen (f (r condition_body))) 3)
+              (= (substr (f (r condition_body)) 0 4) (concat PROTOCOL_PREFIX STATUTES_ANN_PREFIX))
             )
-            (x) ; bad message, error
+            (x)
             (filter-ann-conditions rest (c condition filtered_announcements))
           )
+          ; no other conditions allowed
           (x)
         )
       )
@@ -59,7 +57,7 @@
     (if (= mutation_index -1)
       ; this is a vote for announcements
       STATUTES
-      (mutate-list mutation_index mutation_value STATUTES 0)
+      (mutate-list mutation_index mutation_value STATUTES 0 0)
     )
     ; prices staying the same
     PRICE_INFO
@@ -71,8 +69,7 @@
     ;  updating statutes, assert permission
     (assert
       (size_b32 crt_inner_puzzle_hash)
-      (> mutation_index -3)
-      (> 2 (strlen mutation_index))
+      (> mutation_index -2)
       (if (= mutation_index -1)
         ; vote for announcements only, so this should just be a list
         (l mutation_value)

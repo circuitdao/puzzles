@@ -1,6 +1,14 @@
-(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
-      lineage_proof statutes_inner_puzzle_hash current_amount
-      input_conditions . args)
+(mod (MOD_HASH
+      CAT_MOD_HASH BYC_TAIL_HASH ; TODO: move before MOD_HASH as immutable
+      STATUTES_STRUCT
+      RING_PREV_LAUNCHER_ID
+      LAUNCHER_ID
+      lineage_proof
+      statutes_inner_puzzle_hash
+      current_amount
+      input_conditions
+      . args
+    )
 
   (include *standard-cl-23*)
   (include curry.clib)
@@ -25,7 +33,7 @@
   )
 
   (defun parse-conditions (input_conditions my_puzzle_hash my_create_coin_exists return_conditions new_amount withdraw_amount)
-    (if (l input_conditions)
+    (if (l input_conditions) ; TODO: why do we need the l operator here, why not just (if input_conditions ...)?
       (assign
         (condition_code condition_body . rest_condition) (f input_conditions)
         (if (= condition_code CREATE_COIN)
@@ -50,16 +58,16 @@
     )
   )
 
-  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                      RING_PREV_LAUNCHER_ID LAUNCHER_ID prev_launcher_id launcher_id)
 
     (curry_hashes CAT_MOD_HASH
       (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE CAT_TAIL_HASH)
+      (sha256 ONE BYC_TAIL_HASH)
       (curry_hashes MOD_HASH ; puzzle hash
         (sha256 ONE MOD_HASH)
         (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CAT_TAIL_HASH)
+        (sha256 ONE BYC_TAIL_HASH)
         statutes_struct_hash
         (if prev_launcher_id
           (sha256 ONE prev_launcher_id)
@@ -87,7 +95,7 @@
         (curry_hashes MOD_HASH ; inner puzzle hash
           (sha256 ONE MOD_HASH)
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CAT_TAIL_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
           statutes_struct_hash
           ; we can only change ring formation
           (sha256 ONE (r lineage_proof))
@@ -95,11 +103,12 @@
         )
         (if (= (f lineage_proof) LAUNCHER_ID)
           ; this is initial launch, assert launcher coin
+          ; TODO: do we want to assert that RING_PREV_LAUNCHER_ID = (r lineage_proof) in eve spend? otherwise RING_PREV_LAUNCHER_ID could by anything in eve state.
           LAUNCHER_ID
           ; not launch, just update, assert previous coin spend
           (calculate-coin-id
-            (f lineage_proof) ; parent id
-            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+            (f lineage_proof) ; parent parent id
+            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                   RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
             ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
             current_amount ; previous amount
@@ -111,7 +120,7 @@
         (curry_hashes MOD_HASH ; inner puzzle hash
           (sha256 ONE MOD_HASH)
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CAT_TAIL_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
           statutes_struct_hash
           (sha256 ONE RING_PREV_LAUNCHER_ID)
           (sha256 ONE LAUNCHER_ID)
@@ -119,7 +128,7 @@
         ; this ensures that we're keeping lineage the same
         (calculate-coin-id
           (f lineage_proof)
-          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                 RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
           ; pass through previous amount
           (r lineage_proof)
@@ -131,10 +140,8 @@
       my_puzzle_hash
       0 ; create coin exists = false
       () ; return_conditions
-      ; init new_amount = 0
-      0
-      ; init withdraw_amount = 0
-      0
+      0 ; init new_amount = 0
+      0 ; init withdraw_amount = 0
     )
     withdraw_amount (
       if (> current_amount new_amount)
@@ -183,7 +190,7 @@
                     ANN_PREFIX ; "$"
                     (f args) ; my_coin_id
                     LAUNCHER_ID
-                    (r lineage_proof) ; prev ring launcher id
+                    (r lineage_proof) ; ring prev launcher id
                   )
                   statutes_puzzle_hash
                 )
@@ -195,7 +202,7 @@
             ;ELSE; we're spending/announcing, require approving mods
             (assign
               (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
-              approving_mod_ann_prefix approving_mod_hashes my_coin_id) args
+              approving_mod_ann_prefix approving_mod_hashes my_coin_id) args ; TODO: my_coin_id not really needed below and can be dropped from args list?
               approver_coin_id (assert
                 (size_b32 approving_parent_id)
                 (size_b32 approving_mod_hash)
@@ -210,7 +217,7 @@
                   (if (l approving_mod_curried_args_hash)
                     ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
                     (assert
-                      (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
+                      (= (f approving_mod_curried_args_hash) CAT_MOD_HASH) ; TODO: no need to include CAT_MOD_HASH in approving_mod_curried_args_hash list as curried into this puzzle's state
                       (size_b32 (f (r (r approving_mod_curried_args_hash))))
                       (size_b32 (f (r approving_mod_curried_args_hash)))
                       (curry_hashes CAT_MOD_HASH
@@ -227,14 +234,13 @@
                   approver_amount
                 )
               )
-
               (c
                 ; assert approver coin announcement is valid
                 (list RECEIVE_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    approving_mod_ann_prefix
-                    my_coin_id
+                    approving_mod_ann_prefix ; TODO: can be any 1-byte string as not verified anywhere. can this be exploited? Probably not, as message is linked to approver_coin_id. Most likely makes approving_mod_ann_prefix unnecessary
+                    my_coin_id ; TODO: unnecessary? this is a coin-to-coin message, so coin ID gets verifitied implicity already
                     (- new_amount current_amount)
                     new_amount
                   )
@@ -246,7 +252,7 @@
                   (c (list ASSERT_MY_COIN_ID my_coin_id)
                     (c
                       ;  my new balance so someone can check whole ring balance
-                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID)) ; TODO: insert PROTOCOL_PREFIX?
                       (c (list REMARK PROTOCOL_PREFIX my_coin_id new_amount LAUNCHER_ID) ; for driver code
                         conditions
                       )

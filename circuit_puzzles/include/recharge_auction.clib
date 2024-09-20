@@ -1,27 +1,97 @@
 (
+
   (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
   (defconst PROTOCOL_PREFIX 'CRT')
 
-  (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
-    (if conditions
-      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
-        (filter-announcements
-          rest_of_conditions
-          (c (f conditions) filtered_announcements)
-        )
-        ; no other conditions please
-        (x)
+  ;(defconst REMARK 1)
+  ;(defconst CREATE_COIN 51)
+  ;(defconst CREATE_COIN_ANNOUNCEMENT 60)
+  ;(defconst CREATE_PUZZLE_ANNOUNCEMENT 62)
+  ;(defconst SEND_MESSAGE 66)
+  ;(defconst RECEIVE_MESSAGE 67)
+
+  (defun and_ (CLAUSES)
+    (if (r CLAUSES)
+      (qq (if (unquote (f CLAUSES)) (unquote (and_ (r CLAUSES))) ()))
+      (f CLAUSES)
+    )
+  )
+
+  ; logical AND function that evaluates clauses left to right
+  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
+
+  ; true/false for non-protocol/protocol create announcement condition
+  (defun-inline is-valid-ann-cond (condition_body)
+    (not
+      (and
+        (> (strlen (f condition_body)) 2)
+        (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
       )
-      filtered_announcements
+    )
+  )
+
+  ; true/false for non-protocol/protocol message condition
+  (defun-inline is-valid-msg-cond (condition_body)
+    (not
+      (and
+        (= (strlen (f (r condition_body))) 3)
+        (= (substr (f (r condition_body)) 0 3) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; true/false for non-protocol/protocol remark condition
+  (defun-inline is-valid-rmk-cond (condition_body)
+    (not
+      (and
+        (= (strlen (f condition_body)) 3)
+        (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; fails if CREATE_COIN encountered, but otherwise lets all non-protocol conditions pass
+  (defun filter-conditions ((@ conditions ( (condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (x) ; no create coin allowed
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body)
+            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+              )
+              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            )
+          )
+        )
+      )
+      filtered_conditions
     )
   )
 
   (defun deposit-to-treasury (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
-                              treasury_minimum statutes_puzzle_hash final_treasury_amount
-                              amount_deposited deposit_amount potential_remainder
-                              first_treasury_coin treasury_coins my_coin_id announcements)
+                              treasury_minimum
+                              statutes_puzzle_hash
+                              final_treasury_amount
+                              amount_deposited
+                              deposit_amount
+                              potential_remainder
+                              first_treasury_coin
+                              treasury_coins
+                              my_coin_id
+                              announcements)
     (if treasury_coins
       (assign
         (parent_id launcher_id prev_launcher_id current_amount) (f treasury_coins)
@@ -127,7 +197,7 @@
       (assert
         (= amount_deposited final_treasury_amount)
         (if (all (= deposit_amount 0) (= potential_remainder 0))
-          ; this is assert balance of treasury coins, point is to prove  that recharge auction can be started
+          ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
           (assert (> treasury_minimum final_treasury_amount)
             announcements
           )
@@ -137,18 +207,18 @@
     )
   )
 
-  (defun count-treasury-coins (treasury_coins count total uniques)
+  (defun count-treasury-coins (treasury_coins count total_amount uniques)
     (if treasury_coins
       (count-treasury-coins
         (r treasury_coins)
         (+ 1 count)
-        (+ total (f (r (r (r (f treasury_coins))))))
+        (+ total_amount (f (r (r (r (f treasury_coins))))))
         (if (contains uniques (f (r (f treasury_coins))))
           (x)
           (c (f (r (f treasury_coins))) uniques)
         )
       )
-      (list count total)
+      (list count total_amount)
     )
   )
 

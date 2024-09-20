@@ -2,8 +2,8 @@
 ;; this puzzle is to be used with CRT tail
 (mod (OPERATIONS
       MOD_HASH
-      CAT_MOD_HASH 
-      TAIL_MOD_HASH 
+      CAT_MOD_HASH ; TODO: move before MOD_HASH as immutable
+      CRT_TAIL_HASH ; TODO: move before MOD_HASH as immutable
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
       BILL ; bill is a potential statute if enacted
@@ -21,14 +21,14 @@
   (defconst VETO_PROPOSED_BILL -1)
   (defconst ANN_PREFIX 'G')
 
-  (defun filter-conditions (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+  (defun filter-conditions (MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
                             final_bill bill_operation
                             (@ conditions ((condition_code . condition_rest) . rest_of_conditions))
                             found_create_coin filtered_conditions)
      (if conditions
        (if (= condition_code CREATE_COIN)
          (filter-conditions
-           MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+           MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
            final_bill bill_operation
            rest_of_conditions
            1 ; we found a create coin condition
@@ -53,7 +53,7 @@
                        (curry_hashes MOD_HASH
                          (sha256 ONE MOD_HASH)
                          (sha256 ONE CAT_MOD_HASH)
-                         (sha256 ONE TAIL_MOD_HASH)
+                         (sha256 ONE CRT_TAIL_HASH)
                          (sha256tree STATUTES_STRUCT)
                          (sha256 ONE (f condition_rest))
                          (sha256tree final_bill)
@@ -77,7 +77,7 @@
                  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
              )
              (filter-conditions
-               MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+               MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
                final_bill bill_operation
                rest_of_conditions
                found_create_coin
@@ -89,14 +89,14 @@
              (if (= condition_code REMARK)
                ; filter out remarks since we use them for driver puzzle reveals
                (filter-conditions
-                 MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                 MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
                  final_bill bill_operation
                  rest_of_conditions
                  found_create_coin
                  filtered_conditions
                )
                (filter-conditions
-                 MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                 MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
                  final_bill bill_operation
                  rest_of_conditions
                  found_create_coin
@@ -111,14 +111,14 @@
    )
 
 
-   (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
+   (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
      (curry_hashes CAT_MOD_HASH
        (sha256tree CAT_MOD_HASH)
-       (sha256tree TAIL_MOD_HASH)
+       (sha256tree CRT_TAIL_HASH)
        (curry_hashes MOD_HASH
          (sha256tree MOD_HASH)
          (sha256tree CAT_MOD_HASH)
-         (sha256tree TAIL_MOD_HASH)
+         (sha256tree CRT_TAIL_HASH)
          (sha256tree STATUTES_STRUCT)
          (sha256tree inner_puzzle_hash)
          bill_hash
@@ -195,7 +195,7 @@
        (a
          operation
          (list
-           (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+           (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
            (c new_coin_amount args)
          )
        )
@@ -207,7 +207,7 @@
      ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
      ; add a REMARK for driver assistance
      (filter-conditions
-       MOD_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+       MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
        final_bill bill_operation
        raw_inner_conditions 0
        (c

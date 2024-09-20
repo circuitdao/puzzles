@@ -1,6 +1,8 @@
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
-(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
+(mod (MOD_HASH
+      CAT_MOD_HASH CAT_TAIL_HASH ; TODO: immutable. move before MOD_HASH
+      STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
@@ -129,7 +131,7 @@
       )
       ()
     )
-    new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
+    new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
     pre_final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_deposit, inner_puzzle_hash)
       (c
@@ -221,14 +223,14 @@
                         (if treasury_coin_id
                           (assert
                             ; treasury coin should have enough amount to cover interest
-                            (> new_treasury_amount interest_amount)
-                            ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
+                            (> new_treasury_coin_amount interest_amount)
+                            ; we impose a floor on the amount of interest taken from treasury coin to prevent hogging of treasury coins
                             (> interest_amount minimum_interest_amount)
                             (c
                               (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_WITHDRAWAL minimum_interest_amount)
                               (c
                                 (list SEND_MESSAGE 0x3f
-                                  (concat PROTOCOL_PREFIX ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_amount)
+                                  (concat PROTOCOL_PREFIX ANN_PREFIX treasury_coin_id (* -1 interest_amount) new_treasury_coin_amount)
                                   treasury_coin_id
                                 )
                                 final_conditions

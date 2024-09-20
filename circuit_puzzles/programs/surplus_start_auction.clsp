@@ -1,6 +1,6 @@
 (mod
   (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
     (
       p2_surplus_auction_coin_parent_id lot_amount p2_surplus_auction_mod_hash p2_treasury_hash
@@ -15,10 +15,10 @@
   (include surplus_auction.clib)
   (include utils.clib)
 
-  (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+  (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
                                            treasury_coins my_coin_id lot_amount sum_amount CAT_leftover announcements)
     ; treasury_coins -> ((leader_launcher_1 . amount1) (launcher_2 . amount2)...)
-    ; sorted in reverse order as we have no have to go backwards in a list
+    ; sorted in reverse order as we have no way to go backwards in a list
     ; we iterate over them extracting launcher id and previous launcher id to
     ; form a puzzle hash of each treasury coin in a ring. Amount should form a sum
     ; of lot amount needed for this surplus auction
@@ -33,12 +33,12 @@
             parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CAT_TAIL_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
               (curry_hashes
                 P2_TREASURY_HASH
                 (sha256 ONE P2_TREASURY_HASH)
                 (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE CAT_TAIL_HASH)
+                (sha256 ONE BYC_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256 ONE prev_launcher_id)
                 (sha256 ONE launcher_id)
@@ -60,7 +60,7 @@
             treasury_coin_id
           )
           (assert-treasury-coins-withdrawal
-            P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+            P2_TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
             (r treasury_coins)
             my_coin_id
             lot_amount
@@ -87,7 +87,7 @@
     p2_surplus_puzzle_hash (
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CAT_TAIL_HASH)
+        (sha256 ONE BYC_TAIL_HASH)
         (curry_hashes p2_surplus_auction_mod_hash
           (sha256 ONE p2_surplus_auction_mod_hash)
           (sha256 ONE CAT_MOD_HASH)
@@ -112,7 +112,7 @@
       ;     and coin_id is unique per spend. Once this coin is filled from treasury
       ;     it can't be filled again, hence can be used as unique event in this coins history
       (= LAUNCHER_ID 0)
-      (= CAT_LOT_AMOUNT 0)
+      (= BYC_LOT_AMOUNT 0)
       (c
         ; recreate itself setting the launcher_id, empty bid and coin amount is 0
         (list
@@ -124,13 +124,15 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE my_coin_id)
             (sha256 ONE lot_amount)
-            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
             (sha256 ONE ())
           )
           0
         )
         (c
+          ; TODO: comment below can be deleted. requiring amount = 0 is not strictly speaking required.
+          ;   it simply stops us to launch multiple Surplus Auctions from same parent coin.
           ; it's important to force the amount to zero, since we don't want parent to create multiple coins
           ; with the same amount and launcher_id, which would enable sibling coins to mess with the state and takeover
           ; the auction and the lot
@@ -148,12 +150,12 @@
                     ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
                     (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
                       ; assert p2_surplus_auction coin received the lot amount
-                      (c (list RECEIVE_MESSAGE 0x3f (concat PROTOCOL_PREFIX p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id)
-                        (c (list REMARK PROTOCOL_PREFIX my_coin_id lot_amount 0 () CAT_TAIL_HASH CRT_TAIL_HASH)
+                      (c (list RECEIVE_MESSAGE 0x3f (concat PROTOCOL_PREFIX p2_surplus_auction_coin_id lot_amount ()) p2_surplus_auction_coin_id) ; TODO: protocol prefix needed?
+                        (c (list REMARK PROTOCOL_PREFIX my_coin_id lot_amount 0 () BYC_TAIL_HASH CRT_TAIL_HASH) ; TODO: no need to include BYC/CRT_TAIL_HASH in remark as immutable
                           (assert-treasury-coins-withdrawal
                             p2_treasury_hash
                             CAT_MOD_HASH
-                            CAT_TAIL_HASH
+                            BYC_TAIL_HASH
                             STATUTES_STRUCT
                             treasury_maximum
                             statutes_puzzle_hash

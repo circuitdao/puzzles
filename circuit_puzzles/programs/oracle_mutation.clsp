@@ -1,7 +1,7 @@
 (mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
       (@ oracle_mutation
               (
-                oracle_mutation_program
+                oracle_mutation_program ; TODO: not needed anywhere. remove?
                 statutes_inner_puzzle_hash
                 m_of_n
                 price_updatable_after_seconds
@@ -69,7 +69,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_percent)
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_expiration_seconds)
-        (list CREATE_PUZZLE_ANNOUNCEMENT
+        (list CREATE_PUZZLE_ANNOUNCEMENT ; TODO: add protocol prefix?
           (if (> last_price -1)
             (sha256 next_price next_price_updated)
             (sha256 mean_price current_timestamp)

@@ -1,4 +1,5 @@
-(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
+(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH
+      CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH ; TODO: move these three before MOD_HASH as immutable?
       TRANSFERRED_FEES
       COLLATERAL_AMOUNT
       PRINCIPAL_AMOUNT
@@ -69,7 +70,7 @@
           (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
           ; keeper mode, only coin announcements are allowed
           ; TODO: do we want to allow other conditions too as long as they are not valid-ann-conds?
-          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT)) ; TODO: no point in disallowing asserts
             (assert (is-valid-ann-cond condition_body)
               (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
             )
@@ -86,25 +87,27 @@
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
     ; filter out any cheeky announcements, and skip remarks/create coin
     (if conditions
+      ; fails on protocol create announcements
       (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
         (assert
           (is-valid-ann-cond condition_body)
           (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
         )
+        ; fails on protocol messages
         (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
           (assert
             (is-valid-msg-cond condition_body)
             (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
           )
-          ; filter out remarks since we use them for driver puzzle reveals
-          ; TODO: only filter out REMARKs that have PROTOCOL_PREFIX and 'v'? (would need to add 'v' to REMARK in main puzzle)
+          ; fails on protocol remarks since we use them for driver hints
+          ; TODO: use is-valid-rmk-cond function
           (if (and
                 (= condition_code REMARK)
                 (l condition_body)
                 (= (f condition_body) PROTOCOL_PREFIX)
               )
             (x)
-            ; filter out create coins
+            ; fails on create coins
             (if (= condition_code CREATE_COIN)
               (x)
               (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
