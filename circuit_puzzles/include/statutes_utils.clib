@@ -44,6 +44,7 @@
   (defconst STATUTE_ENACTMENT_TIMEOUT_SECONDS 34)
   (defconst STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS 35)
   (defconst STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL 36)
+  (defconst STATUTE_MIN_BID_INCREASE_BPS 37)
 
   (defconst STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
   (defconst STATUTES_MUTATION_PREFIX "m")
@@ -52,11 +53,12 @@
   (defconst PRICE_PREFIX "p")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
-      (curry_hashes (f STATUTES_STRUCT)
-                    ; we can also provide a hash of the statutes struct to make it more efficient
-                    (if (l (r STATUTES_STRUCT)) (sha256tree STATUTES_STRUCT) (r STATUTES_STRUCT))
-                    inner_puzzle_hash
-      )
+    (curry_hashes
+      (f STATUTES_STRUCT) ; first element of statutes is singleton mod
+      ; we can also provide a hash of the statutes struct to make it more efficient
+      (if (l (r STATUTES_STRUCT)) (sha256tree STATUTES_STRUCT) (r STATUTES_STRUCT))
+      inner_puzzle_hash
+    )
   )
 
   (defun-inline assert-statute (statutes_puzzle_hash statute_index statute_value)
@@ -89,7 +91,10 @@
         (if (= index mutation_index) new_value (f statutes))
         (mutate-list mutation_index new_value (r statutes) (+ index ONE))
       )
-      () ;x "can't mutate") ; no more statutes left and index is same as end of list
+      (if (> mutation_index index)
+        (x) ; mutation index is out of bounds
+        () ; no more statutes left and index is same as end of list
+      )
     )
   )
 

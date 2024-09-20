@@ -1,13 +1,18 @@
 (mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
       _
-      (@ mutation_value (oracle_inner_puz_hash price last_updated))
+      (@ mutation_value (oracle_inner_puz_hash price last_updated current_timestamp))
       crt_inner_puzzle_hash)
-  (include *standard-cl-23*)
+
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
+  (defun-inline price-delay-statute (statutes)
+    (f (f (r (r (r (r (r (r (r (r statutes))))))))))
+  )
 
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
@@ -52,6 +57,8 @@
         (size_uint32 price)
         ; confirm to oracle price announcement to update the price
         (list
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               ; generate oracle singleton puzzle hash
@@ -60,7 +67,7 @@
                 (sha256tree (c SINGLETON_MOD_HASH (c oracle_launcher_id SINGLETON_LAUNCHER_HASH)))
                 oracle_inner_puz_hash
               )
-              (sha256 price last_updated)
+              (sha256 price last_updated current_timestamp (price-delay-statute STATUTES))
             )
           )
         )

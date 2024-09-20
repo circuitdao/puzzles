@@ -3,13 +3,14 @@
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
       mutation_index mutation_value crt_inner_puzzle_hash)
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant CRT_ANN_PREFIX 'G')
+  (defconst CRT_ANN_PREFIX 'G')
+  (defconst CUSTOM_ANNOUNCEMENTS_MUTATION_INDEX -1)
 
   (defun filter-ann-conditions (
     (@ ann_conditions
@@ -51,14 +52,15 @@
 
   (list
     ; we're updating if indexes match and it's not announcements
-    (if (= mutation_index -1)
+    (if (= mutation_index CUSTOM_ANNOUNCEMENTS_MUTATION_INDEX)
       ; this is a vote for announcements
       STATUTES
+      ; update statutes
       (mutate-list mutation_index mutation_value STATUTES 0)
     )
     ; prices staying the same
     PRICE_INFO
-    ; don't change the rate
+    ; don't change the rates
     PAST_CUMULATIVE_STABILITY_FEE_DF
     PAST_CUMULATIVE_INTEREST_DF
     PRICE_UPDATE_COUNTER
@@ -66,22 +68,25 @@
     ;  updating statutes, assert permission
     (assert
       (size_b32 crt_inner_puzzle_hash)
-      (> mutation_index -3)
-      (> 2 (strlen mutation_index))
-      (if (= mutation_index -1)
+      ; -1 is for announcements, rest are for statutes
+      (> mutation_index -2)
+      (> 37 mutation_index) ; there are 37 statutes, no more
+      (if (= mutation_index CUSTOM_ANNOUNCEMENTS_MUTATION_INDEX)
         ; vote for announcements only, so this should just be a list
         (l mutation_value)
         ; should be  a list with 5 elements if mutating statutes
         (not (r (r (r (r (r mutation_value))))))
       )
       (li
-        ; confirm to CRT voting coin that mutation was applied
-        (list SEND_MESSAGE 0x10
+        ; get confirmation from a CRT voting coin that mutation was applied
+        (list RECEIVE_MESSAGE 0x12
           (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value)))
+          (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
         )
-        (list ASSERT_HEIGHT_RELATIVE 1)
+        (list ASSERT_HEIGHT_RELATIVE ONE)
         &rest
-        (if (= mutation_index -1)
+        (if (= mutation_index CUSTOM_ANNOUNCEMENTS_MUTATION_INDEX)
+          ; filter passes conditions for customer announcements, otherwise ignore
           (filter-ann-conditions (f mutation_value) ())
           ()
         )

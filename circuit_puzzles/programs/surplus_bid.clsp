@@ -1,11 +1,15 @@
+;; Bid to active surplus auction coin. There can be multiple active surplus auctions.
+;; Surplus auction puzzle is inner puzzle of CRT coin. So bids are are in CRT CAT values.
+;; The bid amount is bidding for CAT_LOT_AMOUNT. Bid amount must be at least STATUTE_MIN_BID_INCREASE_BPS higher
+;; than the current bid if any to avoid spamming the network with small bids.
 (mod
   (
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
     (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl my_coin_id
-          offer_mod_hash)
+     offer_mod_hash min_bid_increase_bps)
   )
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -14,95 +18,90 @@
 
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (last_target_puzzle_hash last_bid_timestamp) (if LAST_BID LAST_BID (list 0 0))
-    bid_conditions (assert
+    (last_target_puzzle_hash . last_bid_timestamp) (if LAST_BID LAST_BID (c 0 0))
+    (assert
       ; we need lineage proof to ensure that a CAT lot is associated with this surplus auction
       (l lineage_proof)
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> bid_crt_amount 0)) (> bid_crt_amount my_amount))
       ; TTL for bid hasn't expired yet
       (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
-      (c
+      ; bid_crt_amount is min_bid_increase_bps higher than my_amount
+      (> bid_crt_amount (/ (* my_amount (+ PERCENT_PRECISION min_bid_increase_bps)) PERCENT_PRECISION))
+      (li
         (list ASSERT_MY_AMOUNT my_amount)
           ; recreate with new top bid and new timestamp
-        (c
-          (list
-            CREATE_COIN
-            (curry_hashes
-              MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE CAT_LOT_AMOUNT)
-              (sha256 ONE CAT_TAIL_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              (sha256tree (list target_puzzle_hash current_timestamp))
-            )
-            bid_crt_amount
+        (list
+          CREATE_COIN
+          (curry_hashes
+            MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE CAT_LOT_AMOUNT)
+            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (sha256tree (c target_puzzle_hash current_timestamp))
           )
+          bid_crt_amount
+        )
+        (list REMARK  ; this is for the driver to create the reveal
+          LAUNCHER_ID
+          CAT_LOT_AMOUNT
+          bid_crt_amount
+          (c target_puzzle_hash current_timestamp)
+          CAT_TAIL_HASH
+          CRT_TAIL_HASH
+        )
+        (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
+        (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_MIN_BID_INCREASE_BPS min_bid_increase_bps)
+        ; current_time minus one tx block time should already be in the past
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        ; ensure lineage so we don't lose track of the lot
+        (list ASSERT_MY_PARENT_ID
+          (sha256
+            (f lineage_proof)
+            (curry_hashes
+              CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
+            )
+            ; parent bid amount
+            (f (r lineage_proof))
+          )
+        )
+        &rest
+        (if last_target_puzzle_hash
           (c
-            (list REMARK LAUNCHER_ID CAT_LOT_AMOUNT bid_crt_amount (list target_puzzle_hash current_timestamp) CAT_TAIL_HASH CRT_TAIL_HASH)
-            (c
-              (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-                ; current_time minus one tx block time should already be in the past
-                (c
-                  (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-                  (c
-                    ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-                    (c
-                      (list ASSERT_MY_COIN_ID my_coin_id)
-                      ; ensure lineage so we don't lose track of the lot
-                      (c
-                        (list ASSERT_MY_PARENT_ID
-                          (sha256
-                            (f lineage_proof)
-                            (curry_hashes
-                              CAT_MOD_HASH
-                              (sha256 ONE CAT_MOD_HASH)
-                              (sha256 ONE CRT_TAIL_HASH)
-                              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
-                            )
-                            ; parent bid amount
-                            (f (r lineage_proof))
-                          )
-                        )
-                        announcements
-                      )
+            ; assert that keeper absorbed their collateral + left over mojos from melting
+            ; this also confirms that winning bid owner received the lot
+            (list ASSERT_PUZZLE_ANNOUNCEMENT
+              (sha256
+                (curry_hashes CAT_MOD_HASH
+                  (sha256 ONE CAT_MOD_HASH)
+                  (sha256 ONE CRT_TAIL_HASH)
+                  offer_mod_hash
+                )
+                (sha256tree
+                  (c my_coin_id
+                    (list
+                      (list last_target_puzzle_hash my_amount (list last_target_puzzle_hash))
                     )
                   )
                 )
               )
             )
+            announcements
           )
+          announcements
         )
       )
-    )
-    (if last_target_puzzle_hash
-      (c
-        ; assert that keeper absorbed their collateral + left over mojos from melting
-        (list ASSERT_PUZZLE_ANNOUNCEMENT
-          (sha256
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              offer_mod_hash
-            )
-            (sha256tree
-              (c my_coin_id
-                (list
-                  (list last_target_puzzle_hash my_amount (list last_target_puzzle_hash))
-                )
-              )
-            )
-          )
-        )
-        bid_conditions
-      )
-      bid_conditions
     )
   )
 )

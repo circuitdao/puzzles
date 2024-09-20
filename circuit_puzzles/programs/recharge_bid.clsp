@@ -2,10 +2,10 @@
     (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
     ((byc_bid_amount . crt_bid_amount) target_puzzle_hash current_timestamp minimum_byc_bid_amount
-    offer_mod_hash auction_timeout ttl my_coin_id min_crt_price)
+    offer_mod_hash auction_timeout ttl my_coin_id min_crt_price min_bid_increase_bps)
   )
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -19,13 +19,13 @@
     )
     crt_price (/ (* byc_bid_amount PRECISION) crt_bid_amount)
     last_crt_price (if last_byc_bid_amount (/ (* last_byc_bid_amount PRECISION) last_crt_bid_amount) 0)
-    conditions (assert
+    (assert
       (size_b32 target_puzzle_hash)
       LAUNCHER_ID ; can't bid if auction hasn't started yet
       (> crt_price min_crt_price)
       (any
         (= last_crt_price 0)
-        (> crt_price last_crt_price)
+        (> crt_price (/ (* last_crt_price (+ PERCENT_PRECISION min_bid_increase_bps)) PERCENT_PRECISION))
       )
       ; bids can't be smaller than this
       (> byc_bid_amount minimum_byc_bid_amount)
@@ -34,13 +34,13 @@
       ; TTL for bid hasn't expired yet
       (any (= last_bid_timestamp 0) (> ttl (- current_timestamp last_bid_timestamp)))
       ; can't bid more than max_crt_amount
-      (c
+      (li
         ; update LAST_BID
         (list
           CREATE_COIN
           (curry_hashes
             MOD_HASH
-            (sha256tree MOD_HASH)
+            (sha256 ONE MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE CAT_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
@@ -50,78 +50,59 @@
           )
           byc_bid_amount
         )
-        (c
-          (list REMARK
-            LAUNCHER_ID
-            START_TIME
-            (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp)
+        (list REMARK
+          LAUNCHER_ID
+          START_TIME
+          (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp)
+        )
+        (list ASSERT_MY_AMOUNT last_byc_bid_amount)
+        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_CRT_PRICE min_crt_price)
+        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID minimum_byc_bid_amount)
+        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
+        (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
+        (assert-statute statutes_puzzle_hash STATUTE_MIN_BID_INCREASE_BPS min_bid_increase_bps)
+        ; current_time minus one tx block time should already be in the past
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        (list ASSERT_MY_PARENT_ID
+          (calculate-coin-id
+            (f lineage_proof)
+            (curry_hashes
+              CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CAT_TAIL_HASH)
+              (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
+            )
+            ; parent bid amount
+            (f (r lineage_proof))
           )
+        )
+        &rest
+        (if last_target_puzzle_hash
           (c
-            (list ASSERT_MY_AMOUNT last_byc_bid_amount)
+            (list ASSERT_MY_COIN_ID my_coin_id)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_CRT_PRICE min_crt_price)
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID minimum_byc_bid_amount)
-                (c
-                  (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
-                  (c
-                    (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-                    (c
-                      (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-                      ; current_time minus one tx block time should already be in the past
-                      (c
-                        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-                        (c
-                          ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
-                          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-                          (c
-                            (list ASSERT_MY_PARENT_ID
-                              (calculate-coin-id
-                                (f lineage_proof)
-                                (curry_hashes
-                                  CAT_MOD_HASH
-                                  (sha256 ONE CAT_MOD_HASH)
-                                  (sha256 ONE CAT_TAIL_HASH)
-                                  (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
-                                )
-                                ; parent bid amount
-                                (f (r lineage_proof))
-                              )
-                            )
-                            announcements
-                          )
-                        )
-                      )
-                    )
+              (list ASSERT_PUZZLE_ANNOUNCEMENT
+                (sha256
+                  (curry_hashes CAT_MOD_HASH
+                    (sha256 ONE CAT_MOD_HASH)
+                    (sha256 ONE CAT_TAIL_HASH)
+                    offer_mod_hash
                   )
+                  (sha256tree
+                    (c my_coin_id
+                    (list
+                      (list last_target_puzzle_hash last_byc_bid_amount (list last_target_puzzle_hash)))))
                 )
               )
+              announcements
             )
           )
+          announcements
         )
       )
-    )
-    (if last_target_puzzle_hash
-      (c
-        (list ASSERT_MY_COIN_ID my_coin_id)
-        (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT
-            (sha256
-              (curry_hashes CAT_MOD_HASH
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE CAT_TAIL_HASH)
-                offer_mod_hash
-              )
-              (sha256tree
-                (c my_coin_id
-                (list
-                  (list last_target_puzzle_hash last_byc_bid_amount (list last_target_puzzle_hash)))))
-            )
-          )
-          conditions
-        )
-      )
-      conditions
     )
   )
 )

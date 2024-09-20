@@ -20,7 +20,7 @@
   (defun deposit-to-treasury (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
                               treasury_minimum statutes_puzzle_hash final_treasury_amount
                               amount_deposited deposit_amount potential_remainder
-                              first_treasury_coin treasury_coins my_coin_id announcements)
+                              first_treasury_coin treasury_coins announcements)
     (if treasury_coins
       (assign
         (parent_id launcher_id prev_launcher_id current_amount) (f treasury_coins)
@@ -115,7 +115,6 @@
                 potential_remainder
                 first_treasury_coin
                 (r treasury_coins)
-                my_coin_id
                 announcements
               )
             )

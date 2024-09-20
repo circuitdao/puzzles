@@ -10,13 +10,13 @@
 
   (defun-inline get-min-collateral-amount (debt liquidation_ratio xch_price)
     ; returns min collateral value for threshold coll ratio, multiplying with -1 to ceil the division
-    (/ (* -1 (* (/ (* -1 debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
+    (/ (* MINUS_ONE (* (/ (* MINUS_ONE debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
   )
 
   (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
     (- discounted_principal
       (/
-        (* (* -1 negative_byc_principal_to_melt) PRECISION)
+        (* (* MINUS_ONE negative_byc_principal_to_melt) PRECISION)
         cumulative_stability_fee_rate
       )
     )
@@ -25,23 +25,23 @@
 
   (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate discounted_principal principal liquidation_penalty_percent)
     (assign
-      undiscounted_principal (* -1 (/ (* -1 discounted_principal cumulative_stability_fee_rate) PRECISION))
+      undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_rate) PRECISION))
       calculated_outstanding_fees (if (> undiscounted_principal principal)
         (- undiscounted_principal principal)
         0
       )
-      liquidation_penalty (* -1 (/ (* -1 (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION))
+      liquidation_penalty (* MINUS_ONE (/ (* MINUS_ONE (+ principal calculated_outstanding_fees) liquidation_penalty_percent) PERCENT_PRECISION))
       total_repayment_percentage (/ (* byc_amount PRECISION) (+ principal liquidation_penalty calculated_outstanding_fees))
       (if (= total_repayment_percentage PRECISION)
         (c (+ calculated_outstanding_fees liquidation_penalty) liquidation_penalty)
         (c
-          (* -1
+          (* MINUS_ONE
             (/
-              (* -1 total_repayment_percentage (+ calculated_outstanding_fees liquidation_penalty))
+              (* MINUS_ONE total_repayment_percentage (+ calculated_outstanding_fees liquidation_penalty))
               PRECISION
             )
           )
-          (* -1 (/ (* -1 liquidation_penalty total_repayment_percentage) PRECISION))
+          (* MINUS_ONE (/ (* MINUS_ONE liquidation_penalty total_repayment_percentage) PRECISION))
         )
       )
     )

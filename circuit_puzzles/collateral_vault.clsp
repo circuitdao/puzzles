@@ -1,3 +1,16 @@
+;; Collateral Vault Puzzle enables XCH to be locked and BYC to be minted based on XCH price.
+;; This main puzzle controls creation and recreation of the coin and different run modes for the vault, since it can
+;; be run by the owner or keepers. It also enforces strict lineage.
+;; The operations available for the coin are:
+;; - deposit collateral
+;; - withdraw collateral
+;; - mint BYC (create debt)
+;; - repay BYC (debt + fees)
+;; - liquidate vault
+;; - transfer fees to treasury
+;; - start auction
+;; - recover bad debt
+
 (mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_MOD_HASH
       TRANSFERRED_FEES
       COLLATERAL_AMOUNT
@@ -15,7 +28,7 @@
         keeper_operation_info
       )
      )
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -26,7 +39,7 @@
   (defun-inline is-valid-ann-cond (cond_body)
     (not
       (=
-        (substr (f cond_body) 0 1)
+        (substr (f cond_body) 0 ONE)
         ANN_PREFIX
       )
     )
@@ -35,18 +48,18 @@
   (defun-inline is-valid-msg-cond (cond_body)
     (not
       (=
-        (substr (f (r cond_body)) 0 1)
+        (substr (f (r cond_body)) 0 ONE)
         ANN_PREFIX
       )
     )
   )
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)
-  ; RETURNS (conditions vault_operation_condition)
+    ; RETURNS (conditions vault_operation_condition)
     (if conditions
       (if (= condition_code REMARK)
         (if found_remark
-          (x) ; can't have multiple remarks
+          (x)  ; can't have multiple remarks
           (assert (= 'v' (f condition_body))
             (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
           )
@@ -149,7 +162,7 @@
     ; assert lineage
     (c
       (c
-        CREATE_COIN ; op code
+        CREATE_COIN
         (c
           (curry_hashes MOD_HASH
             (sha256tree MOD_HASH)
@@ -170,8 +183,8 @@
         )
       )
       (if lineage_proof
-        ; verify lineage by calculating parent coin id based on lineage proof
-        (c
+        (li
+          ; verify lineage by calculating parent coin id based on lineage proof
           (list
             ASSERT_MY_PARENT_ID
             (calculate-coin-id
@@ -180,24 +193,23 @@
               (f (r (r lineage_proof)))
             )
           )
-          (c (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT)
-            (c
-              (list
-                ; this is for driver code to make it easy to generate puzzle reveal
-                REMARK
-                final_transferred_fees
-                final_collateral_amount
-                final_principal_amount
-                final_auction_state
-                final_inner_puzzle_hash
-                final_discounted_principal
-              )
-              inner_conditions
-            )
+          (list ASSERT_MY_AMOUNT COLLATERAL_AMOUNT)
+          (list
+            ; this is for the driver code to make it easy to generate puzzle reveal
+            REMARK
+            final_transferred_fees
+            final_collateral_amount
+            final_principal_amount
+            final_auction_state
+            final_inner_puzzle_hash
+            final_discounted_principal
           )
+          &rest
+          inner_conditions
         )
-        ; force that every vault needs to start with zero state
-        (c
+        ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
+        ; otherwise launching a vault with pre-existing debt could cause a lot of issues
+        (li
           (list
             ASSERT_MY_PUZZLEHASH
             (curry_hashes MOD_HASH
@@ -213,10 +225,9 @@
               (sha256 ONE 0)
             )
           )
-          (c
-            (list ASSERT_MY_AMOUNT 0)
-            inner_conditions
-          )
+          (list ASSERT_MY_AMOUNT 0)
+          &rest
+          inner_conditions
         )
       )
     )

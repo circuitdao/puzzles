@@ -7,7 +7,7 @@
       surplus_auction_parent_id surplus_auction_curried_args_hash surplus_auction_amount
       my_coin_id puzzle_hash amount)
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include utils.clib)
@@ -27,7 +27,7 @@
     )
     (if (all (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
-      (list  ;create / fill the coin from treasury
+      (list  ; create / fill the coin from treasury
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee we locked them delegating control to launcher coin id
         (list SEND_MESSAGE 0x3f (concat my_coin_id amount puzzle_hash) launcher_coin_id)
@@ -55,9 +55,9 @@
         (list ASSERT_MY_AMOUNT amount)
         ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
         ; and the winning bid amount to melt
-        (list RECEIVE_MESSAGE 0x3f (concat amount puzzle_hash) launcher_coin_id)
+        (list RECEIVE_MESSAGE 0x3f (concat amount puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID) launcher_coin_id)
         ; transfer out
-        (list CREATE_COIN puzzle_hash amount)
+        (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
       )
     )
   )

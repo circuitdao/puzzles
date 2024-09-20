@@ -2,7 +2,7 @@
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
 
-  (include *standard-cl-23*)
+  (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -13,7 +13,7 @@
   (defun filter-ann-conditions ( (@ ann_conditions ( (condition_code . condition_rest) . rest)) filtered_announcements)
     (if ann_conditions
       (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (if  (= (substr (f condition_rest) 0 1) ANN_PREFIX)
+        (if  (= (substr (f condition_rest) 0 ONE) ANN_PREFIX)
           ; bad announcement found, error
           (x)
           (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
@@ -35,7 +35,7 @@
               (if my_create_coin_exists
                 ; can't pay into our own puzzle hash twice
                 (x)
-                (parse-conditions (r input_conditions) my_puzzle_hash 1 (c (f input_conditions) return_conditions) (+ new_amount (f rest_condition)) withdraw_amount)
+                (parse-conditions (r input_conditions) my_puzzle_hash ONE (c (f input_conditions) return_conditions) (+ new_amount (f rest_condition)) withdraw_amount)
               )
               ; if it's paying into a different puzzle hash, decrease the sum (they're withdrawing)
               (parse-conditions (r input_conditions) my_puzzle_hash my_create_coin_exists (c (f input_conditions) return_conditions) new_amount (+ withdraw_amount (f rest_condition)))
@@ -81,7 +81,7 @@
     ;    that assert_parent_id is `(parent_id . previous_amount)`
     ; 2. we're changing lineage, lineage proof is `(parent_id . prev_launcher_id)` and
     ;    asserts announcement from statutes vote
-    (my_puzzle_hash parent_id) (if (= (strlen (r lineage_proof)) 32)
+    (my_puzzle_hash parent_id) (if (size_b32 (r lineage_proof))
       ; we're changing lineage
       (list
         (curry_hashes MOD_HASH ; inner puzzle hash
@@ -151,7 +151,7 @@
     )
     (assert
      ; can't go into negative
-     (> new_amount -1) (> withdraw_amount -1)
+     (> new_amount MINUS_ONE) (> withdraw_amount MINUS_ONE)
      ; no change allowed
      ;(> (+ new_amount withdraw_amount) (- current_amount 1))
      (any
@@ -169,7 +169,7 @@
         (list ASSERT_MY_AMOUNT current_amount)
         (c (list
           ASSERT_MY_PARENT_ID parent_id)
-          (if (all (= (strlen (r lineage_proof)) 32) (= withdraw_amount 0))
+          (if (all (size_b32 (r lineage_proof)) (= withdraw_amount 0))
             ; updating lineage, don't require approving mods
             ; there is initial launch and later update of the ring
             (assert
