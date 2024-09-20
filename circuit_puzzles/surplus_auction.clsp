@@ -6,7 +6,7 @@
       CAT_LOT_AMOUNT ; amount of BYC in a lot to win
       CAT_TAIL_HASH ; hash of BYC tail puzzle that we're giving out
       CRT_TAIL_HASH ; hash of CRT tail puzzle that we're giving out
-      LAST_BID ; to hold bid data -> (target_puzzle_hash current_timestamp)
+      LAST_BID ; to hold bid data -> (target_puzzle_hash . current_timestamp)
       statutes_inner_puzzle_hash
       lineage_proof ; (parent_id launcher_id amount last_bid)
       operation . op_args)

@@ -1,6 +1,8 @@
 (
 
   (defun cut-prices (price_list expiration_timestamp last_matured_price_info)
+    ;; returns (matured_price_info (c matured_price_info non-matured-price-infos))
+    ;; if there is a matured_price_info, or (() (list non-matured price infos)) otherwise
     (if price_list
       (if (> expiration_timestamp  (r (f price_list)))
         (cut-prices (r price_list) expiration_timestamp (f price_list))
