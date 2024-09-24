@@ -6,11 +6,13 @@
       (current_timestamp atom_value)
      )
 
-  (defconst MAX_TX_BLOCK_TIME 120)
-
-  (defconst ONE 1)
+  ; not using cl-23 standard to save costs
   (include condition_codes.clib)
   (include curry.clib)
+
+  (defconst MAX_TX_BLOCK_TIME 120)
+  (defconst ONE 1)
+  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun sha256tree (TREE)
     (if (l TREE)
@@ -18,11 +20,12 @@
       (sha256 ONE TREE)
     )
   )
+
   (if (all
         LAUNCHER_ID
-        inner_puzzle_hash  ; must be owner
+        inner_puzzle_hash ; must be owner
         (any
-          (= MIN_DEPOSIT 0)  ; launch
+          (= MIN_DEPOSIT 0) ; launch
           (> deposit MIN_DEPOSIT) ; deposit must be more than min deposit to pay for fees
         )
       )
@@ -51,6 +54,7 @@
           )
           (c
             (list REMARK
+              PROTOCOL_PREFIX
               LAUNCHER_ID
               (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
               deposit

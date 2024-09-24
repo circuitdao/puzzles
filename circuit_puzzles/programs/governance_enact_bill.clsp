@@ -14,6 +14,7 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+
   (defconst ANN_ENACTED '$')
   (defconst ANN_PREFIX 'G')
 
@@ -28,7 +29,7 @@
       new_max_delta
     ) BILL
     (list
-      ; bill state; if enactment passes, reset this coins bill state
+      ; if enactment passes, reset this coin's bill state
       ()
       ; conditions to return
       (list
@@ -55,7 +56,7 @@
         (list ASSERT_SECONDS_RELATIVE enact_seconds)
         (list SEND_MESSAGE 0x12
           ; we skip the first two elements that are used for voting process, they're not stored in statutes
-          (concat STATUTES_ANN_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r BILL)))
+          (concat PROTOCOL_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r BILL)))
           statutes_puzzle_hash
         )
         (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX ANN_ENACTED))

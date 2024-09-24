@@ -3,30 +3,50 @@
      inner_puzzle
      solution_or_conditions
      )
-  (include condition_codes.clib)
-  (include curry.clib)
+
   (include *standard-cl-23.1*)
+  (include condition_codes.clib)
+  (include condition_filtering.clib)
+  (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
-  (defconst ANN_PREFIX 'A')
+
+  ;(defconst ANN_PREFIX 'A')
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
                               found_create_coin final_conditions)
-    ; RETURNS (conditions create_coin_condition)
+    ; RETURNS (conditions create_coin_condition_body)
     (if conditions
       (if (= condition_code CREATE_COIN)
         (if found_create_coin
-          (x)
+          (x) ; at most one CREATE_COIN allowed
           (restrict-conditions rest_of_conditions condition_body final_conditions)
         )
-        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-          (x)
-          (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body)
+            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+              )
+              ; all other conditions allowed
+              (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+            )
+          )
         )
       )
-      (list final_conditions found_create_coin)
+      (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
     )
   )
+
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
     raw_conditions (if inner_puzzle_hash
@@ -36,7 +56,6 @@
       ; otherwise, solution_or_conditions is conditions
       solution_or_conditions
     )
-
     (input_conditions (new_puzzle_hash deposit (operation . args)))
       (if raw_conditions
         (restrict-conditions raw_conditions () ())
@@ -71,7 +90,7 @@
           )
         )
         (c
-          (list ASSERT_MY_AMOUNT DEPOSIT)
+          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct
           (a
             operation
             (list

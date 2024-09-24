@@ -7,7 +7,7 @@
   (defconst STATUTE_TREASURY_APPROVAL_MOD_HASHES -3)
   (defconst STATUTE_CUMULATIVE_INTEREST_DF -2)
   (defconst STATUTE_CUMULATIVE_STABILITY_FEE_DF -1)
-  (defconst STATUTE_PRICE_ORACLES 0) ; a list of (curried_oracle_mod) with missing price and last updated
+  (defconst STATUTE_PRICE_ORACLES 0) ; oracle launcher ID. rename accordingly?
   (defconst STATUTE_STABILITY_FEE_DF 1)
   (defconst STATUTE_INTEREST_DF 2)
   (defconst STATUTE_CUSTOM_ANNOUNCEMENTS 3)
@@ -46,15 +46,16 @@
   (defconst STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL 36)
   (defconst STATUTE_MIN_BID_INCREASE_BPS 37)
 
-  (defconst STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
+  ;(defconst STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
   (defconst STATUTES_MUTATION_PREFIX "m")
   (defconst STATUTE_PREFIX "s")
   (defconst STATUTE_FULL_PREFIX "S")
   (defconst PRICE_PREFIX "p")
+  (defconst PROTOCOL_PREFIX "CRT")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
     (curry_hashes
-      (f STATUTES_STRUCT) ; first element of statutes is singleton mod
+      (f STATUTES_STRUCT)
       ; we can also provide a hash of the statutes struct to make it more efficient
       (if (l (r STATUTES_STRUCT)) (sha256tree STATUTES_STRUCT) (r STATUTES_STRUCT))
       inner_puzzle_hash
@@ -66,7 +67,7 @@
       (sha256
          statutes_puzzle_hash
         (concat
-          STATUTES_ANN_PREFIX
+          PROTOCOL_PREFIX
           STATUTE_PREFIX statute_index (if (l statute_value) (sha256tree statute_value) statute_value)
         )
       )
@@ -78,7 +79,7 @@
       (sha256
          statutes_puzzle_hash
         (concat
-          STATUTES_ANN_PREFIX
+          PROTOCOL_PREFIX
           STATUTE_FULL_PREFIX statute_index (sha256tree statute_full_value)
         )
       )
@@ -92,7 +93,7 @@
         (mutate-list mutation_index new_value (r statutes) (+ index ONE))
       )
       (if (> mutation_index index)
-        (x) ; mutation index is out of bounds
+        (x) ; mutation index out of bounds
         () ; no more statutes left and index is same as end of list
       )
     )
@@ -102,7 +103,7 @@
     (list ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256 statutes_puzzle_hash
         (concat
-          STATUTES_ANN_PREFIX
+          PROTOCOL_PREFIX
           PRICE_PREFIX (sha256tree price_info)
         )
       )

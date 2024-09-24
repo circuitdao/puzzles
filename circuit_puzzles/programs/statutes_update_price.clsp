@@ -17,15 +17,14 @@
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
   (list
-    STATUTES
+    STATUTES  
     ; get the price, mutation value -> (oracle_inner_puz_hash statutes_struct price last_updated)
     (c price last_updated)
-    ; second index on statutes is current stability_fee rate in 2 decimals eg 500 -> 5%
-    ; to calculate stability_fee rate we need:
-    ; - past cumulative stability_fee rate
-    ; - current stability_fee rate
+    ; to calculate current cumulative stability fee discount factor we need:
+    ; - past cumulative stability fee discount factor
+    ; - current stability fee discount factor
     ; - current timestamp
-    ; - last timestamp of calculation previously
+    ; - timestamp of previous calculation
     (calculate-cumulative-discount-factor
       PAST_CUMULATIVE_STABILITY_FEE_DF
       (f (f (r STATUTES)))
@@ -34,6 +33,11 @@
       ; NOTE: this assumes that at least one oracle is always present and active at position 0
       (r PRICE_INFO) ; prev timestamp
     )
+    ; to calculate current cumulative stability fee discount factor we need:
+    ; - past cumulative interest discount factor
+    ; - current interest discount factor
+    ; - current timestamp
+    ; - timestamp of previous calculation
     (calculate-cumulative-discount-factor
       PAST_CUMULATIVE_INTEREST_DF
       ; current interest rate
@@ -55,10 +59,10 @@
         (size_b32 oracle_inner_puz_hash)
         (size_b32 oracle_launcher_id)
         (size_uint32 price)
-        ; confirm to oracle price announcement to update the price
+        ; confirm oracle price info to update statutes price info
         (list
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               ; generate oracle singleton puzzle hash

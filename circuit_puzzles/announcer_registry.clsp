@@ -6,7 +6,9 @@
   (include *standard-cl-23.1*)
   (include utils.clib)
   (include statutes_utils.clib)
+
   (defconst ANN_PREFIX "R")
+  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry
@@ -122,7 +124,7 @@
                 (list RECEIVE_MESSAGE
                   0x12
                   (concat
-                    'A'
+                    PROTOCOL_PREFIX
                     announcer_inner_puzzle_hash
                     ONE ; must be an approved announcer
                     statutes_struct_hash ; must be on the same protocol
