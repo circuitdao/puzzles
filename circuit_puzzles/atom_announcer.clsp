@@ -43,7 +43,7 @@
           )
         )
       )
-      (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
+      (list final_conditions found_create_coin)
     )
   )
 
