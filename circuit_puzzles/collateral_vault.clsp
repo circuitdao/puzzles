@@ -28,78 +28,52 @@
         keeper_operation_info
       )
      )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
+  (include condition_filtering.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
+  ;(defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
 
-  (defun-inline is-valid-ann-cond (cond_body)
-    (not
-      (=
-        (substr (f cond_body) 0 ONE)
-        ANN_PREFIX
-      )
-    )
-  )
-
-  (defun-inline is-valid-msg-cond (cond_body)
-    (not
-      (=
-        (substr (f (r cond_body)) 0 ONE)
-        ANN_PREFIX
-      )
-    )
-  )
-
-  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark via_solution final_conditions)
-    ; RETURNS (conditions vault_operation_condition)
+  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark final_conditions)
+    ; RETURNS (conditions create_coin_condition_body)
     (if conditions
-      (if (= condition_code REMARK)
-        (if found_remark
-          (x)  ; can't have multiple remarks
-          (assert (= 'v' (f condition_body))
-            (restrict-conditions rest_of_conditions (r condition_body) via_solution final_conditions)
-          )
-        )
-        (if via_solution
-          (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
-          ; keeper mode, only coin announcements are allowed
-          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT))
-            (assert (is-valid-ann-cond condition_body)
-              (restrict-conditions rest_of_conditions found_remark via_solution (c (f conditions) final_conditions))
+      (if (= condition_code CREATE_COIN)
+        (x) ; no CREATE_COIN allowed
+        (if (= condition_code REMARK)
+          (if (and
+                (l condition_body)
+                (= (strlen (f condition_body)) 3)
+                (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+              )
+            ; protocol remark
+            (if found_remark
+              (x) ; only one protocol remark allowed
+              (restrict-conditions rest_of_conditions (r condition_body) final_conditions)
             )
-            ; ignore other conditions if in keeper mode
-            (restrict-conditions rest_of_conditions found_remark via_solution final_conditions)
+            ; non-protocol remarks are fine
+            (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
+              )
+              ; all other conditions allowed
+              (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
+            )
           )
         )
       )
       (list final_conditions found_remark)
-    )
-  )
-
-  ; filter condition function
-  (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
-    ; filter out any cheeky announcements, and skip remarks/create coin
-    (if conditions
-      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-        (assert (is-valid-ann-cond condition_body)
-          (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-        )
-        (if (= condition_code SEND_MESSAGE)
-          (assert (is-valid-msg-cond condition_body)
-            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-          )
-          ; filter out remarks since we use them for driver puzzle reveals and create coins
-          (if (any (= condition_code REMARK) (= condition_code CREATE_COIN))
-            (x)
-            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-          )
-        )
-      )
-      filtered_conditions
     )
   )
 
@@ -114,11 +88,11 @@
       statutes_struct_hash
     )
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
-    (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 (not keeper_operation_info) ())
+    (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 ())
     operation_mod (operation-program vault_operation_condition_pre)
     operation_mod_hash (sha256tree operation_mod)
     (conditions vault_operation_condition)
-      (if (all solution (not keeper_operation_info))
+      (if (all solution (not keeper_operation_info)) ; TODO: why do we need to check that solution is not nil?
         ; owner mode if AUCTION_STATE is empty, ie liquidation hasn't started yet
         (assert
           (not AUCTION_STATE)
@@ -153,8 +127,10 @@
         args
       )
     )
-
-    inner_conditions (filter-conditions conditions vault_conditions)
+    
+    ;inner_conditions (filter-conditions conditions vault_conditions)
+    inner_conditions (merge-lists conditions vault_conditions)
+    
     ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
     ; then they would be able to liquidate that vault immediately and inflate amount of BYC, but wait!
     ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place

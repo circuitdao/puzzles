@@ -116,9 +116,10 @@
                 (list SEND_MESSAGE
                   0x3f
                   (concat
-                    VAULT_ANN_PREFIX
+                    PROTOCOL_PREFIX
+                    ;VAULT_ANN_PREFIX
                     'x'
-                    byc_coin_id_to_melt
+                    ;byc_coin_id_to_melt
                     (- negative_byc_principal_to_melt fees_to_not_pay)
                     (sha256tree STATUTES_STRUCT)
                   )
@@ -131,8 +132,15 @@
             ; get an announcement from offer module that BYC was paid into treasury
             ; approve treasury coin to receive a deposit
             (c
-              (list SEND_MESSAGE 0x3f
-                (concat VAULT_ANN_PREFIX treasury_coin_id fees_to_pay new_treasury_amount)
+              (list SEND_MESSAGE
+                0x3f
+                (concat
+                  PROTOCOL_PREFIX
+                  ;VAULT_ANN_PREFIX
+                  ;treasury_coin_id
+                  fees_to_pay
+                  new_treasury_amount
+                )
                 treasury_coin_id
               )
               conditions

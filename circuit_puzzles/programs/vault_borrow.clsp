@@ -63,9 +63,10 @@
           (list SEND_MESSAGE
             0x3f
             (concat
-              VAULT_ANN_PREFIX
+              PROTOCOL_PREFIX
+              ;VAULT_ANN_PREFIX
               "i"
-              byc_issuing_coin_id
+              ;byc_issuing_coin_id
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)
             )

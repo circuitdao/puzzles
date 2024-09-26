@@ -52,6 +52,7 @@
   (defconst STATUTE_FULL_PREFIX "S")
   (defconst PRICE_PREFIX "p")
   (defconst PROTOCOL_PREFIX "CRT")
+  (defconst CUSTOM_CONDITION_PREFIX "U")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
     (curry_hashes

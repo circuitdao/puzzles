@@ -70,9 +70,10 @@
             ; signal to tail that it can melt BYC with certain amount
             (list SEND_MESSAGE 0x3f
               (concat
-                VAULT_ANN_PREFIX
+                PROTOCOL_PREFIX
+                ;VAULT_ANN_PREFIX
                 "x"
-                treasury_coin_id
+                ;treasury_coin_id
                 (* -1 reconcile_amount)
                 (sha256tree STATUTES_STRUCT)
               )
@@ -81,7 +82,12 @@
             ; approve treasury coin to receive a withdrawal
             (list SEND_MESSAGE 0x3f
               (concat
-                VAULT_ANN_PREFIX treasury_coin_id (* -1 reconcile_amount) new_treasury_amount)
+                PROTOCOL_PREFIX
+                ;VAULT_ANN_PREFIX
+                ;treasury_coin_id
+                (* -1 reconcile_amount)
+                new_treasury_amount
+              )
               treasury_coin_id
             )
             (list ASSERT_MY_COIN_ID my_coin_id)
