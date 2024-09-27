@@ -1,19 +1,38 @@
 (
-  (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
+
+  (include condition_filtering.clib)
+
+  (defconst TREASURY_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
+  (defconst PROTOCOL_PREFIX 'CRT')
 
-  (defun filter-announcements ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions)) filtered_announcements)
+  (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
     (if conditions
-      (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code ASSERT_COIN_ANNOUNCEMENT) (= condition_code ASSERT_PUZZLE_ANNOUNCEMENT))
-        (filter-announcements
-          rest_of_conditions
-          (c (f conditions) filtered_announcements)
+      (if (= condition_code CREATE_COIN)
+        (x) ; no create coin allowed
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body)
+            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+              )
+              ; other conditions are always fine
+              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            )
+          )
         )
-        ; no other conditions please
-        (x)
       )
-      filtered_announcements
+      filtered_conditions
     )
   )
 
@@ -75,8 +94,7 @@
           ; we also send a message to each treasury coin so they can run
           (list SEND_MESSAGE 0x3f
             (concat
-              ANN_PREFIX
-              treasury_coin_id
+              PROTOCOL_PREFIX
               delta
               new_amount
             )
@@ -87,7 +105,8 @@
             (list ASSERT_COIN_ANNOUNCEMENT
               (sha256
                 prev_treasury_coin_id
-                TREASURY_COIN_ANN_PREFIX
+                PROTOCOL_PREFIX
+                TREASURY_PREFIX
                 EQUALS ; as in '$=amount', to avoid collisions
                 new_prev_amount
                 ; link the coins, this previous coin to treasury_coin_id
@@ -98,7 +117,8 @@
               (list ASSERT_COIN_ANNOUNCEMENT
                 (sha256
                   treasury_coin_id
-                  TREASURY_COIN_ANN_PREFIX
+                  PROTOCOL_PREFIX
+                  TREASURY_PREFIX
                   EQUALS ; as in '$=amount', to avoid collisions
                   new_amount
                   ; link the coins, this previous coin to treasury_coin_id
@@ -124,7 +144,7 @@
       (assert
         (= amount_deposited final_treasury_amount)
         (if (all (= deposit_amount 0) (= potential_remainder 0))
-          ; this is assert balance of treasury coins, point is to prove  that recharge auction can be started
+          ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
           (assert (> treasury_minimum final_treasury_amount)
             announcements
           )

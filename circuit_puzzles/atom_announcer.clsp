@@ -11,8 +11,6 @@
   (include utils.clib)
   (include statutes_utils.clib)
 
-  ;(defconst ANN_PREFIX 'A')
-
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
                               found_create_coin final_conditions)
     ; RETURNS (conditions create_coin_condition_body)

@@ -223,8 +223,6 @@
                                 (list SEND_MESSAGE 0x3f
                                   (concat
                                     PROTOCOL_PREFIX
-                                    ;ANN_PREFIX
-                                    ;treasury_coin_id
                                     (* MINUS_ONE interest_amount)
                                     new_treasury_coin_amount
                                   )

@@ -1,8 +1,18 @@
 (mod (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
-    ((byc_bid_amount . crt_bid_amount) target_puzzle_hash current_timestamp minimum_byc_bid_amount
-    offer_mod_hash auction_timeout ttl my_coin_id min_crt_price min_bid_increase_bps)
+    (
+      (byc_bid_amount . crt_bid_amount) ; new bid
+      target_puzzle_hash
+      current_timestamp
+      minimum_byc_bid_amount
+      offer_mod_hash
+      auction_timeout
+      ttl
+      my_coin_id
+      min_crt_price
+      min_bid_increase_bps
+    )
   )
 
   (include *standard-cl-23.1*)
@@ -11,6 +21,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     ((last_byc_bid_amount  . last_crt_bid_amount) last_target_puzzle_hash last_bid_timestamp) (
       if LAST_BID
@@ -42,7 +53,7 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE START_TIME)
@@ -51,6 +62,7 @@
           byc_bid_amount
         )
         (list REMARK
+          PROTOCOL_PREFIX
           LAUNCHER_ID
           START_TIME
           (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp)
@@ -72,7 +84,7 @@
             (curry_hashes
               CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CAT_TAIL_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
               (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
             ; parent bid amount
@@ -88,7 +100,7 @@
                 (sha256
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)
-                    (sha256 ONE CAT_TAIL_HASH)
+                    (sha256 ONE BYC_TAIL_HASH)
                     offer_mod_hash
                   )
                   (sha256tree

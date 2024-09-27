@@ -1,6 +1,6 @@
 (mod
   (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH TAIL_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
     )

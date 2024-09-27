@@ -1,5 +1,5 @@
 (mod (
-    (MOD_WITH_OPERATIONS_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash
     lineage_proof
     announcements
@@ -23,10 +23,10 @@
       (list
         CREATE_COIN
         (curry_hashes
-          MOD_WITH_OPERATIONS_HASH
-          (sha256 ONE MOD_WITH_OPERATIONS_HASH)
+          MOD_HASH
+          (sha256 ONE MOD_HASH)
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CAT_TAIL_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
           (sha256 ONE my_coin_id)
           (sha256tree STATUTES_STRUCT)
           (sha256 ONE 0)
@@ -36,6 +36,7 @@
       )
       (c
         (list REMARK
+          PROTOCOL_PREFIX
           my_coin_id
           0
           () ; no bids
@@ -47,7 +48,7 @@
             ; not LAUNCHER set, this is a launch, we need to get approval from statutes
             (c
               ; confirm back to statutes that we indeed updated the curried args
-              (list RECEIVE_MESSAGE 0x12 (concat ANN_PREFIX '*') statutes_puzzle_hash)
+              (list RECEIVE_MESSAGE 0x12 (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX ANN_PREFIX '*') statutes_puzzle_hash)
               announcements
             )
           )

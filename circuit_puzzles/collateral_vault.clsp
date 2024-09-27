@@ -36,8 +36,6 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  ;(defconst ANN_PREFIX 0x56) ; chr(86) -> "V"
-
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark final_conditions)
     ; RETURNS (conditions create_coin_condition_body)
     (if conditions
@@ -128,7 +126,6 @@
       )
     )
     
-    ;inner_conditions (filter-conditions conditions vault_conditions)
     inner_conditions (merge-lists conditions vault_conditions)
     
     ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
