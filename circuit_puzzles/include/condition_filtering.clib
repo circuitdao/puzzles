@@ -15,8 +15,8 @@
     (not
       (and
         (l condition_body)
-        (> (strlen (f condition_body)) 2)
-        (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+        (> (strlen (f condition_body)) 0)
+        (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
       )
     )
   )
@@ -27,8 +27,8 @@
       (and
         (l condition_body)
         (l (r condition_body))
-        (> (strlen (f (r condition_body))) 2)
-        (= (substr (f (r condition_body)) 0 3) PROTOCOL_PREFIX)
+        (> (strlen (f (r condition_body))) 0)
+        (= (substr (f (r condition_body)) 0 1) PROTOCOL_PREFIX)
       )
     )
   )
@@ -38,8 +38,8 @@
     (not
       (and
         (l condition_body)
-        (= (strlen (f condition_body)) 3)
-        (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+        (= (strlen (f condition_body)) 1)
+        (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
       )
     )
   )

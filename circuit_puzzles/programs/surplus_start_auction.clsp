@@ -58,8 +58,6 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              ;ANN_PREFIX
-              ;treasury_coin_id
               (* -1 withdraw_amount)
               (- current_amount withdraw_amount)
             )
@@ -155,7 +153,6 @@
           0x3f
           (concat
             PROTOCOL_PREFIX
-            ;p2_surplus_auction_coin_id
             lot_amount
             ()
           )
@@ -164,12 +161,12 @@
         (list
           REMARK
           PROTOCOL_PREFIX
-          my_coin_id ; TODO: delete as provides no new information to driver
+          my_coin_id
           lot_amount
           0
           ()
-          BYC_TAIL_HASH ; TODO: no need to include tail hash in remark as immutable
-          CRT_TAIL_HASH ; TODO: no need to include tail hash in remark as immutable
+          BYC_TAIL_HASH
+          CRT_TAIL_HASH
         ) 
         &rest
         (assert-treasury-coins-withdrawal

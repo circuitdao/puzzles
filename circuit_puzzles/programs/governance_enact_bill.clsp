@@ -55,7 +55,7 @@
         (list ASSERT_SECONDS_RELATIVE enact_seconds)
         (list SEND_MESSAGE 0x12
           ; we skip the first two elements that are used for voting process, they're not stored in statutes
-          (concat PROTOCOL_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (r BILL)))
+          (concat PROTOCOL_PREFIX (sha256tree (r BILL)))
           statutes_puzzle_hash
         )
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_ENACTED))

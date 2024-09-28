@@ -1,0 +1,6 @@
+(
+
+  (defconst PROTOCOL_PREFIX "C") ; Circuit
+  (defconst CUSTOM_CONDITION_PREFIX "U") ; cUstom condition
+
+)

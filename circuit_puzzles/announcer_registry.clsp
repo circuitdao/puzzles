@@ -6,10 +6,10 @@
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
+  (include prefixes.clib)
   (include utils.clib)
   (include statutes_utils.clib)
 
-  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry

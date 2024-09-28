@@ -1,7 +1,7 @@
 (
   
-  (defconst PROTOCOL_PREFIX 'CRT')
-  (defconst CUSTOM_CONDITION_PREFIX 'U')
+  (include prefixes.clib)
+
   (defconst ANN_PREFIX 'A') ; used to receive custom messages
 
   (defun-inline recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved

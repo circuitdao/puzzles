@@ -26,7 +26,6 @@
         (list SEND_MESSAGE 0x12
           (concat
             PROTOCOL_PREFIX
-            ;ANN_PREFIX
             INNER_PUZZLE_HASH
             APPROVED
             (sha256tree STATUTES_STRUCT)

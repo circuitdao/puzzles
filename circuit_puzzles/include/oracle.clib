@@ -1,6 +1,6 @@
 (
 
-  (defconst PROTOCOL_PREFIX 'CRT')
+  (include prefixes.clib)
 
   (defun cut-prices (price_list expiration_timestamp last_matured_price_info)
     ;; returns (matured_price_info (c matured_price_info non-matured-price-infos))

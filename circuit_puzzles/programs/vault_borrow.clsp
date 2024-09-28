@@ -64,9 +64,7 @@
             0x3f
             (concat
               PROTOCOL_PREFIX
-              ;VAULT_ANN_PREFIX
               "i"
-              ;byc_issuing_coin_id
               byc_amount_to_mint
               (sha256tree STATUTES_STRUCT)
             )

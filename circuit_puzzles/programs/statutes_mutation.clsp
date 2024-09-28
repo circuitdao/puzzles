@@ -6,12 +6,11 @@
   (include curry.clib)
   (include condition_codes.clib)
   (include condition_filtering.clib)
+  (include prefixes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconst CRT_ANN_PREFIX 'G')
   (defconst CUSTOM_CONDITIONS_MUTATION_INDEX -1)
-  (defconst CUSTOM_CONDITION_PREFIX "U") ; cUstom condition
 
   ; filter custom conditions
   ; fails on:
@@ -44,8 +43,8 @@
                 (and
                   (l condition_body)
                   (l (r condition_body))
-                  (> (strlen (f (r condition_body))) 3)
-                  (= (substr (f (r condition_body)) 0 4) (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX))
+                  (> (strlen (f (r condition_body))) 1)
+                  (= (substr (f (r condition_body)) 0 2) (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX))
                 )
               )
               (filter-custom-conditions rest (c condition filtered_conditions))
@@ -93,7 +92,7 @@
     (assert
       (size_b32 crt_inner_puzzle_hash)
       (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
-      (> 37 mutation_index)
+      (> STATUTES_MAX_IDX mutation_index)
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
         ; vote for announcements only, so this should just be a list
         (l mutation_value)
@@ -103,7 +102,7 @@
       (li
         ; get confirmation from a CRT voting coin that mutation was applied
         (list RECEIVE_MESSAGE 0x12
-          (concat PROTOCOL_PREFIX STATUTES_MUTATION_PREFIX (sha256tree (c mutation_index mutation_value))) ; TODO: STATUTES_MUTATION_PREFIX not required as only RECEIVE_MESSAGE issued by Statutes
+          (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
           (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
         )
         (list ASSERT_HEIGHT_RELATIVE ONE)

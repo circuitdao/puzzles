@@ -1,11 +1,11 @@
 (
 
   (include condition_filtering.clib)
+  (include prefixes.clib)  
 
   (defconst TREASURY_PREFIX 0x24) ; -> '$'
   (defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
-  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
     (if conditions

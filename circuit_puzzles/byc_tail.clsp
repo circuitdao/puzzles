@@ -11,12 +11,10 @@
           vault_mod_hash
           vault_curried_args
           vault_amount
-          ;cat_ann_prefix
           statutes_inner_puzzle_hash
           approved_mod_hashes
           current_coin_amount
           new_byc_coin_amount ; new amount of BYC coin being issued or melted from
-          ;my_coin_id
         )
       )
      )
@@ -39,7 +37,6 @@
       statutes_struct_hash (sha256tree STATUTES_STRUCT)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
-        ;(size_b1 cat_ann_prefix)
         (size_b32 vault_curried_args)
         (= vault_mod_hash (f approved_mod_hashes))
         (any
@@ -49,15 +46,12 @@
         )
         (list
           (list ASSERT_MY_AMOUNT current_coin_amount)
-          ;(list ASSERT_MY_COIN_ID my_coin_id)  ; thanks @bramv-chia
           (list
             RECEIVE_MESSAGE
             0x3f
             (concat
               PROTOCOL_PREFIX
-              ;cat_ann_prefix
               (if (> 0 delta) "x" "i")
-              ;my_coin_id
               (if (> 0 delta) delta new_byc_coin_amount)
               statutes_struct_hash ; need to tie it to statutes struct
             )

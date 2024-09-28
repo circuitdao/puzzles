@@ -1,5 +1,7 @@
 (
 
+  (include prefixes.clib)
+
   (defconst STATUTE_PRICE_UPDATE_COUNTER -7)
   (defconst STATUTE_P2_SURPLUS_AUCTION_MOD_HASH -6)
   (defconst STATUTE_OFFER_MOD_HASH -5)
@@ -46,13 +48,11 @@
   (defconst STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL 36)
   (defconst STATUTE_MIN_BID_INCREASE_BPS 37)
 
-  ;(defconst STATUTES_ANN_PREFIX 0x54) ; chr(84) -> "T" for sTaTuTes
-  (defconst STATUTES_MUTATION_PREFIX "m")
+  (defconst STATUTES_MAX_IDX 37) ; max Statutes index
+
   (defconst STATUTE_PREFIX "s")
   (defconst STATUTE_FULL_PREFIX "S")
   (defconst PRICE_PREFIX "p")
-  (defconst PROTOCOL_PREFIX "CRT")
-  (defconst CUSTOM_CONDITION_PREFIX "U")
 
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
     (curry_hashes

@@ -9,10 +9,10 @@
   ; not using cl-23 standard to save costs
   (include condition_codes.clib)
   (include curry.clib)
+  (include prefixes.clib)
 
   (defconst MAX_TX_BLOCK_TIME 120)
   (defconst ONE 1)
-  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun sha256tree (TREE)
     (if (l TREE)

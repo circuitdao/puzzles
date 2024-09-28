@@ -91,9 +91,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              ;VAULT_ANN_PREFIX
               "i"
-              ;byc_issuing_coin_id
               fees
               (sha256tree STATUTES_STRUCT)
             )
@@ -103,8 +101,6 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              ;VAULT_ANN_PREFIX
-              ;treasury_coin_id
               fees
               new_treasury_amount
             )

@@ -7,9 +7,9 @@
   ; not using cl-23 standard to save costs
   (include condition_codes.clib)
   (include curry.clib)
+  (include prefixes.clib)
 
   (defconst ONE 1)
-  (defconst PROTOCOL_PREFIX 'CRT')
 
   (defun sha256tree (TREE)
     (if (l TREE)

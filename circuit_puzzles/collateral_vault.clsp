@@ -44,8 +44,8 @@
         (if (= condition_code REMARK)
           (if (and
                 (l condition_body)
-                (= (strlen (f condition_body)) 3)
-                (= (substr (f condition_body) 0 3) PROTOCOL_PREFIX)
+                (= (strlen (f condition_body)) 1)
+                (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
               )
             ; protocol remark
             (if found_remark
