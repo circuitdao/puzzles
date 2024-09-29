@@ -5,12 +5,13 @@
       (registry_mod_hash registry_args_hash approved_mod_hashes statutes_inner_puzzle_hash)
      )
 
+  (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23.1*)
   (include utils.clib)
   (include statutes_utils.clib)
   (include announcer.clib)
+
   (assign
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
@@ -24,7 +25,7 @@
       (c
         (list SEND_MESSAGE 0x12
           (concat
-            ANN_PREFIX
+            PROTOCOL_PREFIX
             INNER_PUZZLE_HASH
             APPROVED
             (sha256tree STATUTES_STRUCT)

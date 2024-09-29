@@ -1,14 +1,25 @@
 ;; Bid to active surplus auction coin. There can be multiple active surplus auctions.
 ;; Surplus auction puzzle is inner puzzle of CRT coin. So bids are are in CRT CAT values.
-;; The bid amount is bidding for CAT_LOT_AMOUNT. Bid amount must be at least STATUTE_MIN_BID_INCREASE_BPS higher
+;; The bid amount is bidding for BYC_LOT_AMOUNT. Bid amount must be at least STATUTE_MIN_BID_INCREASE_BPS higher
 ;; than the current bid if any to avoid spamming the network with small bids.
 (mod
   (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
-    statutes_inner_puzzle_hash lineage_proof announcements
-    (bid_crt_amount target_puzzle_hash current_timestamp my_amount ttl my_coin_id
-     offer_mod_hash min_bid_increase_bps)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
+    statutes_inner_puzzle_hash
+    lineage_proof ; -> (parent_parent_id parent_amount parent_cat_inner_puzzle_hash)
+    announcements
+    (
+      bid_crt_amount
+      target_puzzle_hash
+      current_timestamp
+      my_amount
+      ttl
+      my_coin_id
+      offer_mod_hash
+      min_bid_increase_bps
+    )
   )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -30,7 +41,7 @@
       (> bid_crt_amount (/ (* my_amount (+ PERCENT_PRECISION min_bid_increase_bps)) PERCENT_PRECISION))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
-          ; recreate with new top bid and new timestamp
+        ; recreate with new top bid and new timestamp
         (list
           CREATE_COIN
           (curry_hashes
@@ -39,20 +50,21 @@
             (sha256 ONE CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE CAT_LOT_AMOUNT)
-            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE BYC_LOT_AMOUNT)
+            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
             (sha256tree (c target_puzzle_hash current_timestamp))
           )
           bid_crt_amount
         )
         (list REMARK  ; this is for the driver to create the reveal
+          PROTOCOL_PREFIX
           LAUNCHER_ID
-          CAT_LOT_AMOUNT
+          BYC_LOT_AMOUNT
           bid_crt_amount
           (c target_puzzle_hash current_timestamp)
-          CAT_TAIL_HASH
-          CRT_TAIL_HASH
+          BYC_TAIL_HASH ; TODO: no need to include as immutable and known to driver
+          CRT_TAIL_HASH ; TODO: no need to include as immutable and known to driver
         )
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)

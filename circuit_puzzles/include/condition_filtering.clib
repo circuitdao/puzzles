@@ -1,0 +1,47 @@
+(
+
+  (defun and_ (CLAUSES)
+    (if (r CLAUSES)
+      (qq (if (unquote (f CLAUSES)) (unquote (and_ (r CLAUSES))) ()))
+      (f CLAUSES)
+    )
+  )
+
+  ; logical AND function that evaluates clauses left to right
+  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
+
+  ; true/false for non-protocol/protocol CREATE_..._ANNOUNCEMENT condition
+  (defun-inline is-valid-ann-cond (condition_body)
+    (not
+      (and
+        (l condition_body)
+        (> (strlen (f condition_body)) 0)
+        (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; true/false for non-protocol/protocol ..._MESSAGE condition
+  (defun-inline is-valid-msg-cond (condition_body)
+    (not
+      (and
+        (l condition_body)
+        (l (r condition_body))
+        (> (strlen (f (r condition_body))) 0)
+        (= (substr (f (r condition_body)) 0 1) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; true/false for non-protocol/protocol remark condition
+  (defun-inline is-valid-rmk-cond (condition_body)
+    (not
+      (and
+        (l condition_body)
+        (= (strlen (f condition_body)) 1)
+        (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+)

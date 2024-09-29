@@ -15,45 +15,45 @@
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
+  (include condition_filtering.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
   (defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
   (defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
 
-
-
-  (defun filter-conditions ((@ conditions ( (condition_code . condition_rest) . rest_of_conditions))
+  (defun filter-conditions ((@ conditions ( (condition_code . condition_body) . rest_of_conditions))
                             found_first_create_coin
                             filtered_conditions)
     (if conditions
-      (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-        (x)
-        (if (= condition_code CREATE_COIN)
-          (if found_first_create_coin
-            (filter-conditions
-              rest_of_conditions
-              found_first_create_coin
-              (c (f conditions) filtered_conditions)
-            )
-            (filter-conditions
-              rest_of_conditions
-              condition_rest ; first create coin condition
-              ; skip this condition so we can add it later
-              filtered_conditions
-            )
+      (if (= condition_code CREATE_COIN)
+        (if found_first_create_coin
+          ; this is not the first create coin encountered. prepend to conditions list
+          (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
+          ; this is the first create coin encountered. extract condition body
+          (filter-conditions
+            rest_of_conditions
+            condition_body ; extract first create coin condition body
+            filtered_conditions ; don't prepend to conditions list
           )
-          (if (= condition_code REMARK)
-            ; skip REMARK conditions since we use them to generate reveals
-            (filter-conditions
-              rest_of_conditions
-              found_first_create_coin
-              filtered_conditions
+        )
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body)
+            (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
             )
-            (filter-conditions
-              rest_of_conditions
-              found_first_create_coin
-              (c (f conditions) filtered_conditions)
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
+              )
+              ; all other conditions allowed
+              (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
             )
           )
         )
@@ -79,7 +79,7 @@
     )
     (create_coin_body conditions) (filter-conditions
       (a INNER_PUZZLE inner_solution)
-      0 ; found first coin set to false
+      0 ; found first create coin set to false
       ()
     )
     interest_amount (if treasury_coin_info
@@ -122,7 +122,7 @@
       )
       ()
     )
-    new_treasury_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
+    new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
     pre_final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_deposit, inner_puzzle_hash)
       (c
@@ -180,7 +180,7 @@
     (assert
       (> interest_amount MINUS_ONE)
       (size_b32 inner_puzzle_hash)
-      (c (list REMARK new_discounted_deposit new_amount inner_puzzle_hash memos)
+      (c (list REMARK PROTOCOL_PREFIX new_discounted_deposit new_amount inner_puzzle_hash memos)
         (c
           (list ASSERT_MY_COIN_ID my_coin_id)
           (c
@@ -221,7 +221,11 @@
                               (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_WITHDRAWAL minimum_interest_amount)
                               (c
                                 (list SEND_MESSAGE 0x3f
-                                  (concat ANN_PREFIX treasury_coin_id (* MINUS_ONE interest_amount) new_treasury_amount)
+                                  (concat
+                                    PROTOCOL_PREFIX
+                                    (* MINUS_ONE interest_amount)
+                                    new_treasury_coin_amount
+                                  )
                                   treasury_coin_id
                                 )
                                 final_conditions

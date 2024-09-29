@@ -1,5 +1,7 @@
 (
 
+  (include prefixes.clib)
+
   (defun cut-prices (price_list expiration_timestamp last_matured_price_info)
     ;; returns (matured_price_info (c matured_price_info non-matured-price-infos))
     ;; if there is a matured_price_info, or (() (list non-matured price infos)) otherwise
@@ -31,6 +33,7 @@
       conditions
     )
   )
+
   (defun-inline abs (number)
     (if (> number MINUS_ONE) number (* number MINUS_ONE))
   )
@@ -60,7 +63,7 @@
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             ; ONE value represents that announcer is enabled
-            (sha256 announcer_puzzle_hash (sha256 statutes_struct_hash inner_puzzle_hash ONE price))
+            (sha256 announcer_puzzle_hash (sha256 PROTOCOL_PREFIX statutes_struct_hash inner_puzzle_hash ONE price))
           )
           (generate-ann-conditions STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH (r price_announcers))
         )
@@ -68,6 +71,7 @@
       ()
     )
   )
+
   (defun filter (pred (@ lst (first . rest)))
     (if lst
       (assign item (a pred (list first))

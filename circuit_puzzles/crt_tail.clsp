@@ -7,7 +7,8 @@
       Truths parent_is_cat lineage_proof delta
       inner_conditions
       solution
-     ) 
+     )
+
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include cat_truths.clib)
@@ -23,8 +24,8 @@
   )
 
   (defun validate-target-coin ((@ conditions ((condition_code . condition_rest) . rest_of_conditions)) found_create_coin)
-    ; find all CREATE_COIN conditions, check that there's only one and return that, fail
-    ; if there's more CREATE_COIN conditions, but other conditions are fine
+    ; find all CREATE_COIN conditions, check that there's only one and return that,
+    ; fail if there's more CREATE_COIN conditions. other conditions are fine and get skipped
     (if conditions
       (if (= condition_code CREATE_COIN)
         (if found_create_coin
@@ -46,9 +47,16 @@
       (assign
         CAT_MOD_HASH (cat_mod_hash_truth Truths)
         CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
-        (crt_tail_hash byc_tail_hash surplus_mod_hash
-        launcher_id byc_lot_amount last_bid
-        statutes_inner_puzzle_hash approved_mod_hashes) solution
+        (
+          crt_tail_hash
+          byc_tail_hash
+          surplus_mod_hash
+          launcher_id
+          byc_lot_amount
+          last_bid
+          statutes_inner_puzzle_hash
+          approved_mod_hashes
+        ) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         puzzle_hash (
           ; this is a surplus auction puzzle hash
@@ -96,13 +104,12 @@
     )
     (if (= (my_parent_cat_truth Truths) GENESIS_ID)
       () ; issuance at launch of protocol
-      (assign  ; issuing by recharge auction or announcer registry
+      (assign ; issuing by recharge auction or announcer registry
         CAT_MOD_HASH (cat_mod_hash_truth Truths)
         CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
         crt_tail_hash (cat_tail_program_hash_truth Truths)
         (
           mod_hash
-          ann_prefix
           parent_id
           curried_mod_args
           byc_tail_hash
@@ -128,9 +135,9 @@
               (= mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry mod has position in approved hashes
               (tree_hash_of_apply mod_hash curried_mod_args)
             )
-            ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hasing it
-            ; to generate the puzzle hash. This avoids a lot cost since we don't need to pass them into
-            ; the solution. We don't really care what the value are since these puzzles can only be launched
+            ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hashing it
+            ; to generate the puzzle hash. This avoids a lot of costs since we don't need to pass them into
+            ; the solution. We don't really care what the values are since these puzzles can only be launched
             ; by governance so they're trusted. We just need to make sure they have the correct mod_hash.
           )
           amount
@@ -147,7 +154,6 @@
           (any (size_b32 byc_tail_hash) (not byc_tail_hash))
           (size_uint64 amount)
           (size_uint64 issuance_amount)
-          (size_b1 ann_prefix)
           (size_b32 curried_mod_args)
           (size_b32 approving_coin_id)
           ; newly minted CRTs must be approved by approver (recharge auction or announcer registry)
@@ -159,9 +165,9 @@
             (list RECEIVE_MESSAGE
               0x3f
               (concat
-                ann_prefix
+                PROTOCOL_PREFIX
                 statutes_struct_hash
-                target_puzzle_hash  ; get approval for target puzzle hash from approver
+                target_puzzle_hash ; get approval for target puzzle hash from approver
                 issuance_amount
               )
               approving_coin_id

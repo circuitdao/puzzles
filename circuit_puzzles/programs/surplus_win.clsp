@@ -3,11 +3,20 @@
 ; and unlocks BYC in p2_surplus_auction coin and sends them to the winning target puzzle hash.
 (mod
   (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID CAT_LOT_AMOUNT STATUTES_STRUCT)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
-    (ttl current_timestamp my_amount crt_tail_puzzle p2_surplus_auction_coin_parent_id
-     p2_surplus_auction_hash lot_amount limitation_solution)
+    (
+      ttl
+      current_timestamp
+      my_amount
+      crt_tail_puzzle
+      p2_surplus_auction_coin_parent_id
+      p2_surplus_auction_hash
+      lot_amount
+      limitation_solution
+    )
   )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -22,7 +31,7 @@
     p2_surplus_puzzle_hash (
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CAT_TAIL_HASH)
+        (sha256 ONE BYC_TAIL_HASH)
         (curry_hashes p2_surplus_auction_hash
           (sha256 ONE p2_surplus_auction_hash)
           (sha256 ONE CAT_MOD_HASH)
@@ -34,7 +43,7 @@
     p2_surplus_auction_coin_id (calculate-coin-id
         p2_surplus_auction_coin_parent_id
         p2_surplus_puzzle_hash
-        CAT_LOT_AMOUNT
+        BYC_LOT_AMOUNT
     )
     (assert
       (size_b32 p2_surplus_auction_hash)
@@ -43,7 +52,7 @@
       ; ttl for last bid should've expired
       (> (- current_timestamp timestamp) ttl)
       ; check lot matches
-      (= lot_amount CAT_LOT_AMOUNT)
+      (= lot_amount BYC_LOT_AMOUNT)
       (li
         (list ASSERT_MY_AMOUNT my_amount)
         ; no recreate here, we create melting condition
@@ -55,7 +64,7 @@
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
-        (list SEND_MESSAGE 0x3f (concat lot_amount target_puzzle_hash LAUNCHER_ID) p2_surplus_auction_coin_id)
+        (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX lot_amount target_puzzle_hash LAUNCHER_ID) p2_surplus_auction_coin_id)
         ; ensure lineage so nobody can fake the winning bid, ie nobody can fake this state transition (CREATE_COIN conditions are not allowed, so siblings are not possible)
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id

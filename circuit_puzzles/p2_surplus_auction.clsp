@@ -4,33 +4,48 @@
 ; every spend needs to be approved by the surplus auction coin
 (mod (MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
       SURPLUS_AUCTION_MOD_HASH SURPLUS_AUCTION_LAUNCHER_ID
-      surplus_auction_parent_id surplus_auction_curried_args_hash surplus_auction_amount
-      my_coin_id puzzle_hash amount)
+      surplus_auction_parent_id
+      surplus_auction_curried_args_hash
+      surplus_auction_amount
+      puzzle_hash
+      amount
+    )
 
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
+  (include prefixes.clib)
   (include utils.clib)
+
   (assign
-    launcher_coin_id (assert
+    surplus_auction_coin_id (assert
       (size_b32 surplus_auction_curried_args_hash)
       (calculate-coin-id
         surplus_auction_parent_id
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
-          ; we're asserting that launcher coin must be using surplus puzzle so we can trust it's announcements
+          ; we're asserting that launcher coin must be using surplus puzzle so we can trust its announcements
           (tree_hash_of_apply SURPLUS_AUCTION_MOD_HASH surplus_auction_curried_args_hash)
         )
         surplus_auction_amount
       )
     )
-    (if (all (= launcher_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
+    (if (all (= surplus_auction_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
       (list  ; create / fill the coin from treasury
         ; surplus auction is being created and started, since we should have enough in treasury
-        ; to fill this coin, let see. We also guarantee we locked them delegating control to launcher coin id
-        (list SEND_MESSAGE 0x3f (concat my_coin_id amount puzzle_hash) launcher_coin_id)
+        ; to fill this coin, let see. We also guarantee we locked them delegating control to surplus auction coin id
+        (list
+          SEND_MESSAGE
+          0x3f
+          (concat
+            PROTOCOL_PREFIX
+            amount
+            puzzle_hash
+          )
+          surplus_auction_coin_id
+        )
         ; recreate ourselves with the surplus BYC lot amount
         (list
           CREATE_COIN
@@ -44,8 +59,8 @@
           )
           amount
         )
-        (list ASSERT_MY_COIN_ID my_coin_id)
-        ; must be zero when locking the coin
+        ; must be zero when locking the coin. also ensures this spend path can only be taken once
+        ;   since Surplus Auction Lot Amount > 0 (or ow/ there's no possibility of loss to protocol)
         (list ASSERT_MY_AMOUNT 0)
       )
       ; we're transferring funds to surplus auction winner,
@@ -55,7 +70,17 @@
         (list ASSERT_MY_AMOUNT amount)
         ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
         ; and the winning bid amount to melt
-        (list RECEIVE_MESSAGE 0x3f (concat amount puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID) launcher_coin_id)
+        (list
+          RECEIVE_MESSAGE
+          0x3f
+          (concat
+            PROTOCOL_PREFIX
+            amount
+            puzzle_hash
+            SURPLUS_AUCTION_LAUNCHER_ID
+          )
+          surplus_auction_coin_id
+        )
         ; transfer out
         (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
       )

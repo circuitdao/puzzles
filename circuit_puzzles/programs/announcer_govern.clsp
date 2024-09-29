@@ -5,9 +5,10 @@
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp statutes_inner_puzzle_hash input_toggle_activation max_disapproval_penalty_factor)
      )
+
+  (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23.1*)
   (include utils.clib)
   (include statutes_utils.clib)
   (include announcer.clib)
@@ -47,6 +48,8 @@
       (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
       (list RECEIVE_MESSAGE 0x10
         (concat
+          PROTOCOL_PREFIX
+          CUSTOM_CONDITION_PREFIX
           ANN_PREFIX
           LAUNCHER_ID
           toggle_activation

@@ -1,10 +1,17 @@
 (mod (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
-    (ttl current_timestamp treasury_coins
-     p2_treasury_hash funding_coin_id treasury_minimum
-     target_puzzle_hash)
+    (
+      ttl
+      current_timestamp
+      treasury_coins
+      p2_treasury_hash
+      funding_coin_id
+      treasury_minimum
+      target_puzzle_hash
+    )
   )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
@@ -33,7 +40,7 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE 0)
@@ -42,6 +49,7 @@
           0
         )
         (list REMARK
+          PROTOCOL_PREFIX
           LAUNCHER_ID
           0
           ()
@@ -54,14 +62,14 @@
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         ; approve issuance of new CRT coins to target_puzzle_hash
-        (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash target_puzzle_hash winning_crt_bid_amount) funding_coin_id)
+        (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX statutes_struct_hash target_puzzle_hash winning_crt_bid_amount) funding_coin_id)
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
             (f lineage_proof)
             (curry_hashes
               CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CAT_TAIL_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
               (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
             ; parent bid amount
@@ -72,7 +80,7 @@
         (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
           p2_treasury_hash
           CAT_MOD_HASH
-          CAT_TAIL_HASH
+          BYC_TAIL_HASH
           STATUTES_STRUCT
           treasury_minimum
           statutes_puzzle_hash

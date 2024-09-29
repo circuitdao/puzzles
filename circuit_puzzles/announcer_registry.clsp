@@ -1,12 +1,15 @@
-(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_MOD_HASH ANNOUNCER_REGISTRY CLAIM_ITERATION
+(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL MOD_HASH STATUTES_STRUCT
+      ATOM_ANNOUNCER_MOD_HASH ; TODO: move before MOD_HASH as immutable
+      ANNOUNCER_REGISTRY CLAIM_ITERATION
       lineage_proof mint_or_register . args)
 
+  (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
-  (include *standard-cl-23.1*)
+  (include prefixes.clib)
   (include utils.clib)
   (include statutes_utils.clib)
-  (defconst ANN_PREFIX "R")
+
 
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry
@@ -38,8 +41,19 @@
     (announcer_registry claim_interval_number operation_conditions) (if (= mint_or_register 'm')
       ; this is minting
       (assign
-        (statutes_inner_puzzle_hash statutes_price_updates crt_credits_per_interval claim_interval
-         funding_coin_id issuance_coin_info cat_mod_hash crt_tail_hash change_receiver_hash offer_mod_hash my_coin_id) args
+        (
+          statutes_inner_puzzle_hash
+          statutes_price_updates
+          crt_credits_per_interval
+          claim_interval
+          funding_coin_id
+          issuance_coin_info
+          cat_mod_hash
+          crt_tail_hash
+          change_receiver_hash
+          offer_mod_hash
+          my_coin_id
+        ) args
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         current_iteration (/ statutes_price_updates claim_interval)
         announcers_count (list-length ANNOUNCER_REGISTRY 0)
@@ -64,7 +78,17 @@
             () ; clear the registry when minting
             current_iteration
             (list
-              (list SEND_MESSAGE 0x3f (concat ANN_PREFIX statutes_struct_hash offer_mod_hash crt_credits_per_interval) issuance_coin_id)
+              (list
+                SEND_MESSAGE
+                0x3f
+                (concat
+                  PROTOCOL_PREFIX
+                  statutes_struct_hash
+                  offer_mod_hash
+                  crt_credits_per_interval
+                )
+                issuance_coin_id
+              )
               (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee coin to
               (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id '*'))
               (list ASSERT_MY_COIN_ID my_coin_id)
@@ -122,7 +146,7 @@
                 (list RECEIVE_MESSAGE
                   0x12
                   (concat
-                    'A'
+                    PROTOCOL_PREFIX
                     announcer_inner_puzzle_hash
                     ONE ; must be an approved announcer
                     statutes_struct_hash ; must be on the same protocol
@@ -145,6 +169,7 @@
         )
       )
     )
+    ;### MAIN EXPRESSION ###
     (c
       (list ASSERT_MY_AMOUNT 0)
       ; prove lineage
@@ -173,7 +198,7 @@
             0 ; coin amount always zero since it only keeps the registry and mints new coins
           )
           (c
-            (list REMARK announcer_registry claim_interval_number)
+            (list REMARK PROTOCOL_PREFIX announcer_registry claim_interval_number)
             operation_conditions
           )
         )

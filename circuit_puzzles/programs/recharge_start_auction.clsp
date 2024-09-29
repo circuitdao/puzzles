@@ -1,15 +1,22 @@
 (mod (
-    (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
+    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
     statutes_puzzle_hash lineage_proof announcements
-    (start_time treasury_minimum auction_timeout
-     p2_treasury_hash treasury_coins)
+    (
+      start_time
+      treasury_minimum
+      auction_timeout
+      p2_treasury_hash
+      treasury_coins ; -> ((parent_id launcher_id prev_launcher_id current_amount))
+    )
   )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
+
   (assign
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (assert
@@ -30,7 +37,7 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE start_time)
@@ -39,6 +46,7 @@
           0
         )
         (list REMARK
+          PROTOCOL_PREFIX
           LAUNCHER_ID
           start_time
           () ; no bids
@@ -58,7 +66,7 @@
             (curry_hashes
               CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CAT_TAIL_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
               (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
             ; parent bid amount
@@ -70,14 +78,14 @@
         (deposit-to-treasury
           p2_treasury_hash
           CAT_MOD_HASH
-          CAT_TAIL_HASH
+          BYC_TAIL_HASH
           STATUTES_STRUCT
           treasury_minimum
           statutes_puzzle_hash
           treasury_coins_total ; expected balance after deposit of lot
           0 ; amount deposited
-          0
-          0
+          0 ; deposit amount
+          0 ; potential remainder
           (f treasury_coins)
           treasury_coins
           announcements

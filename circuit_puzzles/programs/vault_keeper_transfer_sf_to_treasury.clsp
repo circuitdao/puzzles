@@ -90,9 +90,8 @@
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat
-              VAULT_ANN_PREFIX
+              PROTOCOL_PREFIX
               "i"
-              byc_issuing_coin_id
               fees
               (sha256tree STATUTES_STRUCT)
             )
@@ -100,7 +99,11 @@
           )
           ; approve treasury coin to receive a deposit
           (list SEND_MESSAGE 0x3f
-            (concat VAULT_ANN_PREFIX treasury_coin_id fees new_treasury_amount)
+            (concat
+              PROTOCOL_PREFIX
+              fees
+              new_treasury_amount
+            )
             treasury_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_df)

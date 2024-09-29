@@ -1,26 +1,40 @@
-(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
+(mod (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
 
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
+  (include condition_filtering.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
   (defconstant ANN_PREFIX 0x24) ; -> '$'
 
-  (defun filter-ann-conditions ( (@ ann_conditions ( (condition_code . condition_rest) . rest)) filtered_announcements)
-    (if ann_conditions
-      (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-        (if  (= (substr (f condition_rest) 0 ONE) ANN_PREFIX)
-          ; bad announcement found, error
-          (x)
-          (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
+  ; anything that isn't a protocol condition is allowed
+  (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
+    (if conditions
+      (if (= condition_code REMARK)
+        (assert
+          (is-valid-rmk-cond condition_body)
+          (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
         )
-        (filter-ann-conditions rest (c (f ann_conditions) filtered_announcements))
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          (assert
+            (is-valid-msg-cond condition_body)
+            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+          )
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+            (assert
+              (is-valid-ann-cond condition_body)
+              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+            )
+            ; all other conditions allowed
+            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
+          )
+        )
       )
-      filtered_announcements
+      filtered_conditions
     )
   )
 
@@ -46,20 +60,23 @@
         )
       )
       ; all done, return sum and enforce our create coin condition
-      (assert my_create_coin_exists (list new_amount withdraw_amount return_conditions))
+      (assert
+        my_create_coin_exists
+        (list new_amount withdraw_amount return_conditions)
+      )
     )
   )
 
-  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                      RING_PREV_LAUNCHER_ID LAUNCHER_ID prev_launcher_id launcher_id)
 
     (curry_hashes CAT_MOD_HASH
       (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE CAT_TAIL_HASH)
+      (sha256 ONE BYC_TAIL_HASH)
       (curry_hashes MOD_HASH ; puzzle hash
         (sha256 ONE MOD_HASH)
         (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CAT_TAIL_HASH)
+        (sha256 ONE BYC_TAIL_HASH)
         statutes_struct_hash
         (if prev_launcher_id
           (sha256 ONE prev_launcher_id)
@@ -74,7 +91,7 @@
   )
 
   (assign
-    filtered_conditions (filter-ann-conditions input_conditions ())
+    filtered_conditions (filter-conditions input_conditions ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     ; 1. we're withdrawing/depositing/announcing, lineage proof is parent_id of parent coin and amount, we need to assert
@@ -87,7 +104,7 @@
         (curry_hashes MOD_HASH ; inner puzzle hash
           (sha256 ONE MOD_HASH)
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CAT_TAIL_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
           statutes_struct_hash
           ; we can only change ring formation
           (sha256 ONE (r lineage_proof))
@@ -99,7 +116,7 @@
           ; not launch, just update, assert previous coin spend
           (calculate-coin-id
             (f lineage_proof) ; parent id
-            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                   RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
             ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
             current_amount ; previous amount
@@ -111,7 +128,7 @@
         (curry_hashes MOD_HASH ; inner puzzle hash
           (sha256 ONE MOD_HASH)
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CAT_TAIL_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
           statutes_struct_hash
           (sha256 ONE RING_PREV_LAUNCHER_ID)
           (sha256 ONE LAUNCHER_ID)
@@ -119,7 +136,7 @@
         ; this ensures that we're keeping lineage the same
         (calculate-coin-id
           (f lineage_proof)
-          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH statutes_struct_hash
+          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                 RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
           ; pass through previous amount
           (r lineage_proof)
@@ -131,10 +148,8 @@
       my_puzzle_hash
       0 ; create coin exists = false
       () ; return_conditions
-      ; init new_amount = 0
-      0
-      ; init withdraw_amount = 0
-      0
+      0 ; init new_amount = 0
+      0 ; init withdraw_amount = 0
     )
     withdraw_amount (
       if (> current_amount new_amount)
@@ -176,13 +191,15 @@
               (size_b32 (f args)) ; my_coin_id
               (size_b32 (r lineage_proof))
               (c
-                (list RECEIVE_MESSAGE 0x10  ; only check that statutes singleton sent this message
+                (list RECEIVE_MESSAGE 0x10 ; only check that statutes singleton sent this message
                   ; get approval from statutes
                   (concat
+                    PROTOCOL_PREFIX
+                    CUSTOM_CONDITION_PREFIX
                     ANN_PREFIX
                     (f args) ; my_coin_id
                     LAUNCHER_ID
-                    (r lineage_proof) ; prev ring launcher id
+                    (r lineage_proof) ; ring prev launcher id
                   )
                   statutes_puzzle_hash
                 )
@@ -193,14 +210,17 @@
             )
             ;ELSE; we're spending/announcing, require approving mods
             (assign
-              (approving_parent_id approving_mod_hash approving_mod_curried_args_hash approver_amount
-              approving_mod_ann_prefix approving_mod_hashes my_coin_id) args
+              (
+                approving_parent_id
+                approving_mod_hash
+                approving_mod_curried_args_hash
+                approver_amount
+                approving_mod_hashes
+              ) args
               approver_coin_id (assert
                 (size_b32 approving_parent_id)
                 (size_b32 approving_mod_hash)
                 (size_uint64 approver_amount)
-                (size_b32 my_coin_id)
-                (size_b1 approving_mod_ann_prefix)
                 ; check that this approving mod hash is allowed
                 (contains approving_mod_hashes approving_mod_hash)
                 (calculate-coin-id
@@ -209,7 +229,7 @@
                   (if (l approving_mod_curried_args_hash)
                     ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
                     (assert
-                      (= (f approving_mod_curried_args_hash) CAT_MOD_HASH)
+                      (= (f approving_mod_curried_args_hash) CAT_MOD_HASH) ; TODO: no need to include CAT_MOD_HASH in approving_mod_curried_args_hash list as curried into this puzzle's state
                       (size_b32 (f (r (r approving_mod_curried_args_hash))))
                       (size_b32 (f (r approving_mod_curried_args_hash)))
                       (curry_hashes CAT_MOD_HASH
@@ -231,8 +251,7 @@
                 ; assert approver coin announcement is valid
                 (list RECEIVE_MESSAGE 0x3f
                   (concat
-                    approving_mod_ann_prefix
-                    my_coin_id
+                    PROTOCOL_PREFIX
                     (- new_amount current_amount)
                     new_amount
                   )
@@ -240,14 +259,11 @@
                 )
                 ; assert that approving mod hashes are valid
                 (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approving_mod_hashes)
-                ; assert that passed coin id is ours
-                  (c (list ASSERT_MY_COIN_ID my_coin_id)
-                    (c
-                      ;  my new balance so someone can check whole ring balance
-                      (list CREATE_COIN_ANNOUNCEMENT (concat ANN_PREFIX '=' new_amount LAUNCHER_ID))
-                      (c (list REMARK my_coin_id new_amount LAUNCHER_ID) ; for driver code
-                        conditions
-                      )
+                  (c
+                    ;  my new balance so someone can check whole ring balance
+                    (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                    (c (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID) ; for driver code
+                      conditions
                     )
                   )
                 )
