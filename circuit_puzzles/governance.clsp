@@ -2,7 +2,7 @@
 ;; this puzzle is to be used with CRT tail
 (mod (OPERATIONS
       MOD_HASH
-      CAT_MOD_HASH 
+      CAT_MOD_HASH ; TODO: move before MOD_HASH as fixed?
       CRT_TAIL_HASH 
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
@@ -124,22 +124,6 @@
          )
        )
        (assert found_create_coin filtered_conditions)
-     )
-   )
-
-
-   (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
-     (curry_hashes CAT_MOD_HASH
-       (sha256tree CAT_MOD_HASH)
-       (sha256tree CRT_TAIL_HASH)
-       (curry_hashes MOD_HASH
-         (sha256tree MOD_HASH)
-         (sha256tree CAT_MOD_HASH)
-         (sha256tree CRT_TAIL_HASH)
-         (sha256tree STATUTES_STRUCT)
-         (sha256tree inner_puzzle_hash)
-         bill_hash
-       )
      )
    )
 

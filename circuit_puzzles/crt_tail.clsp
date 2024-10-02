@@ -92,7 +92,7 @@
           (= surplus_mod_hash (f (r approved_mod_hashes)))
           (list
             ; if this is a surplus auction and it called for melting, melt
-            (list ASSERT_MY_PUZZLEHASH puzzle_hash)
+            (list ASSERT_MY_PUZZLE_HASH puzzle_hash)
             ; we should be melting the whole coin value
             (list ASSERT_MY_AMOUNT (* -1 delta))
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)

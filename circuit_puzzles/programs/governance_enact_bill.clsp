@@ -1,6 +1,6 @@
 (mod
   (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
       grandparent_id
@@ -38,11 +38,11 @@
             grandparent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
-              (sha256tree CRT_MOD_HASH)
+              (sha256tree CRT_TAIL_HASH)
               (curry_hashes MOD_HASH
                 (sha256tree MOD_HASH)
                 (sha256tree CAT_MOD_HASH)
-                (sha256tree CRT_MOD_HASH)
+                (sha256tree CRT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree INNER_PUZZLE_HASH)
                 prev_bill_hash

@@ -184,7 +184,7 @@
         ; otherwise launching a vault with pre-existing debt could cause a lot of issues
         (li
           (list
-            ASSERT_MY_PUZZLEHASH
+            ASSERT_MY_PUZZLE_HASH
             (curry_hashes MOD_HASH
               (sha256tree MOD_HASH)
               (sha256 ONE CAT_MOD_HASH)

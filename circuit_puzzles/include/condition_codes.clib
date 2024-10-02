@@ -41,7 +41,7 @@
 
   (defconst ASSERT_MY_COIN_ID 70)
   (defconst ASSERT_MY_PARENT_ID 71)
-  (defconst ASSERT_MY_PUZZLEHASH 72)
+  (defconst ASSERT_MY_PUZZLE_HASH 72)
   (defconst ASSERT_MY_AMOUNT 73)
   (defconst ASSERT_MY_BIRTH_SECONDS 74)
   (defconst ASSERT_MY_BIRTH_HEIGHT 75)

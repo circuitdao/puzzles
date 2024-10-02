@@ -1,8 +1,14 @@
-(mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
-      _
-      (@ mutation_value (oracle_inner_puz_hash price last_updated current_timestamp))
-      crt_inner_puzzle_hash)
+(mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH)
+       MOD_HASH
+       CONST_MOD_HASHES ; ***NEW***
+       STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
+       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
+       _
+       (@ mutation_value (oracle_inner_puz_hash price last_updated current_timestamp))
+       _
+       governance_inner_puzzle_hash
+       _
+     )
 
   (include *standard-cl-23.1*)
   (include curry.clib)

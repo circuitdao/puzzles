@@ -1,0 +1,6 @@
+(mod (CURRIED_ART_0 CURRIED_ARG_1 CURRIED_ARG_2)
+
+  (include condition_codes.clib)
+
+  (list REMARK CURRIED_ARG_0 CURRIED_ARG_1 CURRIED_ARG_2)
+)

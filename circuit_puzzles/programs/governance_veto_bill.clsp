@@ -1,6 +1,6 @@
 (mod
   (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
       parent_veto_id
@@ -11,6 +11,7 @@
   )
 
   (include *standard-cl-23.1*)
+  (include crt_utils.clib)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
@@ -18,21 +19,6 @@
 
   (defconst ANN_VETO 'v')
   (defconst ANN_VETOED 'x')
-
-  (defun-inline calculate-crt-puzzle (MOD_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT inner_puzzle_hash bill_hash )
-    (curry_hashes CAT_MOD_HASH
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE CRT_MOD_HASH)
-      (curry_hashes MOD_HASH
-        (sha256 ONE MOD_HASH)
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CRT_MOD_HASH)
-        (sha256tree STATUTES_STRUCT)
-        (sha256 ONE inner_puzzle_hash)
-        bill_hash
-      )
-    )
-  )
 
   (assign
     (
@@ -67,10 +53,10 @@
             (concat PROTOCOL_PREFIX ANN_VETO (sha256tree BILL))
             (calculate-coin-id
               parent_veto_id
-              (calculate-crt-puzzle
+              (calculate-full-gov-puzzle-hash
                 MOD_HASH
                 CAT_MOD_HASH
-                CRT_MOD_HASH
+                CRT_TAIL_HASH
                 STATUTES_STRUCT
                 veto_inner_puzzle_hash
                 veto_bill_hash

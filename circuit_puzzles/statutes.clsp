@@ -1,13 +1,13 @@
 (mod (
       OPERATIONS
       MOD_HASH
-      (
-        TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token(CRT)
+      (@ CONST_MOD_HASHES (
+        TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token (CRT)
         P2_TREASURY_MOD_HASH
         OFFER_MOD_HASH
         P2_SURPLUS_AUCTION_MOD_HASH
-      )
-      CAT_MOD_HASH
+      ))
+      CAT_MOD_HASH ; TODO: move before MOD_HASH?
       CRT_TAIL_HASH
       STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
       PRICE_INFO ; Statute price info. -> (price . last_updated)
@@ -19,7 +19,9 @@
       PRICE_UPDATE_COUNTER
 
       ; solution
-      crt_inner_puzzle_hash 
+      statutes_launcher_id ; ***NEW***
+      governance_inner_puzzle_hash ; was crt_inner_puzzle_hash
+      bill_hash ; ***NEW***
       mutation
      )
 
@@ -51,7 +53,8 @@
     )
   )
 
-  (defun-inline create-coin-condition (MOD_HASH TREASURY_APPROVAL_MOD_HASHES
+  (defun-inline create-coin-condition (MOD_HASH
+                                        TREASURY_APPROVAL_MOD_HASHES
                                         P2_TREASURY_MOD_HASH P2_SURPLUS_AUCTION_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
@@ -93,8 +96,13 @@
           (a
             operation_mod
             (list
-              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
-              mutation_index mutation_value crt_inner_puzzle_hash
+              MOD_HASH CONST_MOD_HASHES ; ***NEW***
+              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH
+              PRICE_UPDATE_COUNTER
+              mutation_index mutation_value
+              statutes_launcher_id ; ***NEW***
+              governance_inner_puzzle_hash ; was crt_inner_puzzle_hash
+              bill_hash ; ***NEW***
             )
           )
         )
