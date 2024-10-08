@@ -1,12 +1,9 @@
-(mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH) GOVERNANCE_MOD_HASH ; ***NEW***
-      MOD_HASH CONST_MOD_HASHES ; ***NEW***
-      STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-      CAT_MOD_HASH CRT_TAIL_HASH
-      PRICE_UPDATE_COUNTER
-      mutation_index mutation_value
-      statutes_launcher_id ; ***NEW***
-      governance_inner_puzzle_hash ; ***NEW*** was: crt_inner_puzzle_hash
-      bill_hash ; ***NEW***
+(mod (GOVERNANCE_MOD_HASH ; ***NEW***
+      MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
+      CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
+      mutation_index
+      mutation_value
+      governance_curried_args_hash ; ***NEW***
     )
 
   (include *standard-cl-23.1*)
@@ -79,27 +76,8 @@
   )
 
   (assign
-    statutes_struct (c SINGLETON_MOD_HASH (c statutes_launcher_id SINGLETON_LAUNCHER_HASH)) ; ***NEW***
-    ;(x statutes_struct)
-    statutes_inner_puzzle_hash (curry_hashes MOD_HASH
-                                 (sha256 ONE MOD_HASH)
-                                 (sha256tree CONST_MOD_HASHES)
-                                 (sha256 ONE CAT_MOD_HASH)
-                                 (sha256 ONE CRT_TAIL_HASH)
-                                 (sha256tree STATUTES)
-                                 (sha256tree PRICE_INFO)
-                                 (sha256 ONE PAST_CUMULATIVE_STABILITY_FEE_DF)
-                                 (sha256 ONE PAST_CUMULATIVE_INTEREST_DF)
-                                 (sha256 ONE PRICE_UPDATE_COUNTER)
-                               ) ; ***NEW***
-    ;(x statutes_inner_puzzle_hash)
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash statutes_struct statutes_inner_puzzle_hash) ; ***NEW***
-    ;(x statutes_puzzle_hash)
-    governance_full_puzzle_hash (calculate-full-gov-puzzle-hash
-                                    GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-                                    statutes_struct governance_inner_puzzle_hash bill_hash
-                                ) ; ***NEW***
-    ;(x governance_full_puzzle_hash GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH statutes_struct governance_inner_puzzle_hash bill_hash)
+    governance_puzzle_hash (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
+    ;(x governance_puzzle_hash)
     (list
       ; update statutes unless we output custom conditions
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
@@ -118,7 +96,7 @@
     
       ; updating statutes
       (assert
-        (size_b32 governance_inner_puzzle_hash)
+        (size_b32 governance_curried_args_hash)
         (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
         (> STATUTES_MAX_IDX mutation_index)
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
@@ -131,10 +109,13 @@
           ; get confirmation from a CRT voting coin that mutation was applied
           (list RECEIVE_MESSAGE 0x12
             (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
-            governance_full_puzzle_hash
+            (curry_hashes CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              governance_puzzle_hash
+            )
           )
           (list ASSERT_HEIGHT_RELATIVE ONE)
-          (list ASSERT_MY_PUZZLE_HASH statutes_puzzle_hash) ; ***NEW***
           &rest
           (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
             ; filter custom conditions, otherwise ignore  

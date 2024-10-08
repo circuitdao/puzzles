@@ -6,7 +6,7 @@
       CRT_TAIL_HASH 
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
-      BILL ; bill is a potential statute if enacted
+      BILL ; -> (proposal_periods statute_index statute)
       inner_puzzle ; if provided, we're in owner mode
       inner_solution
       veto_conditions
@@ -20,7 +20,6 @@
   (include utils.clib)
 
   (defconst VETO_PROPOSED_BILL -1)
-  (defconst ANN_PREFIX 'G')
 
   ; used to filter raw_inner_conditions
   (defun filter-conditions (MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH

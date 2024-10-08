@@ -1,12 +1,12 @@
 (mod (
       OPERATIONS
       MOD_HASH
-      (@ CONST_MOD_HASHES (
+      (
         TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token (CRT)
         P2_TREASURY_MOD_HASH
         OFFER_MOD_HASH
         P2_SURPLUS_AUCTION_MOD_HASH
-      ))
+      )
       CAT_MOD_HASH ; TODO: move before MOD_HASH?
       CRT_TAIL_HASH
       STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
@@ -19,10 +19,10 @@
       PRICE_UPDATE_COUNTER
 
       ; solution
-      statutes_launcher_id ; ***NEW***
-      governance_inner_puzzle_hash ; was crt_inner_puzzle_hash
-      bill_hash ; ***NEW***
-      mutation
+      ; ***NEW*** needed to calculate puzhash of proposal coin when mutating statute, nil o/w
+      ;   info not included in mutation is proposal periods, statutes struct, governance inner puzzle hash
+      governance_curried_args_hash ; as required by tree_hash_of_apply
+      mutation ; (operation mutation_index mutation_value) when mutating statute or updating price, nil when announcing
      )
 
   (include *standard-cl-23.1*)
@@ -96,13 +96,10 @@
           (a
             operation_mod
             (list
-              MOD_HASH CONST_MOD_HASHES ; ***NEW***
-              STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF CAT_MOD_HASH CRT_TAIL_HASH
-              PRICE_UPDATE_COUNTER
+              MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
+              CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
               mutation_index mutation_value
-              statutes_launcher_id ; ***NEW***
-              governance_inner_puzzle_hash ; was crt_inner_puzzle_hash
-              bill_hash ; ***NEW***
+              governance_curried_args_hash ; ***NEW***
             )
           )
         )

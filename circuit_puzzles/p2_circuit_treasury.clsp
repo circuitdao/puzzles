@@ -196,7 +196,7 @@
                   (concat
                     PROTOCOL_PREFIX
                     CUSTOM_CONDITION_PREFIX
-                    ANN_PREFIX
+                    ANN_PREFIX ; TODO: probably not needed
                     ;(f args) ; my_coin_id
                     LAUNCHER_ID
                     (r lineage_proof) ; ring prev launcher id
