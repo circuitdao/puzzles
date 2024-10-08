@@ -3,8 +3,8 @@
   (include condition_filtering.clib)
   (include prefixes.clib)  
 
-  (defconst TREASURY_PREFIX 0x24) ; -> '$'
-  (defconst ANN_PREFIX 'v')
+  ;(defconst TREASURY_PREFIX 0x24) ; -> '$'
+  ;(defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
 
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
@@ -106,7 +106,7 @@
               (sha256
                 prev_treasury_coin_id
                 PROTOCOL_PREFIX
-                TREASURY_PREFIX
+                ;TREASURY_PREFIX
                 EQUALS ; as in '$=amount', to avoid collisions
                 new_prev_amount
                 ; link the coins, this previous coin to treasury_coin_id
@@ -118,7 +118,7 @@
                 (sha256
                   treasury_coin_id
                   PROTOCOL_PREFIX
-                  TREASURY_PREFIX
+                  ;TREASURY_PREFIX
                   EQUALS ; as in '$=amount', to avoid collisions
                   new_amount
                   ; link the coins, this previous coin to treasury_coin_id

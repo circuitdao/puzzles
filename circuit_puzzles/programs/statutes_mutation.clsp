@@ -1,9 +1,9 @@
-(mod (GOVERNANCE_MOD_HASH ; ***NEW***
+(mod (GOVERNANCE_MOD_HASH
       MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
       mutation_index
       mutation_value
-      governance_curried_args_hash ; ***NEW***
+      governance_curried_args_hash
     )
 
   (include *standard-cl-23.1*)
@@ -77,7 +77,6 @@
 
   (assign
     governance_puzzle_hash (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
-    ;(x governance_puzzle_hash)
     (list
       ; update statutes unless we output custom conditions
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)

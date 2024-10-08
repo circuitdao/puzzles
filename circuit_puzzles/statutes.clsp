@@ -19,10 +19,8 @@
       PRICE_UPDATE_COUNTER
 
       ; solution
-      ; ***NEW*** needed to calculate puzhash of proposal coin when mutating statute, nil o/w
-      ;   info not included in mutation is proposal periods, statutes struct, governance inner puzzle hash
       governance_curried_args_hash ; as required by tree_hash_of_apply
-      mutation ; (operation mutation_index mutation_value) when mutating statute or updating price, nil when announcing
+      mutation
      )
 
   (include *standard-cl-23.1*)
@@ -99,7 +97,7 @@
               MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
               CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
               mutation_index mutation_value
-              governance_curried_args_hash ; ***NEW***
+              governance_curried_args_hash
             )
           )
         )

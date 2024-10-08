@@ -188,7 +188,6 @@
             ; updating lineage, don't require approving mods
             ; there is initial launch and later update of the ring
             (assert
-              ;(size_b32 (f args)) ; my_coin_id
               (size_b32 (r lineage_proof))
               (c
                 (list RECEIVE_MESSAGE 0x12 ; only check that statutes singleton sent this message
@@ -196,16 +195,12 @@
                   (concat
                     PROTOCOL_PREFIX
                     CUSTOM_CONDITION_PREFIX
-                    ANN_PREFIX ; TODO: probably not needed
-                    ;(f args) ; my_coin_id
                     LAUNCHER_ID
                     (r lineage_proof) ; ring prev launcher id
                   )
                   statutes_puzzle_hash
                 )
-                ;(c (list ASSERT_MY_COIN_ID (f args))
-                  conditions
-                ;)
+                conditions
               )
             )
             ; ELSE we're spending/announcing, require approving mods
@@ -261,7 +256,15 @@
                 (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approving_mod_hashes)
                   (c
                     ;  my new balance so someone can check whole ring balance
-                    (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                    (list CREATE_COIN_ANNOUNCEMENT
+                      (concat
+                        PROTOCOL_PREFIX
+                        ;ANN_PREFIX
+                        '='
+                        new_amount
+                        LAUNCHER_ID
+                      )
+                    )
                     (c (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID) ; for driver code
                       conditions
                     )
