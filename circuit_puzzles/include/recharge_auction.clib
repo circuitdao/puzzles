@@ -3,8 +3,6 @@
   (include condition_filtering.clib)
   (include prefixes.clib)  
 
-  ;(defconst TREASURY_PREFIX 0x24) ; -> '$'
-  ;(defconst ANN_PREFIX 'v')
   (defconst EQUALS '=')
 
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
@@ -95,8 +93,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              delta
-              new_amount
+              (sha256tree (c delta new_amount))
             )
             treasury_coin_id
           )
@@ -105,24 +102,32 @@
             (list ASSERT_COIN_ANNOUNCEMENT
               (sha256
                 prev_treasury_coin_id
-                PROTOCOL_PREFIX
-                ;TREASURY_PREFIX
-                EQUALS ; as in '$=amount', to avoid collisions
-                new_prev_amount
-                ; link the coins, this previous coin to treasury_coin_id
-                launcher_id
+                (concat
+                  PROTOCOL_PREFIX
+                  (sha256tree
+                    (c EQUALS ; as in '$=amount', to avoid collisions
+                      (c new_prev_amount
+                        launcher_id ; link the coins, this previous coin to treasury_coin_id
+                      )
+                    )
+                  )
+                )
               )
             )
             (c
               (list ASSERT_COIN_ANNOUNCEMENT
                 (sha256
                   treasury_coin_id
-                  PROTOCOL_PREFIX
-                  ;TREASURY_PREFIX
-                  EQUALS ; as in '$=amount', to avoid collisions
-                  new_amount
-                  ; link the coins, this previous coin to treasury_coin_id
-                  next_launcher_id
+                  (concat
+                    PROTOCOL_PREFIX
+                    (sha256tree
+                      (c EQUALS ; as in '$=amount', to avoid collisions
+                        (c new_amount
+                          next_launcher_id ; link the coins, this previous coin to treasury_coin_id
+                        )
+                      )
+                    )
+                  )
                 )
               )
               (deposit-to-treasury

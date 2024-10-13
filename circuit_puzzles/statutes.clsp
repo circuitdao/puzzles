@@ -34,14 +34,14 @@
       (c
         (list CREATE_PUZZLE_ANNOUNCEMENT
           (concat PROTOCOL_PREFIX
-            STATUTE_PREFIX start_index (f (f statutes))
+            (sha256tree (c STATUTE_PREFIX (c start_index (f (f statutes)))))
           )
         )
         ; add a full statutes when announcing statutes
         (c
           (list CREATE_PUZZLE_ANNOUNCEMENT
             (concat PROTOCOL_PREFIX
-              STATUTE_FULL_PREFIX start_index (sha256tree (f statutes))
+              (sha256tree (c STATUTE_FULL_PREFIX (c start_index (f statutes))))
             )
           )
           (announce-statutes (r statutes) (+ start_index ONE) rest)
@@ -121,28 +121,28 @@
       )
       (list REMARK PROTOCOL_PREFIX statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX -7 price_update_counter)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -7 price_update_counter))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX -6 P2_SURPLUS_AUCTION_MOD_HASH)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -6 P2_SURPLUS_AUCTION_MOD_HASH))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX -5 OFFER_MOD_HASH)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -5 OFFER_MOD_HASH))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX -4 P2_TREASURY_MOD_HASH)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -4 P2_TREASURY_MOD_HASH))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX -3 TREASURY_APPROVAL_MOD_HASHES)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -3 TREASURY_APPROVAL_MOD_HASHES))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX -2 cumulative_interest_df)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -2 cumulative_interest_df))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX STATUTE_PREFIX MINUS_ONE cumulative_stability_fee_df)
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c MINUS_ONE cumulative_stability_fee_df))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX PRICE_PREFIX (sha256tree price_info))
+        (concat PROTOCOL_PREFIX (sha256tree (c PRICE_PREFIX price_info)))
       )
       &rest
       (announce-statutes statutes 0 mutation_conditions)

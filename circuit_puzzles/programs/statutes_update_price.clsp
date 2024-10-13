@@ -73,7 +73,7 @@
                 (sha256tree (c SINGLETON_MOD_HASH (c oracle_launcher_id SINGLETON_LAUNCHER_HASH)))
                 oracle_inner_puz_hash
               )
-              (sha256 price last_updated current_timestamp (price-delay-statute STATUTES))
+              (sha256tree (c price (c last_updated (c current_timestamp (price-delay-statute STATUTES)))))
             )
           )
         )

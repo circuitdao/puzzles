@@ -30,7 +30,6 @@
     mean_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     announcer_conditions (generate-ann-conditions
       STATUTES_STRUCT
-      (sha256tree STATUTES_STRUCT)
       ATOM_ANNOUNCER_PUZZLE_HASH
       price_announcers
     )
@@ -71,7 +70,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_expiration_seconds)
         (if next_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (sha256 next_price next_price_updated current_timestamp price_expiration_seconds)
+            (sha256tree (c next_price (c next_price_updated (c current_timestamp price_expiration_seconds))))
           )
           (list REMARK )
         )

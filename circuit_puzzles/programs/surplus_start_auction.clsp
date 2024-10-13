@@ -58,8 +58,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (* -1 withdraw_amount)
-              (- current_amount withdraw_amount)
+              (sha256tree (c (* -1 withdraw_amount) (- current_amount withdraw_amount)))
             )
             treasury_coin_id
           )
@@ -148,14 +147,8 @@
         ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
         ; assert p2_surplus_auction coin received the lot amount
-        (list
-          RECEIVE_MESSAGE
-          0x3f
-          (concat
-            PROTOCOL_PREFIX
-            lot_amount
-            ()
-          )
+        (list RECEIVE_MESSAGE 0x3f
+          (concat PROTOCOL_PREFIX (sha256tree lot_amount))
           p2_surplus_auction_coin_id
         )
         (list

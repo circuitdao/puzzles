@@ -51,7 +51,7 @@
         new_bill
       )
       (c
-        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_PROPOSED))
+        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
         ; assert that passed statute index correlates to correct statute
         ; and that passed statute values are correct
         (list

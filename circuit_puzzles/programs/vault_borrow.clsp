@@ -60,13 +60,9 @@
         ; additional conditions
         (list
           ; signal to tail that it can issue BYC with certain amount
-          (list SEND_MESSAGE
-            0x3f
-            (concat
-              PROTOCOL_PREFIX
-              "i"
-              byc_amount_to_mint
-              (sha256tree STATUTES_STRUCT)
+          (list SEND_MESSAGE 0x3f
+            (concat PROTOCOL_PREFIX
+              (sha256tree (c "i" (c byc_amount_to_mint STATUTES_STRUCT)))
             )
             byc_issuing_coin_id
           )

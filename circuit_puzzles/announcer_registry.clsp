@@ -10,6 +10,8 @@
   (include utils.clib)
   (include statutes_utils.clib)
 
+  (defconst MINT_OPCODE "m")
+  (defconst REGISTER_OPCODE "r")
 
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry
@@ -37,8 +39,8 @@
   )
 
   (assign
-    statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    (announcer_registry claim_interval_number operation_conditions) (if (= mint_or_register 'm')
+    ;statutes_struct_hash (sha256tree STATUTES_STRUCT)
+    (announcer_registry claim_interval_number operation_conditions) (if (= mint_or_register MINT_OPCODE)
       ; this is minting
       (assign
         (
@@ -78,14 +80,14 @@
             () ; clear the registry when minting
             current_iteration
             (list
-              (list
-                SEND_MESSAGE
-                0x3f
+              (list SEND_MESSAGE 0x3f
                 (concat
                   PROTOCOL_PREFIX
-                  statutes_struct_hash
-                  offer_mod_hash
-                  crt_credits_per_interval
+                  (sha256tree
+                    (c STATUTES_STRUCT ; statutes_struct_hash
+                      (c offer_mod_hash crt_credits_per_interval)
+                    )
+                  )
                 )
                 issuance_coin_id
               )
@@ -130,7 +132,7 @@
         )
       )
       ; register
-      (if (= mint_or_register 'r')
+      (if (= mint_or_register REGISTER_OPCODE)
         (assign
           (announcer_inner_puzzle_hash puzzle_args_hash) args
           announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH puzzle_args_hash)
@@ -143,13 +145,16 @@
               CLAIM_ITERATION
               (list
                 ; assert approval from announcer coin with correct puzzle hash
-                (list RECEIVE_MESSAGE
-                  0x12
+                (list RECEIVE_MESSAGE 0x12
                   (concat
                     PROTOCOL_PREFIX
-                    announcer_inner_puzzle_hash
-                    ONE ; must be an approved announcer
-                    statutes_struct_hash ; must be on the same protocol
+                    (sha256tree
+                      (c announcer_inner_puzzle_hash
+                        (c ONE ; must be an approved announcer
+                           STATUTES_STRUCT ; statutes_struct_hash ; must be on the same protocol
+                        )
+                      )
+                    )
                   )
                   announcer_puzzle_hash
                 )

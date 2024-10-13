@@ -46,11 +46,10 @@
             ; noop
             (list ASSERT_SECONDS_RELATIVE veto_seconds)
           )
-          (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_VETOED))
+          (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_VETOED)))
           ; assert announcement from another CRT coin with higher amount than this one
-          (list RECEIVE_MESSAGE
-            0x3f
-            (concat PROTOCOL_PREFIX ANN_VETO (sha256tree BILL))
+          (list RECEIVE_MESSAGE 0x3f
+            (concat PROTOCOL_PREFIX (sha256tree (c ANN_VETO (sha256tree BILL))))
             (calculate-coin-id
               parent_veto_id
               (calculate-full-gov-puzzle-hash

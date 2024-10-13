@@ -1,4 +1,5 @@
-(mod (STATUTES_STRUCT statutes_inner_puzzle_hash price)
+(mod (STATUTES_STRUCT statutes_inner_puzzle_hash price_info)
+
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
@@ -11,9 +12,9 @@
         (sha256tree STATUTES_STRUCT)
         statutes_inner_puzzle_hash
       )
-      price
+      price_info
     )
-    (list REMARK price)
+    (list REMARK price_info)
     (list REMARK "puzzle hash for statutes: "
       (curry_hashes (f STATUTES_STRUCT)
         (sha256tree STATUTES_STRUCT)

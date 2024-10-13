@@ -113,13 +113,16 @@
               (list )
               (list
                 ; signal to tail that it can melt the BYC
-                (list SEND_MESSAGE
-                  0x3f
+                (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    'x'
-                    (- negative_byc_principal_to_melt fees_to_not_pay)
-                    (sha256tree STATUTES_STRUCT)
+                    (sha256tree
+                      (c 'x'
+                        (c (- negative_byc_principal_to_melt fees_to_not_pay)
+                           STATUTES_STRUCT
+                        )
+                      )
+                    )
                   )
                   byc_coin_id_to_melt
                 )
@@ -130,12 +133,10 @@
             ; get an announcement from offer module that BYC was paid into treasury
             ; approve treasury coin to receive a deposit
             (c
-              (list SEND_MESSAGE
-                0x3f
+              (list SEND_MESSAGE 0x3f
                 (concat
                   PROTOCOL_PREFIX
-                  fees_to_pay
-                  new_treasury_amount
+                  (sha256tree (c fees_to_pay new_treasury_amount))
                 )
                 treasury_coin_id
               )

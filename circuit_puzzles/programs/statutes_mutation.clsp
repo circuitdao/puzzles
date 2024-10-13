@@ -45,12 +45,7 @@
             (assert
               (any
                 (is-valid-msg-cond condition_body)
-                (and
-                  (l condition_body)
-                  (l (r condition_body))
-                  (> (strlen (f (r condition_body))) 1)
-                  (= (substr (f (r condition_body)) 0 2) (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX))
-                )
+                (is-custom-msg-cond condition_body)
               )
               (filter-custom-conditions rest (c condition filtered_conditions))
             )
