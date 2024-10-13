@@ -1,8 +1,13 @@
-(mod (STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
+(mod (GOVERNANCE_MOD_HASH
+      MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
-      mutation_index mutation_value crt_inner_puzzle_hash)
+      mutation_index
+      mutation_value
+      governance_curried_args_hash
+    )
 
   (include *standard-cl-23.1*)
+  (include crt_utils.clib)
   (include curry.clib)
   (include condition_codes.clib)
   (include condition_filtering.clib)
@@ -16,7 +21,7 @@
   ; fails on:
   ; - CREATE_COIN
   ; - protocol conditions, unless
-  ;     condition is a message condition with CUSTOM_CONDITION_PREFIX
+  ;     condition is a SEND_MESSAGE condition with CUSTOM_CONDITION_PREFIX
   ; all other conditions are allowed
   (defun filter-custom-conditions (
     (@ conditions
@@ -36,26 +41,27 @@
             (is-valid-rmk-cond condition_body)
             (filter-custom-conditions rest (c condition filtered_conditions))
           )
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          (if (= condition_code SEND_MESSAGE)
             (assert
               (any
                 (is-valid-msg-cond condition_body)
-                (and
-                  (l condition_body)
-                  (l (r condition_body))
-                  (> (strlen (f (r condition_body))) 1)
-                  (= (substr (f (r condition_body)) 0 2) (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX))
-                )
+                (is-custom-msg-cond condition_body)
               )
               (filter-custom-conditions rest (c condition filtered_conditions))
             )
-            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+            (if (any (= condition_code RECEIVE_MESSAGE))
               (assert
-                (is-valid-ann-cond condition_body)
+                (is-valid-msg-cond condition_body)
                 (filter-custom-conditions rest (c condition filtered_conditions))
               )
-              ; all other conditions allowed
-              (filter-custom-conditions rest (c condition filtered_conditions))
+              (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+                (assert
+                  (is-valid-ann-cond condition_body)
+                  (filter-custom-conditions rest (c condition filtered_conditions))
+                )
+                ; all other conditions allowed
+                (filter-custom-conditions rest (c condition filtered_conditions))
+              )
             )
           )
         )
@@ -64,55 +70,55 @@
     )
   )
 
-  (defun-inline get-crt-puzzle-hash (CAT_MOD_HASH CRT_TAIL_HASH INNER_PUZZLE_HASH)
-    (curry_hashes CAT_MOD_HASH
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE CRT_TAIL_HASH)
-      INNER_PUZZLE_HASH
-    )
-  )
-
-  (list
-    ; update statutes unless we output custom conditions
-    (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-      ; custom conditions case
-      STATUTES
-      ; update statute corresp to given index
-      (mutate-list mutation_index mutation_value STATUTES 0)
-    )
-    ; price info stays the same
-    PRICE_INFO
-    ; discount factors stay the same
-    PAST_CUMULATIVE_STABILITY_FEE_DF
-    PAST_CUMULATIVE_INTEREST_DF
-    ; price update counter stays the same
-    PRICE_UPDATE_COUNTER
-
-    ; updating statutes
-    (assert
-      (size_b32 crt_inner_puzzle_hash)
-      (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
-      (> STATUTES_MAX_IDX mutation_index)
+  (assign
+    governance_puzzle_hash (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
+    (list
+      ; update statutes unless we output custom conditions
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-        ; vote for announcements only, so this should just be a list
-        (l mutation_value)
-        ; should be  a list with 5 elements if mutating statutes
-        (not (r (r (r (r (r mutation_value))))))
+        ; custom conditions case
+        STATUTES
+        ; update statute corresp to given index
+        (mutate-list mutation_index mutation_value STATUTES 0)
       )
-      (li
-        ; get confirmation from a CRT voting coin that mutation was applied
-        (list RECEIVE_MESSAGE 0x12
-          (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
-          (get-crt-puzzle-hash CAT_MOD_HASH CRT_TAIL_HASH crt_inner_puzzle_hash)
-        )
-        (list ASSERT_HEIGHT_RELATIVE ONE)
-        &rest
+      ; price info stays the same
+      PRICE_INFO
+      ; discount factors stay the same
+      PAST_CUMULATIVE_STABILITY_FEE_DF
+      PAST_CUMULATIVE_INTEREST_DF
+      ; price update counter stays the same
+      PRICE_UPDATE_COUNTER
+    
+      ; updating statutes
+      (assert
+        (size_b32 governance_curried_args_hash)
+        (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
+        (> STATUTES_MAX_IDX mutation_index)
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-          ; filter custom conditions, otherwise ignore  
-          (filter-custom-conditions (f mutation_value) ())
-          ()
+          ; vote for announcements only, so this should just be a list
+          (l mutation_value)
+          ; should be  a list with 5 elements if mutating statutes
+          (not (r (r (r (r (r mutation_value))))))
+        )
+        (li
+          ; get confirmation from a CRT voting coin that mutation was applied
+          (list RECEIVE_MESSAGE 0x12
+            (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
+            (curry_hashes CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              governance_puzzle_hash
+            )
+          )
+          (list ASSERT_HEIGHT_RELATIVE ONE)
+          &rest
+          (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
+            ; filter custom conditions, otherwise ignore  
+            (filter-custom-conditions (f mutation_value) ())
+            ()
+          )
         )
       )
     )
   )
+
 )

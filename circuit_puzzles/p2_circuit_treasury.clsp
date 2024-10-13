@@ -9,7 +9,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant ANN_PREFIX 0x24) ; -> '$'
+  (defconst EQUALS '=')
 
   ; anything that isn't a protocol condition is allowed
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
@@ -118,8 +118,8 @@
             (f lineage_proof) ; parent id
             (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
                                   RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
-            ; yeah, current amount must not change when updating lineage, ie needs to be same as parent coin
-            current_amount ; previous amount
+            ; current amount must not change when updating lineage, ie needs to be same as parent coin
+            current_amount ; parent amount
           )
         )
       )
@@ -188,27 +188,25 @@
             ; updating lineage, don't require approving mods
             ; there is initial launch and later update of the ring
             (assert
-              (size_b32 (f args)) ; my_coin_id
               (size_b32 (r lineage_proof))
               (c
-                (list RECEIVE_MESSAGE 0x10 ; only check that statutes singleton sent this message
-                  ; get approval from statutes
+                ; get approval from statutes
+                (list RECEIVE_MESSAGE 0x12
                   (concat
                     PROTOCOL_PREFIX
                     CUSTOM_CONDITION_PREFIX
-                    ANN_PREFIX
-                    (f args) ; my_coin_id
-                    LAUNCHER_ID
-                    (r lineage_proof) ; ring prev launcher id
+                    (sha256tree
+                      (c LAUNCHER_ID
+                        (r lineage_proof) ; ring prev launcher id
+                      )
+                    )
                   )
                   statutes_puzzle_hash
                 )
-                (c (list ASSERT_MY_COIN_ID (f args))
-                  conditions
-                )
+                conditions
               )
             )
-            ;ELSE; we're spending/announcing, require approving mods
+            ; ELSE we're spending/announcing, require approving mods
             (assign
               (
                 approving_parent_id
@@ -252,16 +250,20 @@
                 (list RECEIVE_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (- new_amount current_amount)
-                    new_amount
+                    (sha256tree (c (- new_amount current_amount) new_amount))
                   )
                   approver_coin_id
                 )
                 ; assert that approving mod hashes are valid
-                (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approving_mod_hashes)
+                (c (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approving_mod_hashes))
                   (c
                     ;  my new balance so someone can check whole ring balance
-                    (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_PREFIX '=' new_amount LAUNCHER_ID))
+                    (list CREATE_COIN_ANNOUNCEMENT
+                      (concat
+                        PROTOCOL_PREFIX
+                        (sha256tree (c EQUALS (c new_amount LAUNCHER_ID)))
+                      )
+                    )
                     (c (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID) ; for driver code
                       conditions
                     )

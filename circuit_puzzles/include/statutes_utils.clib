@@ -57,7 +57,7 @@
   (defun-inline calculate-statutes-puzzle-hash (STATUTES_STRUCT inner_puzzle_hash)
     (curry_hashes
       (f STATUTES_STRUCT)
-      ; we can also provide a hash of the statutes struct to make it more efficient
+      ; we can also provide a hash of statutes struct to make it more efficient
       (if (l (r STATUTES_STRUCT)) (sha256tree STATUTES_STRUCT) (r STATUTES_STRUCT))
       inner_puzzle_hash
     )
@@ -66,11 +66,9 @@
   (defun-inline assert-statute (statutes_puzzle_hash statute_index statute_value)
     (list ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256
-         statutes_puzzle_hash
-        (concat
-          PROTOCOL_PREFIX
-          STATUTE_PREFIX statute_index (if (l statute_value) (sha256tree statute_value) statute_value)
-        )
+        statutes_puzzle_hash
+        PROTOCOL_PREFIX
+        (sha256tree (c STATUTE_PREFIX (c statute_index statute_value))) ; (if (l statute_value) (sha256tree statute_value) statute_value)
       )
     )
   )
@@ -78,11 +76,9 @@
   (defun-inline assert-full-statute (statutes_puzzle_hash statute_index statute_full_value)
     (list ASSERT_PUZZLE_ANNOUNCEMENT
       (sha256
-         statutes_puzzle_hash
-        (concat
-          PROTOCOL_PREFIX
-          STATUTE_FULL_PREFIX statute_index (sha256tree statute_full_value)
-        )
+        statutes_puzzle_hash
+        PROTOCOL_PREFIX
+        (sha256tree (c STATUTE_FULL_PREFIX (c statute_index statute_full_value))) ; (sha256tree statute_full_value)
       )
     )
   )
@@ -102,11 +98,10 @@
 
   (defun-inline assert-price-info (statutes_puzzle_hash price_info)
     (list ASSERT_PUZZLE_ANNOUNCEMENT
-      (sha256 statutes_puzzle_hash
-        (concat
-          PROTOCOL_PREFIX
-          PRICE_PREFIX (sha256tree price_info)
-        )
+      (sha256
+        statutes_puzzle_hash
+        PROTOCOL_PREFIX
+        (sha256tree (c PRICE_PREFIX price_info)) ; (sha256tree price_info)
       )
     )
   )

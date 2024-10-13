@@ -34,7 +34,7 @@
         (tree_hash_of_apply vault_mod_hash vault_curried_args)
         vault_amount
       )
-      statutes_struct_hash (sha256tree STATUTES_STRUCT)
+      ;statutes_struct_hash (sha256tree STATUTES_STRUCT)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
         (size_b32 vault_curried_args)
@@ -46,14 +46,16 @@
         )
         (list
           (list ASSERT_MY_AMOUNT current_coin_amount)
-          (list
-            RECEIVE_MESSAGE
-            0x3f
+          (list RECEIVE_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (if (> 0 delta) "x" "i")
-              (if (> 0 delta) delta new_byc_coin_amount)
-              statutes_struct_hash ; need to tie it to statutes struct
+              (sha256tree
+                (c (if (> 0 delta) "x" "i")
+                  (c (if (> 0 delta) delta new_byc_coin_amount)
+                    STATUTES_STRUCT ; statutes_struct_hash ; need to tie it to statutes struct
+                  )
+                )
+              )
             )
             vault_coin_id
           )

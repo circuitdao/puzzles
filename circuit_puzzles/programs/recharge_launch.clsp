@@ -48,7 +48,10 @@
             ; not LAUNCHER set, this is a launch, we need to get approval from statutes
             (c
               ; confirm back to statutes that we indeed updated the curried args
-              (list RECEIVE_MESSAGE 0x12 (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX ANN_PREFIX '*') statutes_puzzle_hash)
+              (list RECEIVE_MESSAGE 0x12
+                (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX (sha256tree '*'))
+                statutes_puzzle_hash
+              )
               announcements
             )
           )

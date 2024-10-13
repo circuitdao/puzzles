@@ -36,14 +36,8 @@
       (list  ; create / fill the coin from treasury
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee we locked them delegating control to surplus auction coin id
-        (list
-          SEND_MESSAGE
-          0x3f
-          (concat
-            PROTOCOL_PREFIX
-            amount
-            puzzle_hash
-          )
+        (list SEND_MESSAGE 0x3f
+          (concat PROTOCOL_PREFIX (sha256tree amount))
           surplus_auction_coin_id
         )
         ; recreate ourselves with the surplus BYC lot amount
@@ -70,14 +64,10 @@
         (list ASSERT_MY_AMOUNT amount)
         ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
         ; and the winning bid amount to melt
-        (list
-          RECEIVE_MESSAGE
-          0x3f
+        (list RECEIVE_MESSAGE 0x3f
           (concat
             PROTOCOL_PREFIX
-            amount
-            puzzle_hash
-            SURPLUS_AUCTION_LAUNCHER_ID
+            (sha256tree (c amount (c puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID)))
           )
           surplus_auction_coin_id
         )

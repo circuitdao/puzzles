@@ -92,10 +92,10 @@
           (= surplus_mod_hash (f (r approved_mod_hashes)))
           (list
             ; if this is a surplus auction and it called for melting, melt
-            (list ASSERT_MY_PUZZLEHASH puzzle_hash)
+            (list ASSERT_MY_PUZZLE_HASH puzzle_hash)
             ; we should be melting the whole coin value
             (list ASSERT_MY_AMOUNT (* -1 delta))
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approved_mod_hashes))
           )
         )
       )
@@ -162,18 +162,21 @@
           (= found_target_amount issuance_amount)
           (= delta 0)
           (list
-            (list RECEIVE_MESSAGE
-              0x3f
+            (list RECEIVE_MESSAGE 0x3f
               (concat
                 PROTOCOL_PREFIX
-                statutes_struct_hash
-                target_puzzle_hash ; get approval for target puzzle hash from approver
-                issuance_amount
+                (sha256tree
+                  (c STATUTES_STRUCT ; statutes_struct_hash
+                    (c target_puzzle_hash ; get approval for target puzzle hash from approver
+                      issuance_amount
+                    )
+                  )
+                )
               )
               approving_coin_id
             )
             (list ASSERT_MY_AMOUNT issuance_amount)
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approved_mod_hashes))
           )
         )
       )

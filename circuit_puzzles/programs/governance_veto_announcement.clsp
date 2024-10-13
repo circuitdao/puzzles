@@ -1,6 +1,6 @@
 (mod
   (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       _ ;
       target_bill_hash
@@ -58,7 +58,7 @@
         (list
           ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
           (list ASSERT_SECONDS_RELATIVE relative_time_spent)
-          (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX ANN_VETO target_bill_hash) target_coin_id)
+          (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree (c ANN_VETO target_bill_hash))) target_coin_id)
         )
       )
     )

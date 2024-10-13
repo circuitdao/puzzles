@@ -1,6 +1,6 @@
 (mod
   (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
       grandparent_id
@@ -38,11 +38,11 @@
             grandparent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
-              (sha256tree CRT_MOD_HASH)
+              (sha256tree CRT_TAIL_HASH)
               (curry_hashes MOD_HASH
                 (sha256tree MOD_HASH)
                 (sha256tree CAT_MOD_HASH)
-                (sha256tree CRT_MOD_HASH)
+                (sha256tree CRT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree INNER_PUZZLE_HASH)
                 prev_bill_hash
@@ -58,7 +58,7 @@
           (concat PROTOCOL_PREFIX (sha256tree (r BILL)))
           statutes_puzzle_hash
         )
-        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_ENACTED))
+        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_ENACTED)))
         ; enactment must happen within enactment timeout seconds otherwise times out and resets the bill
         (list ASSERT_BEFORE_SECONDS_RELATIVE (+ enact_seconds enactment_timeout_seconds))
         (assert-statute statutes_puzzle_hash STATUTE_ENACTMENT_TIMEOUT_SECONDS enactment_timeout_seconds)

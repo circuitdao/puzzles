@@ -197,9 +197,13 @@
             (list SEND_MESSAGE 0x3f
               (concat
                 PROTOCOL_PREFIX
-                'x'
-                (- negative_byc_principal_to_melt fees_to_not_pay)
-                statutes_struct_hash
+                (sha256tree
+                  (c 'x'
+                    (c (- negative_byc_principal_to_melt fees_to_not_pay)
+                      STATUTES_STRUCT ; statutes_struct_hash
+                    )
+                  )
+                )
               )
               byc_coin_id_to_melt
             )
@@ -264,8 +268,7 @@
               (list SEND_MESSAGE 0x3f
                 (concat
                   PROTOCOL_PREFIX
-                  fees_for_treasury
-                  new_treasury_amount
+                  (sha256tree (c fees_for_treasury new_treasury_amount))
                 )
                 treasury_coin_id
               )

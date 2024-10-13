@@ -20,12 +20,13 @@
 
   (c
     (list CREATE_PUZZLE_ANNOUNCEMENT
-      (sha256
+      (concat
         PROTOCOL_PREFIX
-        (sha256tree STATUTES_STRUCT)
-        INNER_PUZZLE_HASH
-        APPROVED
-        ATOM_VALUE
+        (sha256tree
+          (c STATUTES_STRUCT
+            (c INNER_PUZZLE_HASH (c APPROVED ATOM_VALUE))
+          )
+        )
       )
     )
     (c
@@ -51,7 +52,19 @@
         )
         ; driver remark to reveal the puzzle hash
         (c
-          (list REMARK PROTOCOL_PREFIX LAUNCHER_ID INNER_PUZZLE_HASH DEPOSIT APPROVED DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+          (list REMARK
+            PROTOCOL_PREFIX
+            LAUNCHER_ID
+            INNER_PUZZLE_HASH
+            DEPOSIT
+            APPROVED
+            DELAY
+            ATOM_VALUE
+            MIN_DEPOSIT
+            COOLDOWN_START
+            LAST_PENALTY_INTERVAL
+            TIMESTAMP_EXPIRES
+          )
           input_conditions
         )
       )

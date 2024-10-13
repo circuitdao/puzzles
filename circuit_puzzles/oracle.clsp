@@ -46,7 +46,7 @@
             ONE
           )
           (if oldest_updated
-            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256 oldest_price oldest_updated current_timestamp price_expiration_seconds))
+            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c oldest_price (c oldest_updated (c current_timestamp price_expiration_seconds)))))
             (x)  ; no matured prices available, fail, this occurs on launch and increases of price_expiration_seconds
           )
           (list REMARK oldest_price oldest_updated current_timestamp price_expiration_seconds)

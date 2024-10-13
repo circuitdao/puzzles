@@ -48,7 +48,11 @@
     )
   )
 
-  (defun generate-ann-conditions (STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH price_announcers)
+  (defun generate-ann-conditions (
+      STATUTES_STRUCT
+      ATOM_ANNOUNCER_PUZZLE_HASH
+      price_announcers
+    )
     (if price_announcers
       (assign
         announcer (f price_announcers)
@@ -62,10 +66,19 @@
         ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT
-            ; ONE value represents that announcer is enabled
-            (sha256 announcer_puzzle_hash (sha256 PROTOCOL_PREFIX statutes_struct_hash inner_puzzle_hash ONE price))
+            (sha256
+              announcer_puzzle_hash
+              PROTOCOL_PREFIX
+              (sha256tree
+                (c STATUTES_STRUCT (c inner_puzzle_hash (c ONE price))) ; ONE indicates that announcer is approved
+              )
+            )
           )
-          (generate-ann-conditions STATUTES_STRUCT statutes_struct_hash ATOM_ANNOUNCER_PUZZLE_HASH (r price_announcers))
+          (generate-ann-conditions
+            STATUTES_STRUCT
+            ATOM_ANNOUNCER_PUZZLE_HASH
+            (r price_announcers)
+          )
         )
       )
       ()
