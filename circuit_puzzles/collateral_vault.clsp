@@ -42,18 +42,14 @@
       (if (= condition_code CREATE_COIN)
         (x) ; no CREATE_COIN allowed
         (if (= condition_code REMARK)
-          (if (and
-                (l condition_body)
-                (= (strlen (f condition_body)) 1)
-                (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
-              )
+          (if (is-valid-rmk-cond condition_body)
+            ; non-protocol remarks are fine
+            (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
             ; protocol remark
             (if found_remark
               (x) ; only one protocol remark allowed
               (restrict-conditions rest_of_conditions (r condition_body) final_conditions)
             )
-            ; non-protocol remarks are fine
-            (restrict-conditions rest_of_conditions found_remark (c (f conditions) final_conditions))
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
             (assert
@@ -184,7 +180,7 @@
         ; otherwise launching a vault with pre-existing debt could cause a lot of issues
         (li
           (list
-            ASSERT_MY_PUZZLEHASH
+            ASSERT_MY_PUZZLE_HASH
             (curry_hashes MOD_HASH
               (sha256tree MOD_HASH)
               (sha256 ONE CAT_MOD_HASH)

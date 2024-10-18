@@ -21,7 +21,7 @@
       STATUTES_STRUCT
       LAUNCHER_ID
       INNER_PUZZLE_HASH
-      input_toggle_activation ; current statutes price counter passed
+      input_toggle_activation
       deposit
       DELAY
       ATOM_VALUE
@@ -50,9 +50,7 @@
         (concat
           PROTOCOL_PREFIX
           CUSTOM_CONDITION_PREFIX
-          ANN_PREFIX
-          LAUNCHER_ID
-          toggle_activation
+          (sha256tree (c LAUNCHER_ID toggle_activation))
         )
         statutes_puzzle_hash
       )

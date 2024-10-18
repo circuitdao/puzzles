@@ -15,7 +15,8 @@
     (not
       (and
         (l condition_body)
-        (> (strlen (f condition_body)) 0)
+        (not (l (f condition_body)))
+        (= (strlen (f condition_body)) 33)
         (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
       )
     )
@@ -27,17 +28,31 @@
       (and
         (l condition_body)
         (l (r condition_body))
-        (> (strlen (f (r condition_body))) 0)
+        (not (l (f (r condition_body))))
+        (= (strlen (f (r condition_body))) 33)
         (= (substr (f (r condition_body)) 0 1) PROTOCOL_PREFIX)
       )
     )
   )
 
-  ; true/false for non-protocol/protocol remark condition
+  ; true/false for custom ..._MESSAGE condition
+  (defun-inline is-custom-msg-cond (condition_body)
+    (and
+      (l condition_body)
+      (l (r condition_body))
+      (not (l (f (r condition_body))))
+      (= (strlen (f (r condition_body))) 34)
+      ; not checking PROTOCOL_PREFIX to allow for communicating with other protocols
+      (= (substr (f (r condition_body)) 1 2) CUSTOM_CONDITION_PREFIX)
+    )
+  )
+
+  ; true/false if non-protocol/protocol remark condition
   (defun-inline is-valid-rmk-cond (condition_body)
     (not
       (and
         (l condition_body)
+        (not (l (f condition_body)))
         (= (strlen (f condition_body)) 1)
         (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
       )

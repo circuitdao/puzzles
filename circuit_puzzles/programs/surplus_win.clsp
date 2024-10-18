@@ -64,7 +64,13 @@
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         ; assert p2_surplus_auction coin transferred the lot amount to the winner (target_puzzle_hash)
-        (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX lot_amount target_puzzle_hash LAUNCHER_ID) p2_surplus_auction_coin_id)
+        (list SEND_MESSAGE 0x3f
+          (concat
+            PROTOCOL_PREFIX
+            (sha256tree (c lot_amount (c target_puzzle_hash LAUNCHER_ID)))
+          )
+          p2_surplus_auction_coin_id
+        )
         ; ensure lineage so nobody can fake the winning bid, ie nobody can fake this state transition (CREATE_COIN conditions are not allowed, so siblings are not possible)
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id

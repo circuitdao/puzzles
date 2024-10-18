@@ -89,20 +89,14 @@
         (list
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
-            (concat
-              PROTOCOL_PREFIX
-              "i"
-              fees
-              (sha256tree STATUTES_STRUCT)
-            )
+            (concat PROTOCOL_PREFIX (sha256tree (c "i" (c fees STATUTES_STRUCT))))
             byc_issuing_coin_id
           )
           ; approve treasury coin to receive a deposit
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              fees
-              new_treasury_amount
+              (sha256tree (c fees new_treasury_amount))
             )
             treasury_coin_id
           )

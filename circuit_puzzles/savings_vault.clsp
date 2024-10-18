@@ -102,7 +102,7 @@
       (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
       (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
     )
-
+    
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
@@ -148,7 +148,7 @@
       )
       ; this is a launch, verify we're starting with zero amounts
       (c
-        (list ASSERT_MY_PUZZLEHASH
+        (list ASSERT_MY_PUZZLE_HASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE CAT_TAIL_HASH)
@@ -223,8 +223,7 @@
                                 (list SEND_MESSAGE 0x3f
                                   (concat
                                     PROTOCOL_PREFIX
-                                    (* MINUS_ONE interest_amount)
-                                    new_treasury_coin_amount
+                                    (sha256tree (c (* MINUS_ONE interest_amount) new_treasury_coin_amount))
                                   )
                                   treasury_coin_id
                                 )

@@ -1,5 +1,5 @@
 (mod (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_MOD_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
       (@ new_bill (
@@ -51,7 +51,7 @@
         new_bill
       )
       (c
-        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX ANN_PROPOSED))
+        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
         ; assert that passed statute index correlates to correct statute
         ; and that passed statute values are correct
         (list

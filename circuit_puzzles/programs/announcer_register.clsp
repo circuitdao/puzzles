@@ -26,16 +26,20 @@
         (list SEND_MESSAGE 0x12
           (concat
             PROTOCOL_PREFIX
-            INNER_PUZZLE_HASH
-            APPROVED
-            (sha256tree STATUTES_STRUCT)
+            (sha256tree
+              (c INNER_PUZZLE_HASH
+                (c APPROVED
+                  STATUTES_STRUCT
+                )
+              )
+            )
           )
           announcer_registry_puzhash
         )
         ; should not be expired
         (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES approved_mod_hashes)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approved_mod_hashes))
             (recreate-myself-condition MOD_HASH
               STATUTES_STRUCT
               LAUNCHER_ID
