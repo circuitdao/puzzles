@@ -102,7 +102,10 @@
           )
         )
         ; announce. default to existing state. no operation conditions
-        (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER ())
+        (assert
+          (= governance_curried_args_hash ()) ; ensure unique solution when announcing to facilitate identical spend aggregation
+          (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER ())
+        )
       )
     (li
       (create-coin-condition
