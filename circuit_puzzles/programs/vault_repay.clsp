@@ -91,7 +91,7 @@
       (any (= new_principal 0) (> new_principal minimum_principal_amount))
       (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
       ; current time must be at least after last oracle update
-      (> current_timestamp (f price_info))
+      (> current_timestamp (r price_info))
       (list
         (list
           (if (> TRANSFERRED_FEES calculated_stability_fee)
