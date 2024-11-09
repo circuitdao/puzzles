@@ -15,8 +15,6 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconstant ANN_VETO 'v')
-
   (assign
     (
       (veto_seconds . enact_seconds)
@@ -58,7 +56,7 @@
         (list
           ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
           (list ASSERT_SECONDS_RELATIVE relative_time_spent)
-          (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree (c ANN_VETO target_bill_hash))) target_coin_id)
+          (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree target_bill_hash)) target_coin_id)
         )
       )
     )

@@ -17,7 +17,6 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  (defconst ANN_VETO 'v')
   (defconst ANN_VETOED 'x')
 
   (assign
@@ -49,7 +48,7 @@
           (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_VETOED)))
           ; assert announcement from another CRT coin with higher amount than this one
           (list RECEIVE_MESSAGE 0x3f
-            (concat PROTOCOL_PREFIX (sha256tree (c ANN_VETO (sha256tree BILL))))
+            (concat PROTOCOL_PREFIX (sha256tree (sha256tree BILL)))
             (calculate-coin-id
               parent_veto_id
               (calculate-full-gov-puzzle-hash

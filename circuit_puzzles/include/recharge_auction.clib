@@ -3,8 +3,6 @@
   (include condition_filtering.clib)
   (include prefixes.clib)  
 
-  (defconst EQUALS '=')
-
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
     (if conditions
       (if (= condition_code CREATE_COIN)
@@ -105,10 +103,8 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c EQUALS ; as in '$=amount', to avoid collisions
-                      (c new_prev_amount
-                        launcher_id ; link the coins, this previous coin to treasury_coin_id
-                      )
+                    (c new_prev_amount
+                      launcher_id ; link the coins, this previous coin to treasury_coin_id
                     )
                   )
                 )
@@ -121,10 +117,8 @@
                   (concat
                     PROTOCOL_PREFIX
                     (sha256tree
-                      (c EQUALS ; as in '$=amount', to avoid collisions
-                        (c new_amount
-                          next_launcher_id ; link the coins, this previous coin to treasury_coin_id
-                        )
+                      (c new_amount
+                        next_launcher_id ; link the coins, this previous coin to treasury_coin_id
                       )
                     )
                   )

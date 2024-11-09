@@ -2,16 +2,18 @@
 
   (include prefixes.clib)
 
-  (defun cut-prices (price_list expiration_timestamp last_matured_price_info)
-    ;; returns (matured_price_info (c matured_price_info non-matured-price-infos))
-    ;; if there is a matured_price_info, or (() (list non-matured price infos)) otherwise
-    (if price_list
-      (if (> expiration_timestamp  (r (f price_list)))
-        (cut-prices (r price_list) expiration_timestamp (f price_list))
+  (defun cut-price-infos (price_info_list expiration_timestamp last_matured_price_info)
+    ;; returns (last_matured_price_info (c last_matured_price_info non-matured-price-infos))
+    ;; if there is a matured price_info, or (() non-matured-price-infos) otherwise, where
+    ;; last_matured_price_info is the matured price_info with greatest (i.e. most recent) timestamp
+    ;; and non-matured-price-infos is the list of non-matured price_infos.
+    (if price_info_list
+      (if (> expiration_timestamp  (r (f price_info_list)))
+        (cut-price-infos (r price_info_list) expiration_timestamp (f price_info_list))
         (c last_matured_price_info
           (if last_matured_price_info
-            (c last_matured_price_info price_list)
-            price_list
+            (c last_matured_price_info price_info_list)
+            price_info_list
           )
         )
       )

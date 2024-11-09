@@ -1,6 +1,6 @@
-;;; this coin is controlled by the surplus auction coin, and is used to transfer funds to the winner of the surplus auction
-; coin is created with zero amount, and when it's first spent it's filled with the lot amount and puzzle hash
-; if the coin is spent again, it's transferred to the winner of the surplus auction
+;;; this coin (payout coin) is controlled by a surplus auction coin, and is used to pay out funds to the winner of the surplus auction
+; the payout coin is created with zero amount, and when it's first spent it's filled with the lot amount from treasury
+; if the coin is spent again, its amount is transferred to the winner of the surplus auction
 ; every spend needs to be approved by the surplus auction coin
 (mod (MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
       SURPLUS_AUCTION_MOD_HASH SURPLUS_AUCTION_LAUNCHER_ID

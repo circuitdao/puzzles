@@ -6,7 +6,7 @@
           m_of_n
           price_updatable_after_seconds
           price_updatable_threshold_percent
-          price_expiration_seconds
+          price_delay
           current_timestamp
           ; price_announcers -> ((inner_puzzle_hash args_hash price))
           price_announcers
@@ -14,13 +14,13 @@
       )
       input_announcement_asserts
       )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
   (include oracle.clib)
-
 
   (assign
     price_announcers_length (if oracle_mutation (list-length price_announcers 0) ())
@@ -34,7 +34,7 @@
       price_announcers
     )
     ; we add latest price to the end of the list
-    (matured_price . cut_prices) (cut-prices PRICES (- current_timestamp price_expiration_seconds) ())
+    (matured_price . cut_prices) (cut-price-infos PRICES (- current_timestamp price_delay) ())
     new_prices (merge-lists
       cut_prices
       (list (c mean_price current_timestamp))
@@ -67,10 +67,10 @@
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_percent)
-        (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_expiration_seconds)
+        (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
         (if next_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (sha256tree (c next_price (c next_price_updated (c current_timestamp price_expiration_seconds))))
+            (sha256tree (c next_price (c next_price_updated (c current_timestamp price_delay))))
           )
           (list REMARK )
         )

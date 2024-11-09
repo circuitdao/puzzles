@@ -83,11 +83,7 @@
               (list SEND_MESSAGE 0x3f
                 (concat
                   PROTOCOL_PREFIX
-                  (sha256tree
-                    (c STATUTES_STRUCT ; statutes_struct_hash
-                      (c offer_mod_hash crt_credits_per_interval)
-                    )
-                  )
+                  (sha256tree (c STATUTES_STRUCT (c offer_mod_hash crt_credits_per_interval)))
                 )
                 issuance_coin_id
               )
@@ -151,7 +147,7 @@
                     (sha256tree
                       (c announcer_inner_puzzle_hash
                         (c ONE ; must be an approved announcer
-                           STATUTES_STRUCT ; statutes_struct_hash ; must be on the same protocol
+                           STATUTES_STRUCT ; must be on same protocol
                         )
                       )
                     )
