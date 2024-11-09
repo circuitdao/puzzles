@@ -32,7 +32,7 @@
     )
   )
 
-  (defun deposit-to-treasury (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+  (defun deposit-to-treasury (TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
                               treasury_minimum statutes_puzzle_hash final_treasury_amount
                               amount_deposited deposit_amount potential_remainder
                               first_treasury_coin treasury_coins announcements)
@@ -54,8 +54,8 @@
               (sha256tree CAT_MOD_HASH)
               (sha256tree CAT_TAIL_HASH)
               (curry_hashes
-                P2_TREASURY_HASH
-                (sha256tree P2_TREASURY_HASH)
+                TREASURY_HASH
+                (sha256tree TREASURY_HASH)
                 (sha256tree CAT_MOD_HASH)
                 (sha256tree CAT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
@@ -74,8 +74,8 @@
               (sha256tree CAT_MOD_HASH)
               (sha256tree CAT_TAIL_HASH)
               (curry_hashes
-                P2_TREASURY_HASH
-                (sha256tree P2_TREASURY_HASH)
+                TREASURY_HASH
+                (sha256tree TREASURY_HASH)
                 (sha256tree CAT_MOD_HASH)
                 (sha256tree CAT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
@@ -125,7 +125,7 @@
                 )
               )
               (deposit-to-treasury
-                P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+                TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
                 treasury_minimum
                 statutes_puzzle_hash
                 final_treasury_amount

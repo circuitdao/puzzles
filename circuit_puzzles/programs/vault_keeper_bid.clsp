@@ -18,7 +18,7 @@
         my_coin_id
         auction_timeout
         offer_mod_hash
-        p2_treasury_mod_hash
+        treasury_mod_hash
         price_info
         current_stability_fee_rate
       )
@@ -137,8 +137,8 @@
           treasury_parent
           treasury_amount
           (curry_hashes
-            p2_treasury_mod_hash
-            (sha256 ONE p2_treasury_mod_hash)
+            treasury_mod_hash
+            (sha256 ONE treasury_mod_hash)
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE BYC_TAIL_HASH)
             statutes_struct_hash
@@ -255,7 +255,7 @@
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
             ; assert liquidation penalty percent
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_percent)
-            (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
             (assert-price-info statutes_puzzle_hash price_info)
             (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)

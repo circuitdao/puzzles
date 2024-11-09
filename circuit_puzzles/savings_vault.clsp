@@ -8,7 +8,7 @@
       statutes_cumulative_interest_df current_timestamp current_interest_df price_info minimum_interest_amount
       inner_solution
       .
-      (@ treasury_coin_info ((p2_treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
+      (@ treasury_coin_info ((treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
                              treasury_coin_prev_launcher_id treasury_coin_amount )))
      )
 
@@ -109,8 +109,8 @@
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CAT_TAIL_HASH)
-          (curry_hashes p2_treasury_hash
-            (sha256 ONE p2_treasury_hash)
+          (curry_hashes treasury_hash
+            (sha256 ONE treasury_hash)
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE CAT_TAIL_HASH)
             statutes_struct_hash
@@ -168,9 +168,9 @@
       )
     )
     final_conditions (if treasury_coin_info
-      ; check p2_treasury_hash was approved by statutes, this also verifies the cat tail hash
+      ; check treasury_hash was approved by statutes, this also verifies the cat tail hash
       (c
-        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_hash)
         pre_final_conditions
       )
       pre_final_conditions
