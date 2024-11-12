@@ -21,7 +21,6 @@
 
   (assign-lambda
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
-    ;statutes_struct_hash (sha256tree STATUTES_STRUCT)
     (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
     (assert
