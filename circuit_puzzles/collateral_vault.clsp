@@ -11,7 +11,7 @@
 ;; - start auction
 ;; - recover bad debt
 
-(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) CAT_MOD_HASH BYC_TAIL_MOD_HASH MOD_HASH
+(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH
       STATUTES_STRUCT
       TRANSFERRED_FEES COLLATERAL PRINCIPAL
       AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
@@ -76,10 +76,6 @@
 
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    ; generate tail hash from curried params to avoid any malicious currying
-    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH
-      statutes_struct_hash
-    )
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
     (conditions_pre vault_operation_condition_pre) (restrict-conditions raw_conditions 0 ())
     operation_mod (operation-program vault_operation_condition_pre)
@@ -115,7 +111,8 @@
     ) (a
       vault_operation
       (list
-        (list COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
+        (list COLLATERAL
+              PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
               STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
         args
       )
@@ -134,9 +131,7 @@
         (c
           (curry_hashes MOD_HASH
             (sha256tree MOD_HASH)
-            ;(sha256 ONE CAT_MOD_HASH)
             statutes_struct_hash
-            ;(sha256 ONE BYC_TAIL_MOD_HASH)
             (sha256 ONE final_transferred_fees)
             (sha256 ONE final_collateral_amount)
             (sha256 ONE final_principal_amount)
@@ -182,9 +177,7 @@
             ASSERT_MY_PUZZLE_HASH
             (curry_hashes MOD_HASH
               (sha256tree MOD_HASH)
-              ;(sha256 ONE CAT_MOD_HASH)
               statutes_struct_hash
-              ;(sha256 ONE BYC_TAIL_MOD_HASH)
               (sha256 ONE 0)
               (sha256 ONE 0)
               (sha256 ONE 0)

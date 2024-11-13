@@ -1,8 +1,10 @@
 (mod
   (
+    CAT_MOD_HASH
+    BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
-       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE
+       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -29,6 +31,7 @@
   ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
   ; that does not allow the lender to seize collateral)
   (assign
+    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
     new_treasury_amount (- treasury_amount reconcile_amount)
     treasury_coin_id (calculate-byc-coin-id

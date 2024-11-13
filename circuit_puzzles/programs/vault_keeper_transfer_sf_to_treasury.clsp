@@ -1,8 +1,11 @@
 (mod
   (
+    CAT_MOD_HASH
+    BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
-       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL
+       PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -29,6 +32,7 @@
   (include curry.clib)
 
   (assign
+    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     byc_principal_to_melt PRINCIPAL
     cumulative_stability_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_df
