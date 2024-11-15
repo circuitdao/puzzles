@@ -1,7 +1,6 @@
 (mod
   (
-    CAT_MOD_HASH
-    BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -24,7 +23,7 @@
   (include vault.clib)
 
   (assign
-    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_rate (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_rate
       current_stability_fee_rate
@@ -63,18 +62,18 @@
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
         CAT_MOD_HASH
-        BYC_TAIL_HASH
+        byc_tail_hash
         (list
           treasury_parent
           treasury_amount
           (curry_hashes
             treasury_mod_hash
             (sha256 ONE treasury_mod_hash)
-            (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE BYC_TAIL_HASH)
+            ;(sha256 ONE CAT_MOD_HASH)
+            ;(sha256 ONE byc_tail_hash)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE treasury_prev_launcher_id)
             (sha256 ONE treasury_launcher_id)
+            (sha256 ONE treasury_prev_launcher_id)
           )
         )
       )
@@ -83,7 +82,7 @@
     new_treasury_amount (+ fees_to_pay treasury_amount)
     byc_coin_id_to_melt (calculate-byc-coin-id
       CAT_MOD_HASH
-      BYC_TAIL_HASH
+      byc_tail_hash
       byc_melting_coin_info
     )
     (assert

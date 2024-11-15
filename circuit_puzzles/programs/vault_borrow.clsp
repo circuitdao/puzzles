@@ -1,8 +1,7 @@
 ;; Mint BYC to borrow and update the principal and other state variables accordingly
 (mod
   (
-    CAT_MOD_HASH
-    BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -28,7 +27,7 @@
   (include curry.clib)
 
   (assign
-    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     ; calculate the latest cumulative stability fee rate
     cumulative_stability_fee_rate (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_rate
@@ -48,7 +47,7 @@
     ; calculate the coin id for the new BYC coin by enforcing the tail hash
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
-      BYC_TAIL_HASH
+      byc_tail_hash
       byc_issuing_coin_info
     )
     undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)

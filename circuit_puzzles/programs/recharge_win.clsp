@@ -5,7 +5,7 @@
       ttl
       current_timestamp
       treasury_coins
-      treasury_hash
+      treasury_mod_hash
       funding_coin_id
       treasury_minimum
       target_puzzle_hash
@@ -55,7 +55,7 @@
         )
         (list ASSERT_MY_AMOUNT winning_byc_bid_amount)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
@@ -87,7 +87,7 @@
         )
         &rest
         (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
-          treasury_hash
+          treasury_mod_hash
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

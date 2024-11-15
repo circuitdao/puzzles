@@ -6,7 +6,7 @@
       payout_coin_parent_id
       lot_amount
       payout_mod_hash
-      treasury_hash
+      treasury_mod_hash
       start_time
       my_coin_id
       treasury_coins
@@ -21,7 +21,7 @@
   (include surplus_auction.clib)
   (include utils.clib)
 
-  (defun assert-treasury-coins-withdrawal (TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+  (defun assert-treasury-coins-withdrawal (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
                                            treasury_coins lot_amount sum_amount CAT_leftover announcements)
     ; treasury_coins -> ((leader_launcher_1 . amount1) (launcher_2 . amount2)...)
     ; sorted in reverse order as we have no have to go backwards in a list
@@ -41,13 +41,13 @@
               (sha256 ONE CAT_MOD_HASH)
               (sha256 ONE BYC_TAIL_HASH)
               (curry_hashes
-                TREASURY_HASH
-                (sha256 ONE TREASURY_HASH)
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE BYC_TAIL_HASH)
+                TREASURY_MOD_HASH
+                (sha256 ONE TREASURY_MOD_HASH)
+                ;(sha256 ONE CAT_MOD_HASH)
+                ;(sha256 ONE BYC_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
-                (sha256 ONE prev_launcher_id)
                 (sha256 ONE launcher_id)
+                (sha256 ONE prev_launcher_id)
               )
             )
             current_amount ; taking second of (launcher_id amount) pair
@@ -63,7 +63,7 @@
             treasury_coin_id
           )
           (assert-treasury-coins-withdrawal
-            TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+            TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
             (r treasury_coins)
             lot_amount
             (+ sum_amount withdraw_amount)
@@ -140,7 +140,7 @@
         (list ASSERT_MY_AMOUNT 0)
         (list ASSERT_MY_COIN_ID my_coin_id)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
         (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)
         ; start_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
@@ -163,7 +163,7 @@
         ) 
         &rest
         (assert-treasury-coins-withdrawal
-          treasury_hash
+          treasury_mod_hash
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

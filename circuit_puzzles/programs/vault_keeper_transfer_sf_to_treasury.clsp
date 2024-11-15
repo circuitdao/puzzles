@@ -1,7 +1,6 @@
 (mod
   (
-    CAT_MOD_HASH
-    BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL
@@ -32,7 +31,7 @@
   (include curry.clib)
 
   (assign
-    BYC_TAIL_HASH (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     byc_principal_to_melt PRINCIPAL
     cumulative_stability_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_df
@@ -52,23 +51,23 @@
     new_treasury_amount (+ fees treasury_amount)
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
-      BYC_TAIL_HASH
+      byc_tail_hash
       byc_issuing_coin_info
     )
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
-      BYC_TAIL_HASH
+      byc_tail_hash
       (list
         treasury_parent
         treasury_amount
         (curry_hashes
           treasury_mod_hash
           (sha256 ONE treasury_mod_hash)
-          (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE BYC_TAIL_HASH)
+          ;(sha256 ONE CAT_MOD_HASH)
+          ;(sha256 ONE byc_tail_hash)
           (sha256tree STATUTES_STRUCT)
-          (sha256 ONE treasury_prev_launcher_id)
           (sha256 ONE treasury_launcher_id)
+          (sha256 ONE treasury_prev_launcher_id)
         )
       )
     )

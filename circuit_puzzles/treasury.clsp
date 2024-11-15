@@ -1,4 +1,8 @@
-(mod (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT RING_PREV_LAUNCHER_ID LAUNCHER_ID
+(mod (
+      CAT_MOD_HASH BYC_TAIL_MOD_HASH
+      MOD_HASH
+      ;CAT_MOD_HASH BYC_TAIL_HASH
+      STATUTES_STRUCT LAUNCHER_ID RING_PREV_LAUNCHER_ID
       lineage_proof statutes_inner_puzzle_hash current_amount
       input_conditions . args)
 
@@ -65,24 +69,24 @@
     )
   )
 
-  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
+  (defun-inline generate-puzzle-hash (MOD_HASH CAT_MOD_HASH byc_tail_hash statutes_struct_hash
                                      RING_PREV_LAUNCHER_ID LAUNCHER_ID prev_launcher_id launcher_id)
 
     (curry_hashes CAT_MOD_HASH
       (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE BYC_TAIL_HASH)
+      (sha256 ONE byc_tail_hash)
       (curry_hashes MOD_HASH ; puzzle hash
         (sha256 ONE MOD_HASH)
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE BYC_TAIL_HASH)
+        ;(sha256 ONE CAT_MOD_HASH)
+        ;(sha256 ONE BYC_TAIL_HASH)
         statutes_struct_hash
-        (if prev_launcher_id
-          (sha256 ONE prev_launcher_id)
-          (sha256 ONE RING_PREV_LAUNCHER_ID)
-        )
         (if launcher_id
           (sha256 ONE launcher_id)
           (sha256 ONE LAUNCHER_ID)
+        )
+        (if prev_launcher_id
+          (sha256 ONE prev_launcher_id)
+          (sha256 ONE RING_PREV_LAUNCHER_ID)
         )
       )
     )
@@ -92,6 +96,7 @@
     filtered_conditions (filter-conditions input_conditions ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     ; 1. we're withdrawing/depositing/announcing, lineage proof is parent_id of parent coin and amount, we need to assert
     ;    that assert_parent_id is `(parent_id . previous_amount)`
     ; 2. we're changing lineage, lineage proof is `(parent_id . prev_launcher_id)` and
@@ -101,12 +106,12 @@
       (list
         (curry_hashes MOD_HASH ; inner puzzle hash
           (sha256 ONE MOD_HASH)
-          (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE BYC_TAIL_HASH)
+          ;(sha256 ONE CAT_MOD_HASH)
+          ;(sha256 ONE byc_tail_hash)
           statutes_struct_hash
           ; we can only change ring formation
-          (sha256 ONE (r lineage_proof))
           (sha256 ONE LAUNCHER_ID)
+          (sha256 ONE (r lineage_proof))
         )
         (if (= (f lineage_proof) LAUNCHER_ID)
           ; this is initial launch, assert launcher coin
@@ -114,7 +119,7 @@
           ; not launch, just update, assert previous coin spend
           (calculate-coin-id
             (f lineage_proof) ; parent id
-            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
+            (generate-puzzle-hash MOD_HASH CAT_MOD_HASH byc_tail_hash statutes_struct_hash
                                   RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
             ; current amount must not change when updating lineage, ie needs to be same as parent coin
             current_amount ; parent amount
@@ -125,16 +130,16 @@
       (list
         (curry_hashes MOD_HASH ; inner puzzle hash
           (sha256 ONE MOD_HASH)
-          (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE BYC_TAIL_HASH)
+          ;(sha256 ONE CAT_MOD_HASH)
+          ;(sha256 ONE byc_tail_hash)
           statutes_struct_hash
-          (sha256 ONE RING_PREV_LAUNCHER_ID)
           (sha256 ONE LAUNCHER_ID)
+          (sha256 ONE RING_PREV_LAUNCHER_ID)
         )
         ; this ensures that we're keeping lineage the same
         (calculate-coin-id
           (f lineage_proof)
-          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH statutes_struct_hash
+          (generate-puzzle-hash MOD_HASH CAT_MOD_HASH byc_tail_hash statutes_struct_hash
                                 RING_PREV_LAUNCHER_ID LAUNCHER_ID () ())
           ; pass through previous amount
           (r lineage_proof)
