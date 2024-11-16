@@ -1,5 +1,7 @@
-(mod (MUTATION_PROGRAM_HASH MOD_HASH STATUTES_STRUCT
-      ATOM_ANNOUNCER_PUZZLE_HASH ; TODO: move before MOD_HASH
+(mod (
+      MUTATION_PROGRAM_HASH MOD_HASH
+      STATUTES_STRUCT
+      ;ATOM_ANNOUNCER_PUZZLE_HASH ; TODO: move before MOD_HASH
       PRICE_INFOS
       ; solution
       oracle_mutation
@@ -20,7 +22,9 @@
       (a
         (f oracle_mutation)
         (list
-          MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICE_INFOS
+          MOD_HASH STATUTES_STRUCT
+          ;ATOM_ANNOUNCER_PUZZLE_HASH
+          PRICE_INFOS
           oracle_mutation
           input_announcement_asserts
         )
@@ -41,7 +45,7 @@
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
+              ;(sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
               (sha256tree PRICE_INFOS)
             )
             ; min singleton amount, force it to be this

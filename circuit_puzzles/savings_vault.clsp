@@ -1,6 +1,9 @@
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
-(mod (MOD_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
+(mod (CAT_MOD_HASH
+      MOD_HASH
+      ;CAT_MOD_HASH
+      BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
@@ -105,11 +108,11 @@
         treasury_coin_parent_id
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CAT_TAIL_HASH)
+          (sha256 ONE BYC_TAIL_HASH)
           (curry_hashes treasury_hash
             (sha256 ONE treasury_hash)
             ;(sha256 ONE CAT_MOD_HASH)
-            ;(sha256 ONE CAT_TAIL_HASH)
+            ;(sha256 ONE BYC_TAIL_HASH)
             statutes_struct_hash
             (sha256 ONE treasury_coin_launcher_id)
             (sha256 ONE treasury_coin_prev_launcher_id)
@@ -128,11 +131,11 @@
             (f lineage_proof)
             (curry_hashes CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CAT_TAIL_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
               (curry_hashes MOD_HASH
                 (sha256 ONE MOD_HASH)
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE CAT_TAIL_HASH)
+                ;(sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE BYC_TAIL_HASH)
                 statutes_struct_hash
                 (sha256 ONE (f (r (r lineage_proof)))) ; discounted deposit
                 (f (r (r (r lineage_proof)))) ; inner puzzle hash
@@ -148,11 +151,11 @@
         (list ASSERT_MY_PUZZLE_HASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE CAT_TAIL_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CAT_TAIL_HASH)
+              ;(sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
               statutes_struct_hash
               (sha256 ONE 0)
               (sha256tree INNER_PUZZLE)
@@ -197,8 +200,8 @@
                           (c
                             (curry_hashes MOD_HASH ; puzzle hash
                               (sha256 ONE MOD_HASH)
-                              (sha256 ONE CAT_MOD_HASH)
-                              (sha256 ONE CAT_TAIL_HASH)
+                              ;(sha256 ONE CAT_MOD_HASH)
+                              (sha256 ONE BYC_TAIL_HASH)
                               statutes_struct_hash
                               (sha256 ONE new_discounted_deposit)
                               inner_puzzle_hash

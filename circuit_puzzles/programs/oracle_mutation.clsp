@@ -1,4 +1,7 @@
-(mod (MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
+(mod (ATOM_ANNOUNCER_MOD_HASH
+      MOD_HASH STATUTES_STRUCT
+      ;ATOM_ANNOUNCER_PUZZLE_HASH
+      PRICES
       (@ oracle_mutation
         (
           oracle_mutation_program
@@ -30,16 +33,16 @@
     mean_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     announcer_conditions (generate-ann-conditions
       STATUTES_STRUCT
-      ATOM_ANNOUNCER_PUZZLE_HASH
+      ATOM_ANNOUNCER_MOD_HASH
       price_announcers
     )
     ; we add latest price to the end of the list
-    (matured_price . cut_prices) (cut-price-infos PRICES (- current_timestamp price_delay) ())
-    new_prices (merge-lists
-      cut_prices
+    (matured_price_info . cut_price_infos) (cut-price-infos PRICES (- current_timestamp price_delay) ())
+    new_price_infos (merge-lists
+      cut_price_infos
       (list (c mean_price current_timestamp))
     )
-    (next_price . next_price_updated) (if matured_price matured_price (c () ()))
+    (next_price . next_price_updated) (if matured_price_info matured_price_info (c () ()))
     (last_price . last_price_updated) (last-item PRICES)
     ;  new coin will have updated price, increase the counter of updates
     ;###  main expression
@@ -56,7 +59,7 @@
           ; no prices in buffer, update now
           ONE
         )
-        (not (r new_prices)) ; only latest price in the list, this is fine too as all other prices are expired
+        (not (r new_price_infos)) ; only latest price in the list, this is fine too as all other prices are expired
       )
       ; should be confirmed at least within 5 blocks since it was pushed to mempool
       (li
@@ -79,13 +82,13 @@
           (curry_hashes MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
-            (sha256tree new_prices)
+            ;(sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
+            (sha256tree new_price_infos)
           )
           ; min singleton amount, force it to be ONE
           ONE
         )
-        (list REMARK new_prices next_price)
+        (list REMARK new_price_infos next_price)
         &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
       )
     )

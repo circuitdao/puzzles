@@ -52,7 +52,7 @@
 
   (defun generate-ann-conditions (
       STATUTES_STRUCT
-      ATOM_ANNOUNCER_PUZZLE_HASH
+      ATOM_ANNOUNCER_MOD_HASH
       price_announcers
     )
     (if price_announcers
@@ -63,7 +63,7 @@
         announcer_puzzle_hash (assert
           (size_b32 inner_puzzle_hash)
           (size_b32 args_hash)
-          (tree_hash_of_apply ATOM_ANNOUNCER_PUZZLE_HASH args_hash)
+          (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
         )
         ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
         (c
@@ -78,7 +78,7 @@
           )
           (generate-ann-conditions
             STATUTES_STRUCT
-            ATOM_ANNOUNCER_PUZZLE_HASH
+            ATOM_ANNOUNCER_MOD_HASH
             (r price_announcers)
           )
         )
