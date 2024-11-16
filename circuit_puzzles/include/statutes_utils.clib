@@ -6,7 +6,7 @@
   (defconst STATUTE_PAYOUT_MOD_HASH -6)
   (defconst STATUTE_OFFER_MOD_HASH -5)
   (defconst STATUTE_TREASURY_MOD_HASH -4)
-  (defconst STATUTE_TREASURY_APPROVAL_MOD_HASHES -3)
+  (defconst STATUTE_APPROVAL_MOD_HASHES_HASH -3)
   (defconst STATUTE_CUMULATIVE_INTEREST_DF -2)
   (defconst STATUTE_CUMULATIVE_STABILITY_FEE_DF -1)
   (defconst STATUTE_PRICE_ORACLES 0) ; oracle launcher ID. rename accordingly?

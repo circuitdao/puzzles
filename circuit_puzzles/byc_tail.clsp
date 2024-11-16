@@ -12,7 +12,7 @@
           vault_curried_args_hash
           vault_amount
           statutes_inner_puzzle_hash
-          approved_mod_hashes
+          approval_mod_hashes
           current_coin_amount
           new_byc_coin_amount ; new amount of BYC coin being issued or melted from
         )
@@ -38,7 +38,7 @@
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
         (size_b32 vault_curried_args_hash)
-        (= vault_mod_hash (f approved_mod_hashes))
+        (= vault_mod_hash (f approval_mod_hashes))
         (any
           ; when melting, parent must be a cat, and delta must match negative new_byc_coin_amount
           (all parent_is_cat (= new_byc_coin_amount (+ current_coin_amount delta)))
@@ -59,7 +59,7 @@
             )
             vault_coin_id
           )
-          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approved_mod_hashes))
+          (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
         )
       )
     )

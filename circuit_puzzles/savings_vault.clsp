@@ -19,9 +19,6 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  ;(defconstant ANN_PREFIX 0x53) ; chr(83) -> "S"
-  ;(defconstant TREASURY_ANN_PREFIX 0x24) ; -> '$'
-
   (defun filter-conditions ((@ conditions ( (condition_code . condition_body) . rest_of_conditions))
                             found_first_create_coin
                             filtered_conditions)

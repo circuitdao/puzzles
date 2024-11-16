@@ -11,7 +11,7 @@
       my_amount
       crt_tail_puzzle
       payout_coin_parent_id
-      payout_hash
+      payout_mod_hash
       lot_amount
       limitation_solution
     )
@@ -32,11 +32,11 @@
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE BYC_TAIL_HASH)
-        (curry_hashes payout_hash
-          (sha256 ONE payout_hash)
-          (sha256 ONE CAT_MOD_HASH)
+        (curry_hashes payout_mod_hash
+          (sha256 ONE payout_mod_hash)
+          ;(sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
-          (sha256 ONE MOD_HASH)
+          ;(sha256 ONE MOD_HASH)
           (sha256 ONE LAUNCHER_ID)
         )
     )
@@ -46,7 +46,7 @@
         BYC_LOT_AMOUNT
     )
     (assert
-      (size_b32 payout_hash)
+      (size_b32 payout_mod_hash)
       ; ensure correct tail reveal is passed
       (= crt_tail_hash CRT_TAIL_HASH)
       ; ttl for last bid should've expired
@@ -58,7 +58,7 @@
         ; no recreate here, we create melting condition
         (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
-        (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks

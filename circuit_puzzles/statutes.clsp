@@ -2,7 +2,8 @@
       OPERATIONS
       MOD_HASH
       (
-        TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token (CRT)
+        ;TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token (CRT)
+        APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
         TREASURY_MOD_HASH
         OFFER_MOD_HASH
         PAYOUT_MOD_HASH
@@ -52,7 +53,7 @@
   )
 
   (defun-inline create-coin-condition (MOD_HASH
-                                        TREASURY_APPROVAL_MOD_HASHES
+                                        APPROVAL_MOD_HASHES_HASH
                                         TREASURY_MOD_HASH PAYOUT_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
@@ -63,7 +64,7 @@
         (sha256 ONE MOD_HASH)
         (sha256tree
           (list
-            TREASURY_APPROVAL_MOD_HASHES
+            APPROVAL_MOD_HASHES_HASH
             TREASURY_MOD_HASH
             OFFER_MOD_HASH
             PAYOUT_MOD_HASH
@@ -110,7 +111,7 @@
     (li
       (create-coin-condition
         MOD_HASH
-        TREASURY_APPROVAL_MOD_HASHES
+        APPROVAL_MOD_HASHES_HASH
         TREASURY_MOD_HASH
         PAYOUT_MOD_HASH
         CAT_MOD_HASH
@@ -136,7 +137,7 @@
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -4 TREASURY_MOD_HASH))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -3 TREASURY_APPROVAL_MOD_HASHES))))
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -3 APPROVAL_MOD_HASHES_HASH))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -2 cumulative_interest_df))))
