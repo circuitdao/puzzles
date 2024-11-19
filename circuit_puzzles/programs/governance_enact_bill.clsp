@@ -3,7 +3,7 @@
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
     (
       amount
-      grandparent_id
+      parent_parent_id
       prev_bill_hash
       enactment_timeout_seconds
     )
@@ -32,10 +32,10 @@
       ()
       ; conditions to return
       (list
-        ; proposed coin must have a parent with empty bill to avoid currying bills
+        ; proposal coin must have a parent that was a governance coin
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
-            grandparent_id
+            parent_parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
               (sha256tree CRT_TAIL_HASH)
