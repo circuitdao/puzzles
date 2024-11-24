@@ -2,7 +2,6 @@
       OPERATIONS
       MOD_HASH
       (
-        ;TREASURY_APPROVAL_MOD_HASHES ; puzzle mods that are allowed to withdraw/mint stable-coins or governance token (CRT)
         APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
         TREASURY_MOD_HASH
         OFFER_MOD_HASH
@@ -10,6 +9,8 @@
       )
       CAT_MOD_HASH ; TODO: move before MOD_HASH?
       CRT_TAIL_HASH
+      ; indicates whether previous spend was an announce (1) or not (()). Set to 2 in eve state
+      PREV_ANNOUNCE 
       STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
       PRICE_INFO ; Statute price info. -> (price . last_updated)
       ; cumulative stability fee discount factor as of last Statutes price info update
@@ -56,10 +57,10 @@
                                         APPROVAL_MOD_HASHES_HASH
                                         TREASURY_MOD_HASH PAYOUT_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
-                                        statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
+                                        prev_announce statutes price_info
+                                        cumulative_stability_fee_df cumulative_interest_df price_update_counter)
     (list
       CREATE_COIN
-      ; NOTE: we don't curry in operations here as they're already curried in mod hash
       (curry_hashes MOD_HASH
         (sha256 ONE MOD_HASH)
         (sha256tree
@@ -72,6 +73,7 @@
         )
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE CRT_TAIL_HASH)
+        (sha256 ONE prev_announce)
         (sha256tree statutes)
         (sha256tree price_info)
         (sha256 ONE cumulative_stability_fee_df)
@@ -87,10 +89,11 @@
   (assign
     (operation mutation_index mutation_value) (if mutation mutation (() () ()))
     (operation_mod . operation_mod_hash) (if operation (c operation (sha256tree operation)) (c () ()))
-    (statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter mutation_conditions)
+    (prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter operation_conditions)
       (if operation_mod_hash
         ; mutate statutes or update price info
         (assert
+          (= PREV_ANNOUNCE ONE) ; previous spend must have been an announce
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
           (a
             operation_mod
@@ -102,10 +105,24 @@
             )
           )
         )
-        ; announce. default to existing state. no operation conditions
+        ; announce
         (assert
           (= governance_curried_args_hash ()) ; ensure unique solution when announcing to facilitate identical spend aggregation
-          (list STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER ())
+          (list
+            ; set PREV_ANNOUNCE to 1
+            ONE
+            ; keep remaining mutable state unchanged
+            STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER
+            ; operation conditions
+            (if (> PREV_ANNOUNCE 1)
+              ; eve spend
+              ()
+              ; non-eve spend
+              (list
+                (list ASSERT_HEIGHT_RELATIVE ONE) ; no prior ephemeral spend allowed
+              )
+            )
+          )
         )
       )
     (li
@@ -117,13 +134,14 @@
         CAT_MOD_HASH
         OFFER_MOD_HASH
         CRT_TAIL_HASH
+        prev_announce
         statutes
         price_info
         cumulative_stability_fee_df
         cumulative_interest_df
         price_update_counter
       )
-      (list REMARK PROTOCOL_PREFIX statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
+      (list REMARK PROTOCOL_PREFIX prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -7 price_update_counter))))
       )
@@ -149,7 +167,7 @@
         (concat PROTOCOL_PREFIX (sha256tree (c PRICE_PREFIX price_info)))
       )
       &rest
-      (announce-statutes statutes 0 mutation_conditions)
+      (announce-statutes STATUTES 0 operation_conditions) ; always announce existing statutes, even when mutating
     )
   )
 )

@@ -73,7 +73,7 @@
               (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
             ; parent bid amount
-              (f (r lineage_proof))
+            (f (r lineage_proof))
           )
 
         )
