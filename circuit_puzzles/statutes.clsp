@@ -119,7 +119,7 @@
               ()
               ; non-eve spend
               (list
-                (list ASSERT_HEIGHT_RELATIVE ONE) ; no prior ephemeral spend allowed
+                (list ASSERT_HEIGHT_RELATIVE 0) ; no prior ephemeral spend allowed
               )
             )
           )

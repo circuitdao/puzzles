@@ -34,7 +34,6 @@
         (tree_hash_of_apply vault_mod_hash vault_curried_args_hash)
         vault_amount
       )
-      ;statutes_struct_hash (sha256tree STATUTES_STRUCT)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
         (size_b32 vault_curried_args_hash)
