@@ -110,7 +110,6 @@
               governance_puzzle_hash
             )
           )
-          (list ASSERT_HEIGHT_RELATIVE ONE)
           &rest
           (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
             ; filter custom conditions, otherwise ignore  
