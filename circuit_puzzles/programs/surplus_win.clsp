@@ -34,9 +34,7 @@
         (sha256 ONE BYC_TAIL_HASH)
         (curry_hashes payout_mod_hash
           (sha256 ONE payout_mod_hash)
-          ;(sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
-          ;(sha256 ONE MOD_HASH)
           (sha256 ONE LAUNCHER_ID)
         )
     )

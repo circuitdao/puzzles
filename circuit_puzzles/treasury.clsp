@@ -90,8 +90,6 @@
     ;    asserts announcement from statutes vote
     new_puzzle_hash (curry_hashes MOD_HASH ; inner puzzle hash
                       (sha256 ONE MOD_HASH)
-                      ;(sha256 ONE CAT_MOD_HASH)
-                      ;(sha256 ONE byc_tail_hash)
                       statutes_struct_hash
                       (sha256 ONE LAUNCHER_ID)
                       (if (any (not (l args)) (not lineage_proof)) ; (= (f lineage_proof) LAUNCHER_ID))
@@ -112,8 +110,6 @@
           (sha256 ONE byc_tail_hash)
           (curry_hashes MOD_HASH ; puzzle hash
             (sha256 ONE MOD_HASH)
-            ;(sha256 ONE CAT_MOD_HASH)
-            ;(sha256 ONE BYC_TAIL_HASH)
             statutes_struct_hash
             (sha256 ONE LAUNCHER_ID)
             (sha256 ONE (f (r lineage_proof))) ; parent ring_prev_launcher_id
@@ -247,7 +243,6 @@
                       )
                     )
                     (c
-                      ;(list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID) ; for driver code
                       (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID) ; for driver code
                       conditions
                     )

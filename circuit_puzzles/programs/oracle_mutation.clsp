@@ -82,7 +82,6 @@
           (curry_hashes MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            ;(sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
             (sha256tree new_price_infos)
           )
           ; min singleton amount, force it to be ONE

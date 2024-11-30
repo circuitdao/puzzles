@@ -111,8 +111,6 @@
           (sha256 ONE BYC_TAIL_HASH)
           (curry_hashes treasury_hash
             (sha256 ONE treasury_hash)
-            ;(sha256 ONE CAT_MOD_HASH)
-            ;(sha256 ONE BYC_TAIL_HASH)
             statutes_struct_hash
             (sha256 ONE treasury_coin_launcher_id)
             (sha256 ONE treasury_coin_prev_launcher_id)
@@ -134,7 +132,6 @@
               (sha256 ONE BYC_TAIL_HASH)
               (curry_hashes MOD_HASH
                 (sha256 ONE MOD_HASH)
-                ;(sha256 ONE CAT_MOD_HASH)
                 (sha256 ONE BYC_TAIL_HASH)
                 statutes_struct_hash
                 (sha256 ONE (f (r (r lineage_proof)))) ; discounted deposit
@@ -154,7 +151,6 @@
             (sha256 ONE BYC_TAIL_HASH)
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
-              ;(sha256 ONE CAT_MOD_HASH)
               (sha256 ONE BYC_TAIL_HASH)
               statutes_struct_hash
               (sha256 ONE 0)
@@ -200,7 +196,6 @@
                           (c
                             (curry_hashes MOD_HASH ; puzzle hash
                               (sha256 ONE MOD_HASH)
-                              ;(sha256 ONE CAT_MOD_HASH)
                               (sha256 ONE BYC_TAIL_HASH)
                               statutes_struct_hash
                               (sha256 ONE new_discounted_deposit)

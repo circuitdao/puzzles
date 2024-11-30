@@ -56,8 +56,6 @@
               (curry_hashes
                 TREASURY_MOD_HASH
                 (sha256tree TREASURY_MOD_HASH)
-                ;(sha256tree CAT_MOD_HASH)
-                ;(sha256tree BYC_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree launcher_id)
                 (sha256tree prev_launcher_id)
@@ -76,8 +74,6 @@
               (curry_hashes
                 TREASURY_MOD_HASH
                 (sha256tree TREASURY_MOD_HASH)
-                ;(sha256tree CAT_MOD_HASH)
-                ;(sha256tree BYC_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree next_launcher_id)
                 (sha256tree next_prev_launcher_id)
@@ -110,32 +106,17 @@
                 )
               )
             )
-            (c
-              (list ASSERT_COIN_ANNOUNCEMENT
-                (sha256
-                  treasury_coin_id
-                  (concat
-                    PROTOCOL_PREFIX
-                    (sha256tree
-                      (c new_amount
-                        next_launcher_id ; link the coins, this previous coin to treasury_coin_id
-                      )
-                    )
-                  )
-                )
-              )
-              (deposit-to-treasury
-                TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
-                treasury_minimum
-                statutes_puzzle_hash
-                final_treasury_amount
-                (+ amount_deposited new_amount)
-                deposit_amount
-                potential_remainder
-                first_treasury_coin
-                (r treasury_coins)
-                announcements
-              )
+            (deposit-to-treasury
+              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
+              treasury_minimum
+              statutes_puzzle_hash
+              final_treasury_amount
+              (+ amount_deposited new_amount)
+              deposit_amount
+              potential_remainder
+              first_treasury_coin
+              (r treasury_coins)
+              announcements
             )
           )
         )
@@ -167,6 +148,4 @@
       (list count total)
     )
   )
-
-
 )

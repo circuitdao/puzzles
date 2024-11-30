@@ -69,8 +69,6 @@
           (curry_hashes
             treasury_mod_hash
             (sha256 ONE treasury_mod_hash)
-            ;(sha256 ONE CAT_MOD_HASH)
-            ;(sha256 ONE byc_tail_hash)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE treasury_launcher_id)
             (sha256 ONE treasury_prev_launcher_id)
