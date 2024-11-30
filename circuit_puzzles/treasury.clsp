@@ -140,22 +140,14 @@
       )
     withdraw_amount (
       if (> current_amount new_amount)
-        (if (= 0 withdraw_amount_pre)
-          ; there's a delta but no create coin wants to capture the amount, must be a melt
           (- current_amount new_amount)
-          ; withdraw is set, use that
-          (if (> withdraw_amount_pre 0)
-            withdraw_amount_pre
-            (x)
-          )
-        )
         withdraw_amount_pre
     )
     (assert
+     (> withdraw_amount_pre MINUS_ONE)
+     (> current_amount (- withdraw_amount_pre ONE))
      ; can't go into negative
      (> new_amount MINUS_ONE) (> withdraw_amount MINUS_ONE)
-     ; no change allowed
-     ;(> (+ new_amount withdraw_amount) (- current_amount 1))
      (any
       ; we can't leave any change if withdrawing
       (= current_amount (+ new_amount withdraw_amount))
