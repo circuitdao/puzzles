@@ -37,14 +37,14 @@
           (calculate-coin-id
             parent_parent_id
             (curry_hashes CAT_MOD_HASH
-              (sha256tree CAT_MOD_HASH)
-              (sha256tree CRT_TAIL_HASH)
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
               (curry_hashes MOD_HASH
-                (sha256tree MOD_HASH)
-                (sha256tree CAT_MOD_HASH)
-                (sha256tree CRT_TAIL_HASH)
+                (sha256 ONE MOD_HASH)
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CRT_TAIL_HASH)
                 (sha256tree STATUTES_STRUCT)
-                (sha256tree INNER_PUZZLE_HASH)
+                (sha256 ONE INNER_PUZZLE_HASH)
                 prev_bill_hash
               )
             )
