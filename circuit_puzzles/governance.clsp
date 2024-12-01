@@ -150,7 +150,7 @@
    ; from conditions, extract and return:
    ;   bill operation (from first protocol REMARK encountered)
    ;   new (governance or plain) CRT coin amount (from first CREATE_COIN encountered)
-   ; all other conditions are ignored
+   ; all other conditions are dropped
    (defun find-bill-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) bill_operation create_coin_amount)
      (if conditions
        (if (= condition_code REMARK)

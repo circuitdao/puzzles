@@ -1,11 +1,14 @@
 (mod (
-    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
+    CAT_MOD_HASH
+    (MOD_HASH
+     ;CAT_MOD_HASH
+     BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
     statutes_puzzle_hash lineage_proof announcements
     (
       start_time
       treasury_minimum
       auction_timeout
-      p2_treasury_hash
+      treasury_mod_hash
       treasury_coins ; -> ((parent_id launcher_id prev_launcher_id current_amount))
     )
   )
@@ -36,7 +39,6 @@
           (curry_hashes
             MOD_HASH
             (sha256 ONE MOD_HASH)
-            (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree STATUTES_STRUCT)
@@ -53,7 +55,7 @@
         )
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
         (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
-        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
         ; start_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
         ; make sure that start_time hasn't happened yet, allow it to be in mempool for 5 tx blocks
@@ -70,13 +72,13 @@
               (tree_hash_of_apply MOD_HASH (f (r (r lineage_proof))))
             )
             ; parent bid amount
-              (f (r lineage_proof))
+            (f (r lineage_proof))
           )
 
         )
         &rest
         (deposit-to-treasury
-          p2_treasury_hash
+          treasury_mod_hash
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

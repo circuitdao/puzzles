@@ -3,10 +3,10 @@
     (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
     (
-      p2_surplus_auction_coin_parent_id
+      payout_coin_parent_id
       lot_amount
-      p2_surplus_auction_mod_hash
-      p2_treasury_hash
+      payout_mod_hash
+      treasury_mod_hash
       start_time
       my_coin_id
       treasury_coins
@@ -21,7 +21,7 @@
   (include surplus_auction.clib)
   (include utils.clib)
 
-  (defun assert-treasury-coins-withdrawal (P2_TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+  (defun assert-treasury-coins-withdrawal (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
                                            treasury_coins lot_amount sum_amount CAT_leftover announcements)
     ; treasury_coins -> ((leader_launcher_1 . amount1) (launcher_2 . amount2)...)
     ; sorted in reverse order as we have no have to go backwards in a list
@@ -41,13 +41,11 @@
               (sha256 ONE CAT_MOD_HASH)
               (sha256 ONE BYC_TAIL_HASH)
               (curry_hashes
-                P2_TREASURY_HASH
-                (sha256 ONE P2_TREASURY_HASH)
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE BYC_TAIL_HASH)
+                TREASURY_MOD_HASH
+                (sha256 ONE TREASURY_MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
-                (sha256 ONE prev_launcher_id)
                 (sha256 ONE launcher_id)
+                (sha256 ONE prev_launcher_id)
               )
             )
             current_amount ; taking second of (launcher_id amount) pair
@@ -63,7 +61,7 @@
             treasury_coin_id
           )
           (assert-treasury-coins-withdrawal
-            P2_TREASURY_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+            TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
             (r treasury_coins)
             lot_amount
             (+ sum_amount withdraw_amount)
@@ -86,25 +84,23 @@
 
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    p2_surplus_puzzle_hash (
+    payout_puzzle_hash (
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE BYC_TAIL_HASH)
-        (curry_hashes p2_surplus_auction_mod_hash
-          (sha256 ONE p2_surplus_auction_mod_hash)
-          (sha256 ONE CAT_MOD_HASH)
+        (curry_hashes payout_mod_hash
+          (sha256 ONE payout_mod_hash)
           (sha256 ONE CRT_TAIL_HASH)
-          (sha256 ONE MOD_HASH)
           (sha256 ONE my_coin_id)
         )
     )
-    p2_surplus_auction_coin_id (calculate-coin-id
-        p2_surplus_auction_coin_parent_id
-        p2_surplus_puzzle_hash
+    payout_coin_id (calculate-coin-id
+        payout_coin_parent_id
+        payout_puzzle_hash
         0 ; initial amount for the coin that holds our lot should be 0
     )
     (assert
-      (size_b32 p2_surplus_auction_mod_hash)
+      (size_b32 payout_mod_hash)
       ; can't run if LAST_BID is set
       (= LAST_BID ())
       ; we can only run if launcher_id is not set
@@ -122,7 +118,6 @@
           (curry_hashes
             MOD_HASH
             (sha256 ONE MOD_HASH)
-            (sha256 ONE CAT_MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE my_coin_id)
             (sha256 ONE lot_amount)
@@ -140,16 +135,16 @@
         (list ASSERT_MY_AMOUNT 0)
         (list ASSERT_MY_COIN_ID my_coin_id)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_P2_SURPLUS_AUCTION_MOD_HASH p2_surplus_auction_mod_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)
         ; start_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
         ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
-        ; assert p2_surplus_auction coin received the lot amount
+        ; assert payout coin received the lot amount
         (list RECEIVE_MESSAGE 0x3f
           (concat PROTOCOL_PREFIX (sha256tree lot_amount))
-          p2_surplus_auction_coin_id
+          payout_coin_id
         )
         (list
           REMARK
@@ -163,7 +158,7 @@
         ) 
         &rest
         (assert-treasury-coins-withdrawal
-          p2_treasury_hash
+          treasury_mod_hash
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

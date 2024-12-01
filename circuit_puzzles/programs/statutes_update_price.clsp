@@ -19,7 +19,8 @@
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
   (list
-    STATUTES  
+    () ; set PREV_ANNOUNCE to nil
+    STATUTES
     ; get the price, mutation value -> (oracle_inner_puz_hash statutes_struct price last_updated)
     (c price last_updated)
     ; to calculate current cumulative stability fee discount factor we need:

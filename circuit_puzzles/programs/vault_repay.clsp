@@ -1,15 +1,16 @@
 (mod
   (
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
-       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
+       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
     (@ args
       (
          byc_to_repay statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_principal_amount
-         byc_treasury_coin_info p2_treasury_mod_hash price_info current_stability_fee_rate current_timestamp
+         byc_treasury_coin_info treasury_mod_hash price_info current_stability_fee_rate current_timestamp
       )
     )
   )
@@ -22,6 +23,7 @@
   (include vault.clib)
 
   (assign
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_rate (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_rate
       current_stability_fee_rate
@@ -60,18 +62,16 @@
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
         CAT_MOD_HASH
-        BYC_TAIL_HASH
+        byc_tail_hash
         (list
           treasury_parent
           treasury_amount
           (curry_hashes
-            p2_treasury_mod_hash
-            (sha256 ONE p2_treasury_mod_hash)
-            (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE BYC_TAIL_HASH)
+            treasury_mod_hash
+            (sha256 ONE treasury_mod_hash)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE treasury_prev_launcher_id)
             (sha256 ONE treasury_launcher_id)
+            (sha256 ONE treasury_prev_launcher_id)
           )
         )
       )
@@ -80,7 +80,7 @@
     new_treasury_amount (+ fees_to_pay treasury_amount)
     byc_coin_id_to_melt (calculate-byc-coin-id
       CAT_MOD_HASH
-      BYC_TAIL_HASH
+      byc_tail_hash
       byc_melting_coin_info
     )
     (assert
@@ -91,7 +91,7 @@
       (any (= new_principal 0) (> new_principal minimum_principal_amount))
       (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
       ; current time must be at least after last oracle update
-      (> current_timestamp (f price_info))
+      (> current_timestamp (r price_info))
       (list
         (list
           (if (> TRANSFERRED_FEES calculated_stability_fee)
@@ -102,7 +102,7 @@
         (assign
           conditions (li
             (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
-            (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_principal_amount)
             (assert-price-info statutes_puzzle_hash price_info)
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))

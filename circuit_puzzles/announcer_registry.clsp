@@ -1,5 +1,6 @@
-(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL MOD_HASH STATUTES_STRUCT
-      ATOM_ANNOUNCER_MOD_HASH ; TODO: move before MOD_HASH as immutable
+(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL ATOM_ANNOUNCER_MOD_HASH
+      MOD_HASH
+      STATUTES_STRUCT
       ANNOUNCER_REGISTRY CLAIM_ITERATION
       lineage_proof mint_or_register . args)
 
@@ -10,9 +11,10 @@
   (include utils.clib)
   (include statutes_utils.clib)
 
-  (defconst MINT_OPCODE "m")
   (defconst REGISTER_OPCODE "r")
-
+  (defconst MINT_OPCODE "m")
+  
+  ; generates notarized payments to announcer inner puzzle hashes as required by settlement payments puzzle
   (defun generate-offer-assert ((@ announcer_registry ( announcer_inner_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry
       (generate-offer-assert
@@ -39,7 +41,6 @@
   )
 
   (assign
-    ;statutes_struct_hash (sha256tree STATUTES_STRUCT)
     (announcer_registry claim_interval_number operation_conditions) (if (= mint_or_register MINT_OPCODE)
       ; this is minting
       (assign
@@ -48,13 +49,11 @@
           statutes_price_updates
           crt_credits_per_interval
           claim_interval
-          funding_coin_id
           issuance_coin_info
           cat_mod_hash
           crt_tail_hash
           change_receiver_hash
           offer_mod_hash
-          my_coin_id
         ) args
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         current_iteration (/ statutes_price_updates claim_interval)
@@ -83,17 +82,11 @@
               (list SEND_MESSAGE 0x3f
                 (concat
                   PROTOCOL_PREFIX
-                  (sha256tree
-                    (c STATUTES_STRUCT ; statutes_struct_hash
-                      (c offer_mod_hash crt_credits_per_interval)
-                    )
-                  )
+                  (sha256tree (c STATUTES_STRUCT (c offer_mod_hash crt_credits_per_interval)))
                 )
                 issuance_coin_id
               )
-              (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee coin to
-              (list ASSERT_COIN_ANNOUNCEMENT (sha256 funding_coin_id '*'))
-              (list ASSERT_MY_COIN_ID my_coin_id)
+              (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
               (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_PER_INTERVAL crt_credits_per_interval)
@@ -107,7 +100,7 @@
                   )
                   (sha256tree
                     (c
-                      (sha256 my_coin_id funding_coin_id) ; nonce
+                      0 ; nonce
                       (generate-offer-assert
                         ANNOUNCER_REGISTRY
                         (/ crt_credits_per_interval announcers_count)
@@ -134,10 +127,10 @@
       ; register
       (if (= mint_or_register REGISTER_OPCODE)
         (assign
-          (announcer_inner_puzzle_hash puzzle_args_hash) args
-          announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH puzzle_args_hash)
+          (announcer_inner_puzzle_hash announcer_curried_args_hash) args
+          announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH announcer_curried_args_hash)
           (assert
-            (size_b32 puzzle_args_hash)
+            (size_b32 announcer_curried_args_hash)
             (size_b32 announcer_inner_puzzle_hash)
             (not (contains ANNOUNCER_REGISTRY announcer_inner_puzzle_hash))
             (list
@@ -151,7 +144,7 @@
                     (sha256tree
                       (c announcer_inner_puzzle_hash
                         (c ONE ; must be an approved announcer
-                           STATUTES_STRUCT ; statutes_struct_hash ; must be on the same protocol
+                           STATUTES_STRUCT ; must be on same protocol
                         )
                       )
                     )
@@ -196,7 +189,6 @@
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE ATOM_ANNOUNCER_MOD_HASH)
               (sha256tree announcer_registry)
               (sha256 ONE claim_interval_number)
             )

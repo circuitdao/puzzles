@@ -1,4 +1,8 @@
-(mod (MUTATION_PROGRAM_HASH MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
+(mod (
+      MUTATION_PROGRAM_HASH MOD_HASH
+      STATUTES_STRUCT
+      ;ATOM_ANNOUNCER_PUZZLE_HASH ; TODO: move before MOD_HASH
+      PRICE_INFOS
       ; solution
       oracle_mutation
       input_announcement_asserts
@@ -18,7 +22,9 @@
       (a
         (f oracle_mutation)
         (list
-          MOD_HASH STATUTES_STRUCT ATOM_ANNOUNCER_PUZZLE_HASH PRICES
+          MOD_HASH STATUTES_STRUCT
+          ;ATOM_ANNOUNCER_PUZZLE_HASH
+          PRICE_INFOS
           oracle_mutation
           input_announcement_asserts
         )
@@ -30,26 +36,25 @@
     (verify-announcement-asserts
       input_announcement_asserts
       (assign
-        (current_timestamp price_expiration_seconds) announce_args
-        delayed_timestamp (if (all current_timestamp price_expiration_seconds) (- current_timestamp price_expiration_seconds) 0)
-        (last_matured_price . _) (cut-prices PRICES delayed_timestamp ())
-        (oldest_price . oldest_updated) (if last_matured_price last_matured_price (c () ()))
+        (current_timestamp price_delay) announce_args
+        delayed_timestamp (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
+        (last_matured_price_info . _) (cut-price-infos PRICE_INFOS delayed_timestamp ())
+        (oldest_price . oldest_updated) (if last_matured_price_info last_matured_price_info (c () ()))
         (list
           (list CREATE_COIN
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE ATOM_ANNOUNCER_PUZZLE_HASH)
-              (sha256tree PRICES)
+              (sha256tree PRICE_INFOS)
             )
             ; min singleton amount, force it to be this
             ONE
           )
           (if oldest_updated
-            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c oldest_price (c oldest_updated (c current_timestamp price_expiration_seconds)))))
-            (x)  ; no matured prices available, fail, this occurs on launch and increases of price_expiration_seconds
+            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c oldest_price (c oldest_updated (c current_timestamp price_delay)))))
+            (x)  ; no matured prices available, fail. this occurs on launch and potentially when price_delay exceeds STATUTE_PRICE_DELAY
           )
-          (list REMARK oldest_price oldest_updated current_timestamp price_expiration_seconds)
+          (list REMARK oldest_price oldest_updated current_timestamp price_delay)
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
           ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
           ; within a boundary of last_block > current_timestamp - 1 block < next block

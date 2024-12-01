@@ -1,4 +1,7 @@
-(mod (OPERATIONS MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
+(mod (OPERATIONS MOD_HASH
+      ;CAT_MOD_HASH
+      BYC_TAIL_HASH
+      LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
       statutes_inner_puzzle_hash lineage_proof operation . op_args)
 
   (include *standard-cl-23.1*)
@@ -15,7 +18,9 @@
       (a
         operation
         (list
-          (list MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+          (list MOD_HASH
+                ;CAT_MOD_HASH
+                BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
           statutes_puzzle_hash lineage_proof announcements
           (r op_args)
         )

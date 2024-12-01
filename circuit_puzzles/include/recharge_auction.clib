@@ -3,8 +3,6 @@
   (include condition_filtering.clib)
   (include prefixes.clib)  
 
-  (defconst EQUALS '=')
-
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
     (if conditions
       (if (= condition_code CREATE_COIN)
@@ -34,7 +32,7 @@
     )
   )
 
-  (defun deposit-to-treasury (P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
+  (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
                               treasury_minimum statutes_puzzle_hash final_treasury_amount
                               amount_deposited deposit_amount potential_remainder
                               first_treasury_coin treasury_coins announcements)
@@ -54,15 +52,13 @@
             parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
-              (sha256tree CAT_TAIL_HASH)
+              (sha256tree BYC_TAIL_HASH)
               (curry_hashes
-                P2_TREASURY_HASH
-                (sha256tree P2_TREASURY_HASH)
-                (sha256tree CAT_MOD_HASH)
-                (sha256tree CAT_TAIL_HASH)
+                TREASURY_MOD_HASH
+                (sha256tree TREASURY_MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
-                (sha256tree prev_launcher_id)
                 (sha256tree launcher_id)
+                (sha256tree prev_launcher_id)
               )
             )
             current_amount ; taking second of (launcher_id amount) pair
@@ -74,15 +70,13 @@
             next_parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
-              (sha256tree CAT_TAIL_HASH)
+              (sha256tree BYC_TAIL_HASH)
               (curry_hashes
-                P2_TREASURY_HASH
-                (sha256tree P2_TREASURY_HASH)
-                (sha256tree CAT_MOD_HASH)
-                (sha256tree CAT_TAIL_HASH)
+                TREASURY_MOD_HASH
+                (sha256tree TREASURY_MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
-                (sha256tree next_prev_launcher_id)
                 (sha256tree next_launcher_id)
+                (sha256tree next_prev_launcher_id)
               )
             )
             next_current_amount ; taking second of (launcher_id amount) pair
@@ -105,43 +99,24 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c EQUALS ; as in '$=amount', to avoid collisions
-                      (c new_prev_amount
-                        launcher_id ; link the coins, this previous coin to treasury_coin_id
-                      )
+                    (c new_prev_amount
+                      launcher_id ; link the coins, this previous coin to treasury_coin_id
                     )
                   )
                 )
               )
             )
-            (c
-              (list ASSERT_COIN_ANNOUNCEMENT
-                (sha256
-                  treasury_coin_id
-                  (concat
-                    PROTOCOL_PREFIX
-                    (sha256tree
-                      (c EQUALS ; as in '$=amount', to avoid collisions
-                        (c new_amount
-                          next_launcher_id ; link the coins, this previous coin to treasury_coin_id
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-              (deposit-to-treasury
-                P2_TREASURY_HASH CAT_MOD_HASH CAT_TAIL_HASH STATUTES_STRUCT
-                treasury_minimum
-                statutes_puzzle_hash
-                final_treasury_amount
-                (+ amount_deposited new_amount)
-                deposit_amount
-                potential_remainder
-                first_treasury_coin
-                (r treasury_coins)
-                announcements
-              )
+            (deposit-to-treasury
+              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
+              treasury_minimum
+              statutes_puzzle_hash
+              final_treasury_amount
+              (+ amount_deposited new_amount)
+              deposit_amount
+              potential_remainder
+              first_treasury_coin
+              (r treasury_coins)
+              announcements
             )
           )
         )
@@ -173,6 +148,4 @@
       (list count total)
     )
   )
-
-
 )

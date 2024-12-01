@@ -55,7 +55,7 @@
           byc_lot_amount
           last_bid
           statutes_inner_puzzle_hash
-          approved_mod_hashes
+          approval_mod_hashes
         ) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         puzzle_hash (
@@ -65,7 +65,7 @@
             (sha256 ONE crt_tail_hash)
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
-              CAT_MOD_HASH_HASH
+              ;CAT_MOD_HASH_HASH
               statutes_struct_hash
               (sha256 ONE launcher_id)
               (sha256 ONE byc_lot_amount)
@@ -88,14 +88,14 @@
           (> byc_lot_amount 0)
           ; should have a winning bid, last_bid -> (bid_amount . crt_bid_amount)
           (> (r last_bid) 0)
-          ; surplus mod hash is the second in approved mod hash list
-          (= surplus_mod_hash (f (r approved_mod_hashes)))
+          ; surplus mod hash is the second in approval mod hashes list
+          (= surplus_mod_hash (f (r approval_mod_hashes)))
           (list
             ; if this is a surplus auction and it called for melting, melt
             (list ASSERT_MY_PUZZLE_HASH puzzle_hash)
             ; we should be melting the whole coin value
             (list ASSERT_MY_AMOUNT (* -1 delta))
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approved_mod_hashes))
+            (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
           )
         )
       )
@@ -115,15 +115,15 @@
           byc_tail_hash
           amount
           issuance_amount
-          approved_mod_hashes
+          approval_mod_hashes
           statutes_inner_puzzle_hash
           target_puzzle_hash  ; where this coin is going to
         ) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-        approving_coin_id (calculate-coin-id
+        approver_coin_id (calculate-coin-id
           parent_id
-          ; approved_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
-          (if (all byc_tail_hash (= mod_hash (f (r (r approved_mod_hashes)))))
+          ; approval_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
+          (if (all byc_tail_hash (= mod_hash (f (r (r approval_mod_hashes)))))
             ; either a CAT puzzle with recharge auction as inner puzzle
             (curry_hashes CAT_MOD_HASH
               CAT_MOD_HASH_HASH
@@ -132,7 +132,7 @@
             )
             ; OR announcer registry
             (assert
-              (= mod_hash (f (r (r (r (r approved_mod_hashes)))))) ; announcer registry mod has position in approved hashes
+              (= mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
               (tree_hash_of_apply mod_hash curried_mod_args)
             )
             ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hashing it
@@ -149,13 +149,13 @@
           target_puzzle_hash
         )
         (assert
-          ; recharge auction mod is the third in approved mod hash list
+          ; recharge auction mod is the third in approval mod hashes list
           ; can also be announcer registry
           (any (size_b32 byc_tail_hash) (not byc_tail_hash))
           (size_uint64 amount)
           (size_uint64 issuance_amount)
           (size_b32 curried_mod_args)
-          (size_b32 approving_coin_id)
+          (size_b32 approver_coin_id)
           ; newly minted CRTs must be approved by approver (recharge auction or announcer registry)
           ; to avoid someone stealing the issuance amount
           (= found_target_puzzle_hash curried_target_puzzle_hash)
@@ -173,10 +173,10 @@
                   )
                 )
               )
-              approving_coin_id
+              approver_coin_id
             )
             (list ASSERT_MY_AMOUNT issuance_amount)
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_APPROVAL_MOD_HASHES (sha256tree approved_mod_hashes))
+            (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
           )
         )
       )

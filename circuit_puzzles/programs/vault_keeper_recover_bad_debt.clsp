@@ -1,8 +1,9 @@
 (mod
   (
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
-       COLLATERAL CAT_MOD_HASH BYC_TAIL_HASH PRINCIPAL AUCTION_STATE INNER_PUZZLE
+       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
       )
     )
@@ -13,7 +14,7 @@
         my_coin_id
         treasury_coin_info
         auction_timeout
-        p2_treasury_mod_hash
+        treasury_mod_hash
       )
     )
   )
@@ -29,22 +30,21 @@
   ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
   ; that does not allow the lender to seize collateral)
   (assign
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
     new_treasury_amount (- treasury_amount reconcile_amount)
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
-      BYC_TAIL_HASH
+      byc_tail_hash
       (list
         treasury_parent
         treasury_amount
         (curry_hashes
-          p2_treasury_mod_hash
-          (sha256 ONE p2_treasury_mod_hash)
-          (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE BYC_TAIL_HASH)
+          treasury_mod_hash
+          (sha256 ONE treasury_mod_hash)
           (sha256tree STATUTES_STRUCT)
-          (sha256 ONE treasury_prev_launcher_id)
           (sha256 ONE treasury_launcher_id)
+          (sha256 ONE treasury_prev_launcher_id)
         )
       )
     )
@@ -68,7 +68,7 @@
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
-            (assert-statute statutes_puzzle_hash STATUTE_P2_TREASURY_MOD_HASH p2_treasury_mod_hash)
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             ; signal to tail that it can melt BYC with certain amount
             (list SEND_MESSAGE 0x3f
               (concat

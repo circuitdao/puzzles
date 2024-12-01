@@ -148,12 +148,13 @@
           (r (r condition)))
         )
         (if (= (f condition) CREATE_COIN_ANNOUNCEMENT)
-            (assert (not (and
+            (if (not (and
                 (= 33 (strlen (f (r condition))))
                 (= (substr (f (r condition)) 0 ONE) RING_MORPH_BYTE)  ; lazy eval
               ))
               ; then
               condition
+              (x "bad morph")
             )
             condition
         )

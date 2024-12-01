@@ -73,6 +73,7 @@
   (assign
     governance_puzzle_hash (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
     (list
+      () ; set PREV_ANNOUNCE to nil
       ; update statutes unless we output custom conditions
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
         ; custom conditions case
@@ -109,7 +110,6 @@
               governance_puzzle_hash
             )
           )
-          (list ASSERT_HEIGHT_RELATIVE ONE)
           &rest
           (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
             ; filter custom conditions, otherwise ignore  
