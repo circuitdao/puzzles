@@ -111,8 +111,7 @@
     ) (a
       vault_operation
       (list
-        (list COLLATERAL
-              PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
+        (list COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
               STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
         args
       )
@@ -125,6 +124,8 @@
     ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place
     ; bu this still messes up with our accounting and creates under collateralized vaults that messes with our metrics overall
     ; assert lineage
+    ;(x MOD_HASH STATUTES_STRUCT final_transferred_fees final_collateral_amount final_principal_amount
+    ;  final_auction_state final_inner_puzzle_hash final_discounted_principal)
     (c
       (c
         CREATE_COIN

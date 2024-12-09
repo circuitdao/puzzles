@@ -2,7 +2,6 @@
 ;       collateral vaults and new treasury coin puzzle
 (mod (CAT_MOD_HASH
       MOD_HASH
-      ;CAT_MOD_HASH
       BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash

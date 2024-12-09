@@ -1,7 +1,7 @@
 (mod (
       OPERATIONS
       MOD_HASH
-      (
+      ( ; TODO: move before MOD_HASH?
         APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
         TREASURY_MOD_HASH
         OFFER_MOD_HASH

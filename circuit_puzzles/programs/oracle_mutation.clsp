@@ -1,6 +1,5 @@
 (mod (ATOM_ANNOUNCER_MOD_HASH
       MOD_HASH STATUTES_STRUCT
-      ;ATOM_ANNOUNCER_PUZZLE_HASH
       PRICES
       (@ oracle_mutation
         (
@@ -69,7 +68,7 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_percent)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_percent)
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
         (if next_price
           (list CREATE_PUZZLE_ANNOUNCEMENT

@@ -48,14 +48,6 @@
   )
 
 
-  (defun-inline calculate-stability-fee-puzzle (CAT_MOD_HASH BYC_TAIL_HASH OFFER_MOD_HASH)
-    (curry_hashes CAT_MOD_HASH
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE BYC_TAIL_HASH)
-      OFFER_MOD_HASH
-    )
-  )
-
   (defun-inline calculate-byc-coin-id (CAT_MOD_HASH BYC_TAIL_HASH (parent_id amount inner_puzzle_hash))
     (assert
       (size_b32 inner_puzzle_hash)

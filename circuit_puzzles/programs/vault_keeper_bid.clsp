@@ -13,15 +13,16 @@
         byc_to_bid
         byc_melting_coin_info
         byc_treasury_coin_info
-        liquidation_penalty_percent
-        statutes_cumulative_stability_fee_rate
+        liquidation_penalty_percent ; TODO: make part of AUCTION_STATE
+        ; statutes_cumulative_stability_fee_df ; NEW: no longer needed
         target_puzzle_hash
-        my_coin_id
-        auction_timeout
-        offer_mod_hash
-        treasury_mod_hash
-        price_info
-        current_stability_fee_rate
+        my_coin_id ; TODO: check if needed
+        auction_timeout ; TODO: make part of AUCTION_STATE
+        offer_mod_hash ; TODO: make part of AUCTION_STATE
+        treasury_mod_hash ; TODO: make part of AUCTION_STATE
+        price_info ; TODO: no longer needed
+        ; current_stability_fee_rate ; NEW: no longer needed
+        minimum_debt_amount ; TODO: add to drivers ; TODO: make part of AUCTION_STATE
       )
     )
   )
@@ -37,27 +38,29 @@
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     current_timestamp (+ tx_current_timestamp (* 3 MAX_TX_BLOCK_TIME))
-    cumulative_stability_fee_rate (calculate-cumulative-discount-factor
-      statutes_cumulative_stability_fee_rate
-      current_stability_fee_rate
-      current_timestamp
-      (r price_info)
-    )
+            ; parse auction state as we'll need to verify it's still running and hasn't timed out
+    (
+      auction_start_time
+      start_price
+      step_price_decrease_factor
+      step_time_interval
+      initiator_puzzle_hash
+      initiator_incentive_balance
+      cumulative_stability_fee_df ; NEW
+    ) AUCTION_STATE
+    ;cumulative_stability_fee_rate (calculate-cumulative-discount-factor
+    ;  statutes_cumulative_stability_fee_rate
+    ;  current_stability_fee_rate
+    ;  current_timestamp
+    ;  (r price_info)
+    ;)
     (fees . liquidation_penalty) (calculate-fees
       byc_to_bid
-      cumulative_stability_fee_rate
+      cumulative_stability_fee_df
       DISCOUNTED_PRINCIPAL
       PRINCIPAL
       liquidation_penalty_percent
     )
-    ; parse auction state as we'll need to verify it's still running and hasn't timed out
-    (auction_start_time
-     start_price
-     step_price_decrease_factor
-     step_time_interval
-     initiator_puzzle_hash
-     initiator_incentive_balance) AUCTION_STATE
-
     fees_to_pay (if (> TRANSFERRED_FEES fees)
       0
       (- fees TRANSFERRED_FEES)
@@ -75,13 +78,13 @@
     byc_principal_to_melt (- byc_to_bid fees)
     ; negative because we need negative value in the coin announcements later on
     negative_byc_principal_to_melt (* -1 byc_principal_to_melt)
-    undiscounted_principal (* -1 (/ (* -1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
+    undiscounted_principal (* -1 (/ (* -1 DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
     discounted_principal (if (= (- byc_to_bid liquidation_penalty) undiscounted_principal)
       0
       (discount-principal-for-melt
         DISCOUNTED_PRINCIPAL
         (* -1 (- byc_to_bid liquidation_penalty))
-        cumulative_stability_fee_rate
+        cumulative_stability_fee_df
       )
     )
     ; use all byc provided from keeper to get a piece of collateral
@@ -119,8 +122,8 @@
         COLLATERAL
         bid_xch_collateral_amount_pre
     )
-    leftover_deposit (- COLLATERAL bid_xch_collateral_amount)
-    leftover_principal_amount (
+    leftover_collateral (- COLLATERAL bid_xch_collateral_amount)
+    leftover_principal (
       if (> byc_principal_to_melt PRINCIPAL)
         0
         (- PRINCIPAL byc_principal_to_melt)
@@ -153,7 +156,7 @@
     auction_state (
       ; update auction state based on the bid, which mostly means to set it to null if all debt was paid off
       ; which will push the vault back into usable state for owner of inner puzzle
-      if (= leftover_principal_amount 0)
+      if (= leftover_principal 0)
         ()
         (list
           auction_start_time
@@ -162,7 +165,12 @@
           step_time_interval
           initiator_puzzle_hash
           (- initiator_incentive_balance initiator_incentive)
+          cumulative_stability_fee_df
         )
+    )
+    leftover_transferred_fees (if (> TRANSFERRED_FEES fees)
+      (- TRANSFERRED_FEES fees)
+      0
     )
     (assert
       (> liquidation_penalty_percent 0)
@@ -177,15 +185,15 @@
       (> current_timestamp (- auction_start_time 1))
       ; check that there is a deposit to bid for
       (> COLLATERAL 0)
-      (> leftover_deposit -1)
-      (list
+      (> leftover_collateral -1)
+      (any (> leftover_principal minimum_debt_amount) (= leftover_principal 0))
+      ;(x leftover_transferred_fees leftover_collateral leftover_principal
+      ;    auction_state INNER_PUZZLE_HASH discounted_principal)
+      (list 
         ; auction_state -> (start_time start_price last_auction_price)
         (list
-          (if (> TRANSFERRED_FEES fees)
-            (- TRANSFERRED_FEES fees)
-            0
-          )
-          leftover_deposit leftover_principal_amount auction_state INNER_PUZZLE_HASH discounted_principal
+          leftover_transferred_fees leftover_collateral leftover_principal
+          auction_state INNER_PUZZLE_HASH discounted_principal
         )
         (assign
           conditions (list
@@ -235,9 +243,9 @@
               ; get an announcement from offer module that BYC was paid to initiator
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
-                  (calculate-stability-fee-puzzle
-                    CAT_MOD_HASH
-                    byc_tail_hash
+                  (curry_hashes CAT_MOD_HASH
+                    (sha256 ONE CAT_MOD_HASH)
+                    (sha256 ONE byc_tail_hash)
                     offer_mod_hash
                   )
                   ; nonce = my_coin_id, payments = (initiator puzzle hash, initiator incentive fee)
@@ -250,17 +258,18 @@
               ; else NOOP as we don't need to pay the negative fee
               (list REMARK)
             )
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
+            ;(assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval) ; NEW: was never needed
+            ;(assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor) ; NEW: was never needed
+            ;(assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout) ; NEW: was never needed
             ; assert liquidation penalty percent
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_percent)
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-            (assert-price-info statutes_puzzle_hash price_info)
-            (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
-            ; assert cumulative stability fee rate
-            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
+            (assert-price-info statutes_puzzle_hash price_info) ; TODO: no longer needed
+            ;(assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate) ; NEW: no longer needed
+            ;; assert cumulative stability fee rate
+            ;(assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate) ; NEW: no longer needed
           )
           (if (> fees_for_treasury 0)
             ; get an announcement that BYC was paid into treasury

@@ -18,8 +18,8 @@
         starting_price_factor
         initiator_puzzle_hash
         auction_timeout
-        statutes_cumulative_stability_fee_rate
-        current_stability_fee_rate
+        statutes_cumulative_stability_fee_df
+        current_stability_fee_df
       )
     )
   )
@@ -31,14 +31,14 @@
   (include utils.clib)
 
   (assign
-    cumulative_stability_fee_rate (calculate-cumulative-discount-factor
-      statutes_cumulative_stability_fee_rate
-      current_stability_fee_rate
+    cumulative_stability_fee_df (calculate-cumulative-discount-factor
+      statutes_cumulative_stability_fee_df
+      current_stability_fee_df
       ; don't allow anyone to exploit our processing interval buffer to get tx into mempool and borrow from the future
       (+ auction_start_time (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
+    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION)
     min_collateral_amount (get-min-collateral-amount
       undiscounted_principal
       liquidation_ratio
@@ -58,6 +58,7 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
+      cumulative_stability_fee_df ; NEW
     )
     (list
       ; auction_state -> (start_time start_price last_auction_price)
@@ -75,10 +76,10 @@
         (list
           (list ASSERT_SECONDS_ABSOLUTE (- auction_start_time MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ auction_start_time MAX_TX_BLOCK_TIME))
-          ; assert collateralization ratio
-          (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
-          ; assert collateral price
           (assert-price-info statutes_puzzle_hash price_info)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
+          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df) ; NEW: should have been here all along!!
+          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df) ; NEW: should have been here all along!!
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)

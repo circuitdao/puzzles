@@ -24,7 +24,7 @@
 
   (assign-lambda
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
-    (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
+    treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
     (assert
       ; must have something to deposit
@@ -95,13 +95,12 @@
           STATUTES_STRUCT
           treasury_minimum
           statutes_puzzle_hash
-          (+ treasury_coins_total winning_byc_bid_amount) ; expected balance after deposit of lot
-          0 ; amount deposited
           treasury_deposit_per_coin
           remainder
           (f treasury_coins)
           treasury_coins
           announcements
+          0 ; arg to sum up post-deposit treasury amounts
         )
       )
     )

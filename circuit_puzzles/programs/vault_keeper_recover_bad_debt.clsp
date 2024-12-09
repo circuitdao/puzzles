@@ -15,6 +15,7 @@
         treasury_coin_info
         auction_timeout
         treasury_mod_hash
+        minimum_debt_amount
       )
     )
   )
@@ -48,10 +49,14 @@
         )
       )
     )
-    (auction_start_time
-     start_price step_price_decrease_factor
-     step_time_interval initiator_puzzle_hash initiator_incentive_balance) (assert AUCTION_STATE AUCTION_STATE)
-    updated_auction_state (if (= PRINCIPAL reconcile_amount)
+    (auction_start_time start_price step_price_decrease_factor step_time_interval
+     initiator_puzzle_hash initiator_incentive_balance cumulative_stability_fee_df) (assert AUCTION_STATE AUCTION_STATE)
+    debt (+ PRINCIPAL TRANSFERRED_FEES)
+    (leftover_principal . leftover_transferred_fees) (if (> TRANSFERRED_FEES reconcile_amount)
+      (c PRINCIPAL (- TRANSFERRED_FEES reconcile_amount))
+      (c (- PRINCIPAL (- reconcile_amount TRANSFERRED_FEES)) 0)
+    )
+    updated_auction_state (if (= debt reconcile_amount)
       ()
       AUCTION_STATE
     )
@@ -60,13 +65,17 @@
       (= COLLATERAL 0)
       (> PRINCIPAL 0)
       ; if there are byc minted, so we can't reconcile
-      (> PRINCIPAL (- reconcile_amount 1))
+      (if (> debt reconcile_amount)
+        (> (- debt reconcile_amount) minimum_debt_amount)
+        (= debt reconcile_amount)
+      )
       (> reconcile_amount 0)
       (list
-        (list TRANSFERRED_FEES COLLATERAL (- PRINCIPAL reconcile_amount) updated_auction_state INNER_PUZZLE ())
+        (list leftover_transferred_fees COLLATERAL leftover_principal updated_auction_state INNER_PUZZLE ())
         (list
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             ; signal to tail that it can melt BYC with certain amount
@@ -76,7 +85,7 @@
                 (sha256tree
                   (c "x"
                     (c (* -1 reconcile_amount)
-                      STATUTES_STRUCT
+                      STATUTES_STRUCT ; LATER: needed as already used in calculation of treasury_coin_id?
                     )
                   )
                 )
