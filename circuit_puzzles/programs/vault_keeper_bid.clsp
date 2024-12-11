@@ -13,16 +13,14 @@
         byc_to_bid
         byc_melting_coin_info
         byc_treasury_coin_info
-        liquidation_penalty_percent ; TODO: make part of AUCTION_STATE
-        ; statutes_cumulative_stability_fee_df ; NEW: no longer needed
+        liquidation_penalty_percent ; LATER: make part of AUCTION_STATE
         target_puzzle_hash
-        my_coin_id ; TODO: check if needed
-        auction_timeout ; TODO: make part of AUCTION_STATE
-        offer_mod_hash ; TODO: make part of AUCTION_STATE
-        treasury_mod_hash ; TODO: make part of AUCTION_STATE
-        price_info ; TODO: no longer needed
-        ; current_stability_fee_rate ; NEW: no longer needed
-        minimum_debt_amount ; TODO: add to drivers ; TODO: make part of AUCTION_STATE
+        my_coin_id ; LATER: check if needed
+        auction_timeout ; LATER: make part of AUCTION_STATE
+        offer_mod_hash ; LATER: make part of AUCTION_STATE
+        treasury_mod_hash ; LATER: make part of AUCTION_STATE
+        price_info ; LATER: no longer needed
+        minimum_debt_amount ; LATER: make part of AUCTION_STATE
       )
     )
   )
@@ -38,7 +36,7 @@
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     current_timestamp (+ tx_current_timestamp (* 3 MAX_TX_BLOCK_TIME))
-            ; parse auction state as we'll need to verify it's still running and hasn't timed out
+    ; parse auction state as we'll need to verify it's still running and hasn't timed out
     (
       auction_start_time
       start_price
@@ -46,14 +44,8 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      cumulative_stability_fee_df ; NEW
+      cumulative_stability_fee_df
     ) AUCTION_STATE
-    ;cumulative_stability_fee_rate (calculate-cumulative-discount-factor
-    ;  statutes_cumulative_stability_fee_rate
-    ;  current_stability_fee_rate
-    ;  current_timestamp
-    ;  (r price_info)
-    ;)
     (fees . liquidation_penalty) (calculate-fees
       byc_to_bid
       cumulative_stability_fee_df
@@ -259,17 +251,10 @@
               (list REMARK)
             )
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
-            ;(assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval) ; NEW: was never needed
-            ;(assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor) ; NEW: was never needed
-            ;(assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout) ; NEW: was never needed
-            ; assert liquidation penalty percent
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_percent)
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-            (assert-price-info statutes_puzzle_hash price_info) ; TODO: no longer needed
-            ;(assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate) ; NEW: no longer needed
-            ;; assert cumulative stability fee rate
-            ;(assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate) ; NEW: no longer needed
+            (assert-price-info statutes_puzzle_hash price_info) ; LATER: no longer needed
           )
           (if (> fees_for_treasury 0)
             ; get an announcement that BYC was paid into treasury

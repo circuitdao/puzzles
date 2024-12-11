@@ -17,13 +17,13 @@
       AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
-        ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
+        ; owner mode iff keeper_operation_info is nil
         inner_puzzle
-        solution
+        solution ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
         ; a keeper operation can be run only if vault is under-collateralized
         ; - start auction
-        ; - take collateral
-        ; - transform to bad debt
+        ; - bid
+        ; - recover bad debt
         keeper_operation_info
       )
      )
@@ -32,6 +32,7 @@
   (include curry.clib)
   (include condition_codes.clib)
   (include condition_filtering.clib)
+  (include prefixes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
 
@@ -81,8 +82,8 @@
     operation_mod (operation-program vault_operation_condition_pre)
     operation_mod_hash (sha256tree operation_mod)
     (conditions vault_operation_condition)
-      (if (all solution (not keeper_operation_info)) ; TODO: why do we need to check that solution is not nil?
-        ; owner mode if AUCTION_STATE is empty, ie liquidation hasn't started yet
+      (if (not keeper_operation_info)
+        ; owner mode must have empty AUCTION_STATE, ie vault is not in liquidation or bad debt
         (assert
           (not AUCTION_STATE)
           (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
@@ -124,7 +125,6 @@
     ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place
     ; bu this still messes up with our accounting and creates under collateralized vaults that messes with our metrics overall
     ; assert lineage
-    ;(x MOD_HASH STATUTES_STRUCT final_transferred_fees final_collateral_amount final_principal_amount
     ;  final_auction_state final_inner_puzzle_hash final_discounted_principal)
     (c
       (c
@@ -161,6 +161,7 @@
           (list
             ; this is for the driver code to make it easy to generate puzzle reveal
             REMARK
+            PROTOCOL_PREFIX
             final_transferred_fees
             final_collateral_amount
             final_principal_amount
