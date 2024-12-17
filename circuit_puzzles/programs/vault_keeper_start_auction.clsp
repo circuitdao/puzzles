@@ -12,7 +12,7 @@
         step_time_interval
         step_price_decrease_factor
         initiator_incentive_flat_fee
-        initiator_incentive_relative_fee_percent
+        initiator_incentive_relative_fee_bps
         liquidation_ratio
         price_info
         starting_price_factor
@@ -20,6 +20,8 @@
         auction_timeout
         statutes_cumulative_stability_fee_df
         current_stability_fee_df
+        liquidation_penalty_bps ; NEW
+        minimum_debt_amount ; NEW
       )
     )
   )
@@ -39,39 +41,57 @@
       (r price_info)
     )
     undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION)
+    ;undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
     min_collateral_amount (get-min-collateral-amount
       undiscounted_principal
       liquidation_ratio
       (f price_info)
     )
-    ; start_price -> last_price * starting_price_factor
-    start_price (/ (* (f price_info) starting_price_factor) PERCENT_PRECISION)
+    start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
     prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
-    initiator_incentive_relative (/ (* undiscounted_principal initiator_incentive_relative_fee_percent) PERCENT_PRECISION)
+    initiator_incentive_relative (/ (* undiscounted_principal initiator_incentive_relative_fee_bps) PRECISION_BPS)
     initiator_incentive_balance (+ initiator_incentive_flat_fee initiator_incentive_relative)
+    total_fees (calculate-total-fees
+      undiscounted_principal
+      PRINCIPAL
+      liquidation_penalty_bps
+    )
+    ;(x cumulative_stability_fee_df undiscounted_principal total_fees)
+    byc_to_treasury_balance (- total_fees initiator_incentive_balance TRANSFERRED_FEES)
+    byc_to_burn_balance (+ PRINCIPAL TRANSFERRED_FEES)
     auction_state (list
-      ; current auction start time, we need this to figure out if auction has timed out
-      ; so we can restart it
+      ; current auction start time, we need this to figure out if auction has timed out so we can restart it
       auction_start_time
       start_price
       step_price_decrease_factor
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      cumulative_stability_fee_df
+      ;cumulative_stability_fee_df
+      auction_timeout ; NEW
+      ;liquidation_penalty_bps ; NEW
+      minimum_debt_amount ; NEW
+      byc_to_treasury_balance
+      byc_to_burn_balance
     )
     (list
-      ; auction_state -> (start_time start_price last_auction_price)
-      (list TRANSFERRED_FEES COLLATERAL PRINCIPAL auction_state INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
+      (list
+        0 ; TRANSFERRED_FEES
+        COLLATERAL
+        0 ; PRINCIPAL
+        auction_state
+        INNER_PUZZLE_HASH
+        0 ; DISCOUNTED_PRINCIPAL
+      )
       (assert
         ; is previous auction still running by checking if auction_start_time hasn't timed out
         (any
           (> (- auction_start_time prev_auction_start_time) auction_timeout)
           (not AUCTION_STATE)
         )
-        ; we should be below min collateral ratio to start an auction
+        ; we must be below min collateral ratio to start an auction
         (> min_collateral_amount COLLATERAL)
-        ; there should be deposit to auction off
+        ; there should be collateral to auction off, o/w it's bad debt
         (> COLLATERAL 0)
         (list
           (list ASSERT_SECONDS_ABSOLUTE (- auction_start_time MAX_TX_BLOCK_TIME))
@@ -80,12 +100,14 @@
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
-          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
-          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
-          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
-          (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_BPS initiator_incentive_relative_fee_percent)
-          (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_FLAT initiator_incentive_flat_fee)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR starting_price_factor)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_BPS initiator_incentive_relative_fee_bps)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_FLAT initiator_incentive_flat_fee)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_bps)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
         )
       )
     )

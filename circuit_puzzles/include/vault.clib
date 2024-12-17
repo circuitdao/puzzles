@@ -22,6 +22,18 @@
     )
   )
 
+  (defun-inline calculate-total-fees (undiscounted_principal principal liquidation_penalty_bps)
+    (assign
+      ;undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_df) PRECISION))
+      stability_fees (if (> undiscounted_principal principal)
+        (- undiscounted_principal principal)
+        0
+      )
+      debt (+ principal stability_fees)
+      liquidation_penalty (* MINUS_ONE (/ (* MINUS_ONE debt liquidation_penalty_bps) PERCENT_PRECISION))
+      (+ stability_fees liquidation_penalty) ; total fees
+    )
+  )
 
   (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate discounted_principal principal liquidation_penalty_percent)
     (assign
