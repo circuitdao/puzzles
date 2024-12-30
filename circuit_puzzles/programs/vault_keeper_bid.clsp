@@ -40,10 +40,10 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      auction_timeout ; NEW
-      minimum_debt_amount ; NEW
-      byc_to_treasury_balance ; NEW
-      byc_to_melt_balance ; NEW
+      auction_timeout
+      minimum_debt_amount
+      byc_to_treasury_balance
+      byc_to_melt_balance
     ) AUCTION_STATE
     ; first pay initiator
     initiator_incentive (if (> byc_bid_amount initiator_incentive_balance)

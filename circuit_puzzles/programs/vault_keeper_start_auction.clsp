@@ -20,8 +20,8 @@
         auction_timeout
         statutes_cumulative_stability_fee_df
         current_stability_fee_df
-        liquidation_penalty_bps ; NEW
-        minimum_debt_amount ; NEW
+        liquidation_penalty_bps
+        minimum_debt_amount
       )
     )
   )
@@ -32,6 +32,9 @@
   (include condition_codes.clib)
   (include utils.clib)
 
+  ; NOTE: as in tradfi loan agreements, if the lender seizes collateral, there’s no further interest being
+  ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
+  ; that does not allow the lender to seize collateral)
   (assign
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -40,14 +43,14 @@
       (+ auction_start_time (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION)
-    ;undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
+    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
     min_collateral_amount (get-min-collateral-amount
       undiscounted_principal
       liquidation_ratio
       (f price_info)
     )
-    start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
+    ; start_price -> last_price * starting_price_factor
+    start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) 
     prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
     initiator_incentive_relative (/ (* undiscounted_principal initiator_incentive_relative_fee_bps) PRECISION_BPS)
     initiator_incentive_balance (+ initiator_incentive_flat_fee initiator_incentive_relative)
@@ -56,7 +59,6 @@
       PRINCIPAL
       liquidation_penalty_bps
     )
-    ;(x cumulative_stability_fee_df undiscounted_principal total_fees)
     byc_to_treasury_balance (- total_fees initiator_incentive_balance TRANSFERRED_FEES)
     byc_to_burn_balance (+ PRINCIPAL TRANSFERRED_FEES)
     auction_state (list
@@ -67,10 +69,8 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      ;cumulative_stability_fee_df
-      auction_timeout ; NEW
-      ;liquidation_penalty_bps ; NEW
-      minimum_debt_amount ; NEW
+      auction_timeout
+      minimum_debt_amount
       byc_to_treasury_balance
       byc_to_burn_balance
     )

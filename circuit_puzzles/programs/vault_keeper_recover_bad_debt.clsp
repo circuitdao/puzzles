@@ -11,11 +11,8 @@
       (
         reconcile_amount
         current_timestamp
-        ;my_coin_id ; NEW: not needed?!
         treasury_coin_info
-        ;auction_timeout ; NEW: no longer needed
         treasury_mod_hash
-        ;minimum_debt_amount ; NEW: no longer needed
       )
     )
   )
@@ -27,9 +24,6 @@
   (include condition_codes.clib)
   (include curry.clib)
 
-  ; NOTE: in a real-life loan agreement, if the lender seizes collateral, there’s no further interest being
-  ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
-  ; that does not allow the lender to seize collateral)
   (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
@@ -49,7 +43,6 @@
         )
       )
     )
-    ;(x AUCTION_STATE)
     (
       auction_start_time
       start_price
@@ -57,21 +50,12 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      ;cumulative_stability_fee_df
-      auction_timeout ; NEW
-      ;liquidation_penalty_bps ; NEW
-      minimum_debt_amount ; NEW
-      byc_to_treasury_balance ; NEW
-      byc_to_melt_balance ; NEW
+      auction_timeout
+      minimum_debt_amount
+      byc_to_treasury_balance
+      byc_to_melt_balance
     ) (assert AUCTION_STATE AUCTION_STATE)
-    ;(x byc_to_melt_balance)
-    ;debt (+ PRINCIPAL TRANSFERRED_FEES)
-    ;(leftover_principal . leftover_transferred_fees) (if (> TRANSFERRED_FEES reconcile_amount)
-    ;  (c PRINCIPAL (- TRANSFERRED_FEES reconcile_amount))
-    ;  (c (- PRINCIPAL (- reconcile_amount TRANSFERRED_FEES)) 0)
-    ;)
     leftover_byc_to_melt_balance (- byc_to_melt_balance reconcile_amount)
-    ;(x byc_to_melt_balance reconcile_amount leftover_byc_to_melt_balance)
     auction_state (if (= byc_to_melt_balance reconcile_amount)
       ()
       (list
@@ -80,25 +64,22 @@
         0 ; step_price_decrease_factor
         0 ; step_time_interval
         0 ; initiator_puzzle_hash
-        0 ; initiator_incentive_balance ; initiator is no longer getting paid
+        0 ; initiator_incentive_balance. initiator is no longer getting paid
         0 ; auction_timeout
         minimum_debt_amount
-        0 ; byc_to_treasury_balance ; fees paid to treasury cancel out
+        0 ; byc_to_treasury_balance. fees paid to treasury cancel out
         leftover_byc_to_melt_balance
       )
     )
-    ;(x leftover_byc_to_melt_balance auction_state COLLATERAL)
     (assert
       ; check that there is no collateral left
       (= COLLATERAL 0)
-      ;(> PRINCIPAL 0)
-      ; must recover debt fully are leave more than min debt amount
+      ; must recover debt fully or leave more than min debt amount
       (if (> byc_to_melt_balance reconcile_amount)
         (> (- byc_to_melt_balance reconcile_amount) minimum_debt_amount)
         (= byc_to_melt_balance reconcile_amount)
       )
       (> reconcile_amount 0)
-      ;(x COLLATERAL byc_to_melt_balance reconcile_amount leftover_byc_to_melt_balance treasury_amount minimum_debt_amount)
       (list
         (list
           0 ; transferred fees
@@ -109,32 +90,31 @@
           0 ; discounted principal
         )
         (list
-            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-            ; signal to tail that it can melt BYC with certain amount
-            (list SEND_MESSAGE 0x3f
-              (concat
-                PROTOCOL_PREFIX
-                (sha256tree
-                  (c "x"
-                    (c (* -1 reconcile_amount)
-                      STATUTES_STRUCT ; LATER: needed as already used in calculation of treasury_coin_id?
-                    )
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
+          ; signal to tail that it can melt BYC with certain amount
+          (list SEND_MESSAGE 0x3f
+            (concat
+              PROTOCOL_PREFIX
+              (sha256tree
+                (c "x"
+                  (c (* -1 reconcile_amount)
+                    STATUTES_STRUCT ; LATER: not needed as already used in calculation of treasury_coin_id?
                   )
                 )
               )
-              treasury_coin_id
             )
-            ; approve treasury coin to allow a withdrawal
-            (list SEND_MESSAGE 0x3f
-              (concat
-                PROTOCOL_PREFIX
-                (sha256tree (c (* -1 reconcile_amount) new_treasury_amount))
-              )
-              treasury_coin_id
+            treasury_coin_id
+          )
+          ; approve treasury coin to allow a withdrawal
+          (list SEND_MESSAGE 0x3f
+            (concat
+              PROTOCOL_PREFIX
+              (sha256tree (c (* -1 reconcile_amount) new_treasury_amount))
             )
-            ;(list ASSERT_MY_COIN_ID my_coin_id) ; NEW: not needed?!
+            treasury_coin_id
+          )
         )
       )
     )

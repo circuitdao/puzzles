@@ -11,13 +11,13 @@
     (@ args
       (
         byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
-        statutes_cumulative_stability_df
-        my_coin_id
+        statutes_cumulative_stability_fee_df
+        my_coin_id ; LATER: not needed?
         treasury_coin_info
         treasury_mod_hash
         minimum_sf_transfer_amount
         current_timestamp
-        current_stability_df
+        current_stability_fee_df
         price_info
       )
     )
@@ -33,22 +33,24 @@
   (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     byc_principal_to_melt PRINCIPAL
-    cumulative_stability_df (calculate-cumulative-discount-factor
-      statutes_cumulative_stability_df
-      current_stability_df
+    cumulative_stability_fee_df (calculate-cumulative-discount-factor
+      statutes_cumulative_stability_fee_df
+      current_stability_fee_df
       (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    (full_fees . liquidation_penalty) (calculate-fees
-      byc_principal_to_melt
-      cumulative_stability_df
-      DISCOUNTED_PRINCIPAL
-      PRINCIPAL
-      0 ; no liquidation penalty
-    )
-    fees (- full_fees TRANSFERRED_FEES)
+    ;(full_fees . liquidation_penalty) (calculate-fees
+    ;  byc_principal_to_melt
+    ;  cumulative_stability_df
+    ;  DISCOUNTED_PRINCIPAL
+    ;  PRINCIPAL
+    ;  0 ; no liquidation penalty
+    ;)
+    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
+    stability_fees (calculate-total-fees undiscounted_principal PRINCIPAL 0)
+    fees_to_treasury (- stability_fees TRANSFERRED_FEES)
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
-    new_treasury_amount (+ fees treasury_amount)
+    new_treasury_amount (+ fees_to_treasury treasury_amount)
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
@@ -70,19 +72,20 @@
       )
     )
     (assert
-      ; only if there are fees to be paid
-      (> fees 0)
+      ; only if there are fees to transfer
+      (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins
-      (> fees minimum_sf_transfer_amount)
+      (> fees_to_treasury minimum_sf_transfer_amount)
       ; only if it hasn't entered liquidation yet
       (not AUCTION_STATE)
-      ; if there are byc minted, meaning there is something to run SF on
+      ; only if there are outstanding loans
       (> PRINCIPAL 0)
+      ;(> COLLATERAL (- fees_to_treasury 1)) ; LATER: take into account issue mojos
       (list
         (list
-          (+ TRANSFERRED_FEES fees)
-          COLLATERAL
-          PRINCIPAL ; fees still need to be paid, just not to treasury
+          (+ TRANSFERRED_FEES fees_to_treasury)
+          COLLATERAL ; LATER: (- COLLATERAL fees_to_treasury)
+          PRINCIPAL
           AUCTION_STATE
           INNER_PUZZLE_HASH
           DISCOUNTED_PRINCIPAL
@@ -90,25 +93,25 @@
         (list
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
-            (concat PROTOCOL_PREFIX (sha256tree (c "i" (c fees STATUTES_STRUCT))))
+            (concat PROTOCOL_PREFIX (sha256tree (c "i" (c fees_to_treasury STATUTES_STRUCT))))
             byc_issuing_coin_id
           )
           ; approve treasury coin to receive a deposit
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c fees new_treasury_amount))
+              (sha256tree (c fees_to_treasury new_treasury_amount))
             )
             treasury_coin_id
           )
-          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_df)
+          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
           (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_STABILITY_FEE_TRANSFER minimum_sf_transfer_amount)
           (list ASSERT_MY_COIN_ID my_coin_id)
           (assert-price-info statutes_puzzle_hash price_info)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_df)
+          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
         )
       )
     )
