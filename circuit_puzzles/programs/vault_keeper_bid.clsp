@@ -97,10 +97,13 @@
         bid_xch_collateral_amount_pre
     )
     leftover_collateral (- COLLATERAL bid_xch_collateral_amount)
-    byc_coin_id_to_melt (calculate-byc-coin-id
-      CAT_MOD_HASH
-      byc_tail_hash
-      byc_melting_coin_info
+    byc_coin_id_to_melt (if byc_melting_coin_info
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        byc_melting_coin_info
+      )
+      ()
     )
     (treasury_parent treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
@@ -134,8 +137,8 @@
           step_time_interval
           initiator_puzzle_hash
           (- initiator_incentive_balance initiator_incentive)
-          auction_timeout ; NEW
-          minimum_debt_amount ; NEW
+          auction_timeout
+          minimum_debt_amount
           (- byc_to_treasury_balance byc_to_treasury)
           (- byc_to_melt_balance byc_to_melt)
         )
@@ -170,36 +173,42 @@
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
-            (list SEND_MESSAGE 0x3f
-              (concat
-                PROTOCOL_PREFIX
-                (sha256tree
-                  (c 'x'
-                    (c (* -1 byc_to_melt)
-                      STATUTES_STRUCT
+            (if (> byc_to_melt 0)
+              (list SEND_MESSAGE 0x3f
+                (concat
+                  PROTOCOL_PREFIX
+                  (sha256tree
+                    (c 'x'
+                      (c (* -1 byc_to_melt)
+                        STATUTES_STRUCT
+                      )
                     )
                   )
                 )
+                byc_coin_id_to_melt
               )
-              byc_coin_id_to_melt
+              (list REMARK)
             )
-            ; get a melt confirmation from BYC tail
-            ; assert that keeper absorbed their collateral + left over mojos from melting
-            (list ASSERT_PUZZLE_ANNOUNCEMENT
-              (sha256
-                offer_mod_hash
-                (sha256tree
-                  (c
-                    my_coin_id ; nonce. LATER: needed?
-                    (list
+            (if (> (+ bid_xch_collateral_amount byc_to_melt) 0)
+              ; get a melt confirmation from BYC tail
+              ; assert that keeper absorbed their collateral + left over mojos from melting
+              (list ASSERT_PUZZLE_ANNOUNCEMENT
+                (sha256
+                  offer_mod_hash
+                  (sha256tree
+                    (c
+                      my_coin_id ; nonce. LATER: needed?
                       (list
-                        target_puzzle_hash
-                        (+ bid_xch_collateral_amount byc_to_melt)
+                        (list
+                          target_puzzle_hash
+                          (+ bid_xch_collateral_amount byc_to_melt)
+                        )
                       )
                     )
                   )
                 )
               )
+              (list REMARK)
             )
             ; announce that we transferred collateral to target puzzle hash
             (if (> initiator_incentive 0)
@@ -221,7 +230,6 @@
                   )
                 )
               )
-              ; else NOOP as we don't need to pay the negative fee
               (list REMARK)
             )
           )
