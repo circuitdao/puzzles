@@ -10,7 +10,9 @@
     (@ args
       (
          byc_to_repay statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_principal_amount
-         byc_treasury_coin_info treasury_mod_hash price_info current_stability_fee_rate current_timestamp
+         byc_treasury_coin_info treasury_mod_hash
+         min_treasury_delta ; NEW
+         price_info current_stability_fee_rate current_timestamp
       )
     )
   )
@@ -31,6 +33,14 @@
       (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
+    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
+    ;; START NEW
+    total_fees (calculate-total-fees undiscounted_principal PRINCIPAL 0)
+    max_fees_to_pay (if (> TRANSFERRED_FEES total_fees)
+      0
+      (- total_fees TRANSFERRED_FEES)
+    )
+    ;; END NEW
     (calculated_stability_fee . _) (calculate-fees
       byc_to_repay
       cumulative_stability_fee_rate
@@ -49,7 +59,6 @@
       PRINCIPAL
       negative_byc_principal_to_melt
     )
-    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
     new_discounted_principal (if (= byc_to_repay undiscounted_principal)
       0
       (discount-principal-for-melt
@@ -58,6 +67,7 @@
         cumulative_stability_fee_rate
       )
     )
+    ; TODO: need to check that new undiscounted principal is > min debt
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
@@ -88,8 +98,11 @@
       (> undiscounted_principal (- byc_to_repay ONE))
       ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
       ; vault liquidation costs at healthy levels
+      ; TODO: need to check for new debt, not new principal below
       (any (= new_principal 0) (> new_principal minimum_principal_amount))
       (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
+      ; amount being deposited to treasury must exceed required min unless all (non-transferred) SFs are repaid
+      (any (> fees_to_pay min_treasury_delta) (= fees_to_pay max_fees_to_pay))
       ; current time must be at least after last oracle update
       (> current_timestamp (r price_info))
       (list
@@ -133,14 +146,17 @@
             ; get an announcement from offer module that BYC was paid into treasury
             ; approve treasury coin to receive a deposit
             (c
-              (list SEND_MESSAGE 0x3f
-                (concat
-                  PROTOCOL_PREFIX
-                  (sha256tree (c fees_to_pay new_treasury_amount))
+              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
+              (c 
+                (list SEND_MESSAGE 0x3f
+                  (concat
+                    PROTOCOL_PREFIX
+                    (sha256tree (c fees_to_pay new_treasury_amount))
+                  )
+                  treasury_coin_id
                 )
-                treasury_coin_id
+                conditions
               )
-              conditions
             )
             ; else no approvals needed
             conditions

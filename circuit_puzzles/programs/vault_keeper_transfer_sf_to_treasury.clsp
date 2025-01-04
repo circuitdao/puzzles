@@ -15,7 +15,7 @@
         my_coin_id ; LATER: not needed?
         treasury_coin_info
         treasury_mod_hash
-        minimum_sf_transfer_amount
+        min_treasury_delta ; minimum_sf_transfer_amount
         current_timestamp
         current_stability_fee_df
         price_info
@@ -75,7 +75,7 @@
       ; only if there are fees to transfer
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins
-      (> fees_to_treasury minimum_sf_transfer_amount)
+      (> fees_to_treasury min_treasury_delta) ;minimum_sf_transfer_amount)
       ; only if it hasn't entered liquidation yet
       (not AUCTION_STATE)
       ; only if there are outstanding loans
@@ -106,7 +106,7 @@
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-          (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_STABILITY_FEE_TRANSFER minimum_sf_transfer_amount)
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta) ;minimum_sf_transfer_amount)
           (list ASSERT_MY_COIN_ID my_coin_id)
           (assert-price-info statutes_puzzle_hash price_info)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))

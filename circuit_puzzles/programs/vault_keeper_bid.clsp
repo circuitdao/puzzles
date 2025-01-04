@@ -13,6 +13,7 @@
         byc_bid_amount
         byc_melting_coin_info
         byc_treasury_coin_info
+        min_treasury_delta ; NEW or add to auction state?
         target_puzzle_hash
         my_coin_id ; LATER: check if needed
         offer_mod_hash
@@ -155,6 +156,7 @@
       (> COLLATERAL 0)
       (> leftover_collateral -1)
       (any (> leftover_debt minimum_debt_amount) (= leftover_debt 0))
+      (any (> byc_to_treasury min_treasury_delta) (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0))
       (list 
         (list
           0 ; leftover_transferred_fees
@@ -236,14 +238,17 @@
           (if (> byc_to_treasury 0)
             ; approve treasury coin to receive a deposit
             (c
-              (list SEND_MESSAGE 0x3f
-                (concat
-                  PROTOCOL_PREFIX
-                  (sha256tree (c byc_to_treasury new_treasury_amount))
+              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
+              (c
+                (list SEND_MESSAGE 0x3f
+                  (concat
+                    PROTOCOL_PREFIX
+                    (sha256tree (c byc_to_treasury new_treasury_amount))
+                  )
+                  treasury_coin_id
                 )
-                treasury_coin_id
+                conditions
               )
-              conditions
             )
             ; maybe we set fees to zero for some reason, so don't charge anything
             conditions
