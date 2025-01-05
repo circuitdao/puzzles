@@ -7,7 +7,7 @@
       statutes_inner_puzzle_hash
       current_amount
       my_coin_id
-      statutes_cumulative_interest_df current_timestamp current_interest_df price_info minimum_interest_amount
+      statutes_cumulative_interest_df current_timestamp current_interest_df price_info min_treasury_delta
       inner_solution
       .
       (@ treasury_coin_info ((treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
@@ -208,11 +208,11 @@
                         (if treasury_coin_id
                           (assert
                             ; current treasury coin should have enough amount to cover interest
-                            (> treasury_coin_amount interest_amount)
+                            (> treasury_coin_amount min_treasury_delta)
                             ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
-                            (> interest_amount minimum_interest_amount)
+                            (> interest_amount min_treasury_delta)
                             (c
-                              (assert-statute statutes_puzzle_hash STATUTE_SAVINGS_MINIMUM_INTEREST_WITHDRAWAL minimum_interest_amount)
+                              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
                               (c
                                 (list SEND_MESSAGE 0x3f
                                   (concat
