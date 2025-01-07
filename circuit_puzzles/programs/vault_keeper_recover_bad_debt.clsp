@@ -4,7 +4,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
       )
     )
     (@ args
@@ -12,6 +12,7 @@
         reconcile_amount
         current_timestamp
         treasury_coin_info
+        min_treasury_delta
         treasury_mod_hash
       )
     )
@@ -26,7 +27,7 @@
 
   (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
+    (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if treasury_coin_info treasury_coin_info (list 0 0 0 0))
     new_treasury_amount (- treasury_amount reconcile_amount)
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
@@ -79,41 +80,53 @@
         (> (- byc_to_melt_balance reconcile_amount) minimum_debt_amount)
         (= byc_to_melt_balance reconcile_amount)
       )
-      (> reconcile_amount 0)
+      (any (> reconcile_amount min_treasury_delta) (= reconcile_amount byc_to_melt_balance))
       (list
         (list
-          0 ; transferred fees
           COLLATERAL
           0 ; principal
           auction_state
           INNER_PUZZLE_HASH
           0 ; discounted principal
         )
-        (list
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-          ; signal to tail that it can melt BYC with certain amount
-          (list SEND_MESSAGE 0x3f
-            (concat
-              PROTOCOL_PREFIX
-              (sha256tree
-                (c "x"
-                  (c (* -1 reconcile_amount)
-                    STATUTES_STRUCT ; LATER: not needed as already used in calculation of treasury_coin_id?
+        (assign
+          conditions (list
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
+          )
+          (if (> reconcile_amount 0)
+            (c
+              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
+              (c
+                ; signal to tail that it can melt BYC with certain amount
+                (list SEND_MESSAGE 0x3f
+                  (concat
+                    PROTOCOL_PREFIX
+                    (sha256tree
+                      (c "x"
+                        (c (* -1 reconcile_amount)
+                          STATUTES_STRUCT ; LATER: not needed as already used in calculation of treasury_coin_id?
+                        )
+                      )
+                    )
                   )
+                  treasury_coin_id
+                )
+                (c
+                  ; approve treasury coin to allow a withdrawal
+                  (list SEND_MESSAGE 0x3f
+                    (concat
+                      PROTOCOL_PREFIX
+                      (sha256tree (c (* -1 reconcile_amount) new_treasury_amount))
+                    )
+                    treasury_coin_id
+                  )
+                  conditions
                 )
               )
             )
-            treasury_coin_id
-          )
-          ; approve treasury coin to allow a withdrawal
-          (list SEND_MESSAGE 0x3f
-            (concat
-              PROTOCOL_PREFIX
-              (sha256tree (c (* -1 reconcile_amount) new_treasury_amount))
-            )
-            treasury_coin_id
+            conditions
           )
         )
       )

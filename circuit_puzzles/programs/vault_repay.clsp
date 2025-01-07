@@ -4,13 +4,17 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
       )
     )
     (@ args
       (
-         byc_to_repay statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_principal_amount
-         byc_treasury_coin_info treasury_mod_hash price_info current_stability_fee_rate current_timestamp
+         repay_amount ; total amount being repaid
+         sf_transfer_amount ; SFs to transfer to treasury
+         statutes_cumulative_stability_fee_rate byc_melting_coin_info minimum_debt_amount
+         byc_treasury_coin_info treasury_mod_hash
+         min_treasury_delta
+         price_info current_stability_fee_rate current_timestamp
       )
     )
   )
@@ -31,33 +35,17 @@
       (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    (calculated_stability_fee . _) (calculate-fees
-      byc_to_repay
-      cumulative_stability_fee_rate
-      DISCOUNTED_PRINCIPAL
-      PRINCIPAL
-      0 ; no liquidation penalty when repaying
-    )
-    fees_to_pay (if (> TRANSFERRED_FEES calculated_stability_fee)
-      0
-      (- calculated_stability_fee TRANSFERRED_FEES)
-    )
-    fees_to_not_pay (- calculated_stability_fee fees_to_pay)
-    ; burn the byc that's left after fees are paid
-    negative_byc_principal_to_melt (* MINUS_ONE (- byc_to_repay calculated_stability_fee))
-    new_principal (+
-      PRINCIPAL
-      negative_byc_principal_to_melt
-    )
     undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION))
-    new_discounted_principal (if (= byc_to_repay undiscounted_principal)
+    accrued_sf (calculate-total-fees undiscounted_principal PRINCIPAL 0)
+    negative_principal_to_repay (- sf_transfer_amount repay_amount)
+    new_principal (+ PRINCIPAL negative_principal_to_repay)
+    new_discounted_principal (if (= repay_amount undiscounted_principal)
       0
-      (discount-principal-for-melt
-        DISCOUNTED_PRINCIPAL
-        (* MINUS_ONE byc_to_repay)
-        cumulative_stability_fee_rate
+      (- DISCOUNTED_PRINCIPAL
+        (/ (* repay_amount PRECISION) cumulative_stability_fee_rate)
       )
     )
+    new_undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE new_discounted_principal cumulative_stability_fee_rate) PRECISION))
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
@@ -77,39 +65,36 @@
       )
       ()
     )
-    new_treasury_amount (+ fees_to_pay treasury_amount)
+    new_treasury_amount (+ sf_transfer_amount treasury_amount)
     byc_coin_id_to_melt (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
       byc_melting_coin_info
     )
     (assert
-      (> byc_to_repay 0)
-      (> undiscounted_principal (- byc_to_repay ONE))
-      ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep
-      ; vault liquidation costs at healthy levels
-      (any (= new_principal 0) (> new_principal minimum_principal_amount))
-      (any (> new_principal 0)  (all (= new_principal 0) (= new_discounted_principal 0)))
+      (> repay_amount MINUS_ONE) ; repay amount must not be negative (but can be 0)
+      (> undiscounted_principal (- repay_amount ONE)) ; cannot repay more than outstanding debt      
+      (> sf_transfer_amount MINUS_ONE) ; cannot transfer a negative amount
+      (> accrued_sf (- sf_transfer_amount ONE)) ; cannot transfer more than accrued SFs
+      ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep vault liquidation costs at healthy levels
+      (any (= new_undiscounted_principal 0) (> new_undiscounted_principal minimum_debt_amount))
+      (any (= sf_transfer_amount 0) (> sf_transfer_amount min_treasury_delta)) ; if there is a deposit to treasury, it must exceed required min
+      (any (> repay_amount 0) (> sf_transfer_amount 0)) ; noop if both are 0. not strictly necessary, unless we open repay up to keepers
       ; current time must be at least after last oracle update
       (> current_timestamp (r price_info))
       (list
-        (list
-          (if (> TRANSFERRED_FEES calculated_stability_fee)
-            (- TRANSFERRED_FEES calculated_stability_fee)
-            0
-          ) ; final_transferred_fees in collateral_vault.clsp
-          COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
+        (list COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
         (assign
           conditions (li
             (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_principal_amount)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
             (assert-price-info statutes_puzzle_hash price_info)
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
             &rest
-            (if (> negative_byc_principal_to_melt MINUS_ONE)
+            (if (> negative_principal_to_repay MINUS_ONE) ;(> negative_byc_principal_to_melt MINUS_ONE)
               (list )
               (list
                 ; signal to tail that it can melt the BYC
@@ -118,7 +103,7 @@
                     PROTOCOL_PREFIX
                     (sha256tree
                       (c 'x'
-                        (c (- negative_byc_principal_to_melt fees_to_not_pay)
+                        (c negative_principal_to_repay ;(- negative_principal_to_repay fees_to_not_pay)
                            STATUTES_STRUCT
                         )
                       )
@@ -129,18 +114,21 @@
               )
             )
           )
-          (if (> fees_to_pay 0)
+          (if (> sf_transfer_amount 0)
             ; get an announcement from offer module that BYC was paid into treasury
             ; approve treasury coin to receive a deposit
             (c
-              (list SEND_MESSAGE 0x3f
-                (concat
-                  PROTOCOL_PREFIX
-                  (sha256tree (c fees_to_pay new_treasury_amount))
+              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
+              (c 
+                (list SEND_MESSAGE 0x3f
+                  (concat
+                    PROTOCOL_PREFIX
+                    (sha256tree (c sf_transfer_amount new_treasury_amount))
+                  )
+                  treasury_coin_id
                 )
-                treasury_coin_id
+                conditions
               )
-              conditions
             )
             ; else no approvals needed
             conditions

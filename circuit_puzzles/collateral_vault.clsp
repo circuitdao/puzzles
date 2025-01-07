@@ -11,9 +11,7 @@
 ;; - start auction
 ;; - recover bad debt
 
-(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH
-      STATUTES_STRUCT
-      TRANSFERRED_FEES COLLATERAL PRINCIPAL
+(mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH STATUTES_STRUCT COLLATERAL PRINCIPAL
       AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
         lineage_proof
@@ -101,7 +99,7 @@
     statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
     (
       (
-        final_transferred_fees
+        ;final_transferred_fees
         final_collateral_amount
         final_principal_amount
         final_auction_state
@@ -113,7 +111,7 @@
       vault_operation
       (list
         (list COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-              STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash)
+              STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash)
         args
       )
     )
@@ -133,7 +131,7 @@
           (curry_hashes MOD_HASH
             (sha256tree MOD_HASH)
             statutes_struct_hash
-            (sha256 ONE final_transferred_fees)
+            ;(sha256 ONE final_transferred_fees)
             (sha256 ONE final_collateral_amount)
             (sha256 ONE final_principal_amount)
             (sha256tree final_auction_state)
@@ -162,7 +160,7 @@
             ; this is for the driver code to make it easy to generate puzzle reveal
             REMARK
             PROTOCOL_PREFIX
-            final_transferred_fees
+            ;final_transferred_fees
             final_collateral_amount
             final_principal_amount
             final_auction_state
@@ -180,7 +178,7 @@
             (curry_hashes MOD_HASH
               (sha256tree MOD_HASH)
               statutes_struct_hash
-              (sha256 ONE 0)
+              ;(sha256 ONE 0)
               (sha256 ONE 0)
               (sha256 ONE 0)
               (sha256 ONE ())

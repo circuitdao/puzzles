@@ -1,9 +1,5 @@
 (
 
-  ;(defconst VAULT_ANN_PREFIX 0x56) ; chr(86) -> "V"
-  (defconst TREASURY_ANN_PREFIX 0x24) ; -> "$"
-  (defconst BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
-
   (defun-inline available-to-mint (collateral debt liquidation_ratio xch_price)
     (- (/ (/ (* collateral xch_price 1000) liquidation_ratio) MOJOS) debt)
   )
@@ -11,15 +7,6 @@
   (defun-inline get-min-collateral-amount (debt liquidation_ratio xch_price)
     ; returns min collateral value for threshold coll ratio, multiplying with -1 to ceil the division
     (/ (* MINUS_ONE (* (/ (* MINUS_ONE debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
-  )
-
-  (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
-    (- discounted_principal
-      (/
-        (* (* MINUS_ONE negative_byc_principal_to_melt) PRECISION)
-        cumulative_stability_fee_rate
-      )
-    )
   )
 
   (defun-inline calculate-total-fees (undiscounted_principal principal liquidation_penalty_bps)

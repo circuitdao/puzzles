@@ -4,7 +4,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
       )
     )
     (@ args
@@ -13,8 +13,9 @@
         byc_bid_amount
         byc_melting_coin_info
         byc_treasury_coin_info
+        min_treasury_delta
         target_puzzle_hash
-        my_coin_id ; LATER: check if needed
+        my_coin_id
         offer_mod_hash
         treasury_mod_hash
       )
@@ -97,10 +98,13 @@
         bid_xch_collateral_amount_pre
     )
     leftover_collateral (- COLLATERAL bid_xch_collateral_amount)
-    byc_coin_id_to_melt (calculate-byc-coin-id
-      CAT_MOD_HASH
-      byc_tail_hash
-      byc_melting_coin_info
+    byc_coin_id_to_melt (if byc_melting_coin_info
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        byc_melting_coin_info
+      )
+      ()
     )
     (treasury_parent treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
@@ -134,8 +138,8 @@
           step_time_interval
           initiator_puzzle_hash
           (- initiator_incentive_balance initiator_incentive)
-          auction_timeout ; NEW
-          minimum_debt_amount ; NEW
+          auction_timeout
+          minimum_debt_amount
           (- byc_to_treasury_balance byc_to_treasury)
           (- byc_to_melt_balance byc_to_melt)
         )
@@ -152,9 +156,10 @@
       (> COLLATERAL 0)
       (> leftover_collateral -1)
       (any (> leftover_debt minimum_debt_amount) (= leftover_debt 0))
+      (any (> byc_to_treasury min_treasury_delta) (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0))
       (list 
         (list
-          0 ; leftover_transferred_fees
+          ;0 ; leftover_transferred_fees
           leftover_collateral
           0 ; leftover_principal
           auction_state
@@ -170,36 +175,42 @@
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
-            (list SEND_MESSAGE 0x3f
-              (concat
-                PROTOCOL_PREFIX
-                (sha256tree
-                  (c 'x'
-                    (c (* -1 byc_to_melt)
-                      STATUTES_STRUCT
+            (if (> byc_to_melt 0)
+              (list SEND_MESSAGE 0x3f
+                (concat
+                  PROTOCOL_PREFIX
+                  (sha256tree
+                    (c 'x'
+                      (c (* -1 byc_to_melt)
+                        STATUTES_STRUCT
+                      )
                     )
                   )
                 )
+                byc_coin_id_to_melt
               )
-              byc_coin_id_to_melt
+              (list REMARK)
             )
-            ; get a melt confirmation from BYC tail
-            ; assert that keeper absorbed their collateral + left over mojos from melting
-            (list ASSERT_PUZZLE_ANNOUNCEMENT
-              (sha256
-                offer_mod_hash
-                (sha256tree
-                  (c
-                    my_coin_id ; nonce. LATER: needed?
-                    (list
+            (if (> (+ bid_xch_collateral_amount byc_to_melt) 0)
+              ; get a melt confirmation from BYC tail
+              ; assert that keeper absorbed their collateral + left over mojos from melting
+              (list ASSERT_PUZZLE_ANNOUNCEMENT
+                (sha256
+                  offer_mod_hash
+                  (sha256tree
+                    (c
+                      my_coin_id ; nonce. LATER: needed?
                       (list
-                        target_puzzle_hash
-                        (+ bid_xch_collateral_amount byc_to_melt)
+                        (list
+                          target_puzzle_hash
+                          (+ bid_xch_collateral_amount byc_to_melt)
+                        )
                       )
                     )
                   )
                 )
               )
+              (list REMARK)
             )
             ; announce that we transferred collateral to target puzzle hash
             (if (> initiator_incentive 0)
@@ -221,21 +232,23 @@
                   )
                 )
               )
-              ; else NOOP as we don't need to pay the negative fee
               (list REMARK)
             )
           )
           (if (> byc_to_treasury 0)
             ; approve treasury coin to receive a deposit
             (c
-              (list SEND_MESSAGE 0x3f
-                (concat
-                  PROTOCOL_PREFIX
-                  (sha256tree (c byc_to_treasury new_treasury_amount))
+              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
+              (c
+                (list SEND_MESSAGE 0x3f
+                  (concat
+                    PROTOCOL_PREFIX
+                    (sha256tree (c byc_to_treasury new_treasury_amount))
+                  )
+                  treasury_coin_id
                 )
-                treasury_coin_id
+                conditions
               )
-              conditions
             )
             ; maybe we set fees to zero for some reason, so don't charge anything
             conditions
