@@ -57,8 +57,8 @@
         (list
           (assert-full-statute
             statutes_puzzle_hash
-            ; we use special statute to use for custom announcements limits
-            (if (= statute_index -1) STATUTE_CUSTOM_ANNOUNCEMENTS statute_index)
+            ; we use special statute for custom conditions limits
+            (if (= statute_index -1) STATUTE_CUSTOM_CONDITIONS statute_index)
             current_statute
           )
         )

@@ -9,7 +9,7 @@
       treasury_mod_hash
       start_time
       my_coin_id
-      treasury_coins
+      treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
       treasury_maximum
     )
   )
@@ -21,20 +21,20 @@
   (include surplus_auction.clib)
   (include utils.clib)
 
+  ; LATER: can we simplify treasury coins list by using curried_args_hash instead of individual inner puzzle args?
   (defun assert-treasury-coins-withdrawal (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
-                                           treasury_coins lot_amount sum_amount CAT_leftover announcements)
-    ; treasury_coins -> ((leader_launcher_1 . amount1) (launcher_2 . amount2)...)
-    ; sorted in reverse order as we have no have to go backwards in a list
-    ; we iterate over them extracting launcher id and previous launcher id to
-    ; form a puzzle hash of each treasury coin in a ring. Amount should form a sum
-    ; of lot amount needed for this surplus auction
+        treasury_coins ; any subset of treasury coins -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
+        lot_amount ; amount to withdraw from treasury coins
+        sum_amounts_withdrawn ; amount withdrawn from treasury coins. must be passed 0 when function is called
+        new_treasury_coins_amount ; post-withdrawal amount of treasury coins. must be passed 0 when function is called
+        announcements
+      )
     (if treasury_coins
       (assign
-        ; treasury_coin -> (parent_id launcher_id current_amount withdraw_amount)
-        (parent_id launcher_id prev_launcher_id current_amount withdraw_amount) (f treasury_coins)
+        (parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount) (f treasury_coins)
         treasury_coin_id (assert
           (size_b32 launcher_id)
-          (size_b32 prev_launcher_id)
+          (size_b32 ring_prev_launcher_id)
           (calculate-coin-id
             parent_id
             (curry_hashes CAT_MOD_HASH
@@ -45,10 +45,10 @@
                 (sha256 ONE TREASURY_MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256 ONE launcher_id)
-                (sha256 ONE prev_launcher_id)
+                (sha256 ONE ring_prev_launcher_id)
               )
             )
-            current_amount ; taking second of (launcher_id amount) pair
+            current_amount
           )
         )
         (c
@@ -64,8 +64,8 @@
             TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
             (r treasury_coins)
             lot_amount
-            (+ sum_amount withdraw_amount)
-            (- (+ CAT_leftover current_amount) withdraw_amount)
+            (+ sum_amounts_withdrawn withdraw_amount)
+            (- (+ new_treasury_coins_amount current_amount) withdraw_amount)
             announcements
           )
         )
@@ -73,7 +73,7 @@
       ; we're withdrawing exactly what lot we require for this surplus auction
       ; and treasury needs to stay above maximum threshold, so to trigger surplus auction
       ; we need maximum + lot_amount
-      (assert (= sum_amount lot_amount) (> CAT_leftover treasury_maximum)
+      (assert (= sum_amounts_withdrawn lot_amount) (> new_treasury_coins_amount treasury_maximum)
         (c
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MAXIMUM treasury_maximum) ; end of recursion
           announcements
@@ -165,9 +165,9 @@
           treasury_maximum
           statutes_puzzle_hash
           treasury_coins
-          lot_amount ; lot amount of byc offered
-          0 ; withdrawal sum amount
-          0 ; leftover byc amount
+          lot_amount ; amount of byc to withdraw
+          0 ; sum amounts withdrawn
+          0 ; post-withdrawal treasury coins amount
           announcements
         )
       )

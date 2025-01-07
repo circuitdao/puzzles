@@ -9,7 +9,7 @@
       treasury_minimum
       auction_timeout
       treasury_mod_hash
-      treasury_coins ; -> ((parent_id launcher_id prev_launcher_id current_amount))
+      treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
     )
   )
 
@@ -21,7 +21,7 @@
   (include recharge_auction.clib)
 
   (assign
-    (treasury_coins_count treasury_coins_total) (count-treasury-coins treasury_coins 0 0 ())
+    treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (assert
       (> treasury_coins_count 0)
       LAUNCHER_ID
@@ -77,6 +77,7 @@
 
         )
         &rest
+        ; deposit to treasury = no. treasury coins * deposit per coin + remainder
         (deposit-to-treasury
           treasury_mod_hash
           CAT_MOD_HASH
@@ -84,13 +85,12 @@
           STATUTES_STRUCT
           treasury_minimum
           statutes_puzzle_hash
-          treasury_coins_total ; expected balance after deposit of lot
-          0 ; amount deposited
-          0 ; deposit amount
-          0 ; potential remainder
+          0 ; deposit per coin
+          0 ; deposit remainder
           (f treasury_coins)
           treasury_coins
           announcements
+          0 ; arg to sum up post-deposit treasury amounts
         )
       )
     )

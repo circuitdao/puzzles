@@ -5,7 +5,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
       )
     )
     (@ args
@@ -59,7 +59,7 @@
       (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) byc_amount_to_mint)
       (list
         ; updated state
-        (list TRANSFERRED_FEES COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
+        (list COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
         ; additional conditions
         (list
           ; signal to tail that it can issue BYC with certain amount

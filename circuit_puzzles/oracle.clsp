@@ -1,7 +1,6 @@
 (mod (
       MUTATION_PROGRAM_HASH MOD_HASH
       STATUTES_STRUCT
-      ;ATOM_ANNOUNCER_PUZZLE_HASH ; TODO: move before MOD_HASH
       PRICE_INFOS
       ; solution
       oracle_mutation
@@ -23,7 +22,6 @@
         (f oracle_mutation)
         (list
           MOD_HASH STATUTES_STRUCT
-          ;ATOM_ANNOUNCER_PUZZLE_HASH
           PRICE_INFOS
           oracle_mutation
           input_announcement_asserts

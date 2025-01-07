@@ -1,7 +1,6 @@
 (mod (
     CAT_MOD_HASH
     (MOD_HASH
-    ;CAT_MOD_HASH
     BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
     (

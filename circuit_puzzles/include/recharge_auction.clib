@@ -32,21 +32,28 @@
     )
   )
 
+  ; asserts post-deposit treasury ring amounts,  ensuring intended amount has been deposited to treasury
+  ; total deposited to treasury = no. treasury coins * deposit_amount_per_coin + remainder
   (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
-                              treasury_minimum statutes_puzzle_hash final_treasury_amount
-                              amount_deposited deposit_amount potential_remainder
-                              first_treasury_coin treasury_coins announcements)
+                              treasury_minimum statutes_puzzle_hash
+                              deposit_amount_per_coin ; amount being deposited into each treasury coin
+                              remainder ; amount being deposited in addition to deposit_amount_per_coin into first of treasury_coins
+                              first_treasury_coin
+                              treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
+                              announcements
+                              new_total_amount ; post-deposit treasury amount. must be passed 0 when function is called
+                              )
     (if treasury_coins
       (assign
-        (parent_id launcher_id prev_launcher_id current_amount) (f treasury_coins)
-        (remainder next_parent_id next_launcher_id next_prev_launcher_id next_current_amount) (
+        (parent_id launcher_id ring_prev_launcher_id current_amount) (f treasury_coins)
+        (potential_remainder next_parent_id next_launcher_id next_ring_prev_launcher_id next_current_amount) (
           if (r treasury_coins)
             (c 0x00 (f (r treasury_coins)))
-            (c potential_remainder first_treasury_coin)
+            (c remainder first_treasury_coin)
         )
-        delta (+ deposit_amount remainder)
+        delta (+ deposit_amount_per_coin potential_remainder)
         new_amount (+ next_current_amount delta)
-        new_prev_amount (+ current_amount deposit_amount (if (= launcher_id (f (r first_treasury_coin))) potential_remainder 0))
+        new_prev_amount (+ current_amount deposit_amount_per_coin (if (= launcher_id (f (r first_treasury_coin))) remainder 0))
         prev_treasury_coin_id (
           calculate-coin-id
             parent_id
@@ -58,15 +65,13 @@
                 (sha256tree TREASURY_MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree launcher_id)
-                (sha256tree prev_launcher_id)
+                (sha256tree ring_prev_launcher_id)
               )
             )
-            current_amount ; taking second of (launcher_id amount) pair
+            current_amount
         )
-        treasury_coin_id (assert
-          ; ensure first_treasury_coin is pointing to the same coin this coin is pointing to
-          (= launcher_id next_prev_launcher_id)
-          (calculate-coin-id
+        treasury_coin_id (
+          calculate-coin-id
             next_parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
@@ -76,11 +81,10 @@
                 (sha256tree TREASURY_MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree next_launcher_id)
-                (sha256tree next_prev_launcher_id)
+                (sha256tree next_ring_prev_launcher_id)
               )
             )
-            next_current_amount ; taking second of (launcher_id amount) pair
-          )
+            next_current_amount
         )
         (c
           ; we also send a message to each treasury coin so they can run
@@ -100,7 +104,7 @@
                   PROTOCOL_PREFIX
                   (sha256tree
                     (c new_prev_amount
-                      launcher_id ; link the coins, this previous coin to treasury_coin_id
+                      next_ring_prev_launcher_id ; ensure treasury coin links to prev treasury coin
                     )
                   )
                 )
@@ -110,42 +114,37 @@
               TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
               treasury_minimum
               statutes_puzzle_hash
-              final_treasury_amount
-              (+ amount_deposited new_amount)
-              deposit_amount
-              potential_remainder
+              deposit_amount_per_coin
+              remainder
               first_treasury_coin
               (r treasury_coins)
               announcements
+              (+ new_total_amount new_amount)
             )
           )
         )
       )
-      (assert
-        (= amount_deposited final_treasury_amount)
-        (if (all (= deposit_amount 0) (= potential_remainder 0))
-          ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
-          (assert (> treasury_minimum final_treasury_amount)
-            announcements
-          )
+      (if (all (= deposit_amount_per_coin 0) (= remainder 0))
+        ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
+        (assert (> treasury_minimum new_total_amount)
           announcements
         )
+        announcements
       )
     )
   )
 
-  (defun count-treasury-coins (treasury_coins count total uniques)
+  (defun count-treasury-coins (treasury_coins count uniques)
     (if treasury_coins
       (count-treasury-coins
         (r treasury_coins)
         (+ 1 count)
-        (+ total (f (r (r (r (f treasury_coins))))))
         (if (contains uniques (f (r (f treasury_coins))))
           (x)
           (c (f (r (f treasury_coins))) uniques)
         )
       )
-      (list count total)
+      count
     )
   )
 )

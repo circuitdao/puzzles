@@ -1,9 +1,5 @@
 (
 
-  ;(defconst VAULT_ANN_PREFIX 0x56) ; chr(86) -> "V"
-  (defconst TREASURY_ANN_PREFIX 0x24) ; -> "$"
-  (defconst BYC_ANN_PREFIX 0x42) ; chr(66) -> "B"
-
   (defun-inline available-to-mint (collateral debt liquidation_ratio xch_price)
     (- (/ (/ (* collateral xch_price 1000) liquidation_ratio) MOJOS) debt)
   )
@@ -13,15 +9,18 @@
     (/ (* MINUS_ONE (* (/ (* MINUS_ONE debt 100) xch_price) liquidation_ratio) MOJOS) 100000)
   )
 
-  (defun-inline discount-principal-for-melt (discounted_principal negative_byc_principal_to_melt cumulative_stability_fee_rate)
-    (- discounted_principal
-      (/
-        (* (* MINUS_ONE negative_byc_principal_to_melt) PRECISION)
-        cumulative_stability_fee_rate
+  (defun-inline calculate-total-fees (undiscounted_principal principal liquidation_penalty_bps)
+    (assign
+      ;undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_df) PRECISION))
+      stability_fees (if (> undiscounted_principal principal)
+        (- undiscounted_principal principal)
+        0
       )
+      debt (+ principal stability_fees)
+      liquidation_penalty (* MINUS_ONE (/ (* MINUS_ONE debt liquidation_penalty_bps) PERCENT_PRECISION))
+      (+ stability_fees liquidation_penalty) ; total fees
     )
   )
-
 
   (defun-inline calculate-fees (byc_amount cumulative_stability_fee_rate discounted_principal principal liquidation_penalty_percent)
     (assign
@@ -47,14 +46,6 @@
     )
   )
 
-
-  (defun-inline calculate-stability-fee-puzzle (CAT_MOD_HASH BYC_TAIL_HASH OFFER_MOD_HASH)
-    (curry_hashes CAT_MOD_HASH
-      (sha256 ONE CAT_MOD_HASH)
-      (sha256 ONE BYC_TAIL_HASH)
-      OFFER_MOD_HASH
-    )
-  )
 
   (defun-inline calculate-byc-coin-id (CAT_MOD_HASH BYC_TAIL_HASH (parent_id amount inner_puzzle_hash))
     (assert

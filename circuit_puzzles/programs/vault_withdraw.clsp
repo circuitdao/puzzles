@@ -3,7 +3,8 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash
       )
     )
     (@ args
@@ -45,7 +46,7 @@
       (> COLLATERAL new_deposited_amount)
       (> new_deposited_amount (- min_collateral_amount 1))
       (list
-        (list TRANSFERRED_FEES new_deposited_amount PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
+        (list new_deposited_amount PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
         (list
           ; assert liquidation ratio
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
