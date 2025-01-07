@@ -59,7 +59,7 @@
       )
       ()
     )
-    (assert_debug
+    (assert
       (size_b32 statutes_inner_puzzle_hash)
       (size_uint32 cooldown_interval)
       (size_b1 new_decision_bool)
