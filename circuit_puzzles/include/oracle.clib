@@ -50,10 +50,19 @@
     )
   )
 
+  (defun above-threshold (prices new_price auto_approve_price_threshold_bps)
+    (if prices
+      (if (> (/ (* (abs (- (f (f prices)) new_price)) 10000) (f (f prices))) auto_approve_price_threshold_bps)
+        ONE
+        (above-threshold (r prices) new_price auto_approve_price_threshold_bps)
+      )
+      ()
+    )
+  )
+
   (defun generate-ann-conditions (
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
-      TEMP_BAN_LIST
       price_announcers
     )
     (if price_announcers
@@ -77,10 +86,13 @@
               )
             )
           )
-          (generate-ann-conditions
-            STATUTES_STRUCT
-            ATOM_ANNOUNCER_MOD_HASH
-            (r price_announcers)
+          (c
+            (list REMARK launcher_id price)
+            (generate-ann-conditions
+              STATUTES_STRUCT
+              ATOM_ANNOUNCER_MOD_HASH
+              (r price_announcers)
+            )
           )
         )
       )
@@ -104,6 +116,15 @@
     (if lst
       (list-length (r lst) (+ count 1))
       count
+    )
+  )
+  (defun not-contains-flat-silent (lst item)
+    (if lst
+      (if (= (f lst) item)
+        ()
+        (not-contains-flat-silent (r lst) item)
+      )
+      1
     )
   )
 

@@ -1,10 +1,11 @@
 (mod (
-      MUTATION_PROGRAM_HASH MOD_HASH
+      (MUTATION_PROGRAM_HASH . OUTLIER_RESOLUTION_PROGRAM_HASH) MOD_HASH
       STATUTES_STRUCT
       PRICE_INFOS
       TEMP_BAN_LIST
+      OUTLIER_INFO
       ; solution
-      oracle_mutation
+      oracle_program_args
       input_announcement_asserts
       . announce_args
      )
@@ -17,20 +18,28 @@
   (include oracle.clib)
 
 
-  (if oracle_mutation
-    (assert (= (sha256tree (f oracle_mutation)) MUTATION_PROGRAM_HASH)
-      (a
-        (f oracle_mutation)
-        (list
-          MOD_HASH STATUTES_STRUCT
-          PRICE_INFOS
-          TEMP_BAN_LIST
-          oracle_mutation
-          input_announcement_asserts
+  (if oracle_program_args
+    (assign
+      oracle_program_hash (sha256tree (f oracle_program_args))
+      (assert
+        (any
+          (= oracle_program_hash MUTATION_PROGRAM_HASH)
+          (= oracle_program_hash OUTLIER_RESOLUTION_PROGRAM_HASH)
+        )
+        (a
+          (f oracle_program_args)
+          (list
+            MOD_HASH
+            STATUTES_STRUCT
+            PRICE_INFOS
+            TEMP_BAN_LIST
+            OUTLIER_INFO
+            oracle_program_args
+            input_announcement_asserts
+          )
         )
       )
     )
-
     ; no updates, just assert and announce
     ; recreate yourself to conserve updates so far
     (verify-announcement-asserts
@@ -47,6 +56,8 @@
               (sha256tree STATUTES_STRUCT)
               (sha256tree PRICE_INFOS)
               (sha256tree TEMP_BAN_LIST)
+              ; oracle can't announce if outlier is not resolved
+              (assert (not OUTLIER_INFO) (sha256 ONE ()))
             )
             ; min singleton amount, force it to be this
             ONE

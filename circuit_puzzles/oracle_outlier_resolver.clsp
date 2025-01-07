@@ -1,0 +1,43 @@
+;; CRT inner puzzle that can resolve outliers in the oracle coin
+;;
+;; When oracle gets a price update that's an outlier, it's paused until outlier is resolved by CRT holders
+;; bidding with this resolver coin. Each coin has a cooldown interval so can't be reused once used for that period.
+;; Holders can override previous decision if they have higher amount of CRTs.
+(mod (INNER_PUZZLE decision new_temp_ban_list oracle_coin_id cooldown_interval amount inner_solution)
+
+  (include condition_codes.clib)
+
+  (defconstant ONE 1)
+  (defconstant TWO 2)
+  (defconstant THREE 3)
+
+  (defun sha256tree (TREE)
+    (if (l TREE)
+      (sha256 TWO (sha256tree (f TREE)) (sha256tree (r TREE)))
+      (sha256 ONE TREE)
+    )
+  )
+
+  (c
+    ; ensure this coin was created before the cooldown interval
+    (list ASSERT_SECONDS_RELATIVE cooldown_interval)
+    (c
+      ; ensure the amount is correct
+      (list ASSERT_MY_AMOUNT amount)
+      (if oracle_coin_id
+        ; confirm this coin was spent with correct params
+        (c
+          (list SEND_MESSAGE
+            0x3f
+            (concat "C" (sha256tree new_temp_ban_list) decision cooldown_interval amount)
+            oracle_coin_id
+          )
+          (a INNER_PUZZLE inner_solution)
+        )
+        ; just run the inner solution if no oracle coin id
+        ; to allow the owner to exit this puzzle or change the inner puzzle
+        (a INNER_PUZZLE inner_solution)
+      )
+    )
+  )
+)

@@ -24,7 +24,7 @@
         PROTOCOL_PREFIX
         (sha256tree
           (c STATUTES_STRUCT
-            (c LAUNCHER_ID (c APPROVED ATOM_VALUE))
+            (c INNER_PUZZLE_HASH (c APPROVED ATOM_VALUE))
           )
         )
       )
