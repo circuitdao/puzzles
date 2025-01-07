@@ -29,7 +29,7 @@
 
   (defun-inline size_b1 (var)
     ; zero or one byte
-    (or (> (strlen var) MINUS_ONE) (> TWO (strlen var)))
+    (all (> (strlen var) MINUS_ONE) (> TWO (strlen var)))
   )
 
   (defun and_ (CLAUSES)

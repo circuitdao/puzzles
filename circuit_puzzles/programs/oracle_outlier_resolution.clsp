@@ -81,6 +81,7 @@
         )
         ; enforce correct interval to use when cooling down after coin is created for making outlier resolutions
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_PUZZLE_COOLDOWN_INTERVAL cooldown_interval)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_APPROVAL_INTERVAL outlier_approval_interval)
         (list
           CREATE_COIN
           (curry_hashes MOD_HASH

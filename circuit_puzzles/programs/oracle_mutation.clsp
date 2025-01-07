@@ -119,6 +119,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_TEMP_BAN_INTERVAL temp_ban_interval)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_APPROVAL_INTERVAL outlier_approval_interval)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_AUTO_APPROVE_PRICE_THRESHOLD_BPS auto_approve_price_threshold_bps)
         (if next_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
             (sha256tree (c next_price (c next_price_updated (c current_timestamp price_delay))))
