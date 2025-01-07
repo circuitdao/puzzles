@@ -61,7 +61,7 @@
     (price_to_apply temp_ban_list_to_apply outlier_info) (if OUTLIER_INFO
       ; outlier is set, block all price mutations, only price resolver can be used
       (x)
-      (if (above-threshold cut_price_infos mean_price auto_approve_price_threshold_bps)
+      (if (or (not cut_price_infos) (above-threshold cut_price_infos mean_price auto_approve_price_threshold_bps))
         ; we have a price outlier, set the outlier info
         (list 0 () (c () (c mean_price current_timestamp)))
         ; price is within threshold, no change, no outlier info
