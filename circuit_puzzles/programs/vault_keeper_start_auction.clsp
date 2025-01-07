@@ -3,7 +3,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
       )
     )
     (@ args
@@ -14,7 +14,7 @@
         step_price_decrease_factor
         price_info
         starting_price_factor
-        initiator_puzzle_hash
+        initiator_puzzle_hash ; can provide new initiator_puzzle_hash on restart. desirable or not?
         auction_timeout
         minimum_debt_amount
       )
@@ -38,7 +38,7 @@
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
       liquidation_penalty_bps
-    ) (if start_only start_only (assert AUCTION_STATE (list 0 0 1 1 1 0)))
+    ) (if start_only start_only (assert (all AUCTION_STATE (not start_only)) (list 0 0 1 1 1 0)))
     ; start only
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -68,20 +68,20 @@
       start_price
       step_price_decrease_factor
       step_time_interval
-      initiator_puzzle_hash ; TODO: stick with initial initiator puzzle hash or allow change on restart?!
+      initiator_puzzle_hash
       (if AUCTION_STATE
-        (f (r (r (r (r (r AUCTION_STATE))))))  ; initiator_incentive_balance
+        (f (r (r (r (r (r AUCTION_STATE)))))) ; initiator_incentive_balance
         initiator_incentive_balance
       )
       auction_timeout
       minimum_debt_amount
       (if AUCTION_STATE
         (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_treasury_balance
-        (- total_fees initiator_incentive_balance TRANSFERRED_FEES) ; byc_to_treasury_balance
+        (- total_fees initiator_incentive_balance)
       )
       (if AUCTION_STATE
         (f (r (r (r (r (r (r (r (r (r AUCTION_STATE)))))))))) ; byc_to_melt_balance
-        (+ PRINCIPAL TRANSFERRED_FEES) ; byc_to_melt_balance
+        PRINCIPAL
       )
     )
     conditions (list
@@ -96,7 +96,6 @@
     )
     (list
       (list
-        0 ; TRANSFERRED_FEES
         COLLATERAL
         0 ; PRINCIPAL
         auction_state

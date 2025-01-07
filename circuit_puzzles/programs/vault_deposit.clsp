@@ -3,7 +3,8 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash
       )
     )
     (@ args
@@ -15,7 +16,6 @@
   (if (> deposit_amount 0)
     (list
       (list
-        TRANSFERRED_FEES
         (+ deposit_amount COLLATERAL)
         PRINCIPAL
         AUCTION_STATE

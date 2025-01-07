@@ -3,7 +3,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL TRANSFERRED_FEES statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
       )
     )
     (@ args
@@ -15,7 +15,7 @@
 
 
   (list
-    (list TRANSFERRED_FEES COLLATERAL PRINCIPAL AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
+    (list COLLATERAL PRINCIPAL AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
     ; nothing else to assert here, just create a coin with new inner puzzle (target_puzzle_hash)
     (list )
   )
