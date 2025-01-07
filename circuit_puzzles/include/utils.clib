@@ -28,8 +28,27 @@
   )
 
   (defun-inline size_b1 (var)
-    (= (strlen var) ONE)
+    ; zero or one byte
+    (all (> (strlen var) MINUS_ONE) (> TWO (strlen var)))
   )
+
+  (defun and_ (CLAUSES)
+    (if (r CLAUSES)
+      (qq (if (unquote (f CLAUSES)) (unquote (and_ (r CLAUSES))) ()))
+      (f CLAUSES)
+      )
+    )
+
+  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
+
+  (defun or_ (CLAUSES)
+    (if (r CLAUSES) ;; There are more.
+      (qq (if (unquote (f CLAUSES)) (unquote (f CLAUSES)) (unquote (or_ (r CLAUSES)))))
+      (f CLAUSES)
+      )
+    )
+
+  (defmac or CLAUSES (if CLAUSES (or_ CLAUSES) ()))
 
   (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
     (if (> previous_timestamp current_timestamp)
@@ -47,11 +66,9 @@
   (defun validate-conditions-for-invalid-msgs ( (@ conditions ((condition_code . condition_rest) . rest_of_conditions)) coin_id)
     (if conditions
       (if
-        (all
-          (any
-            (= condition_code SEND_MESSAGE)
-            (= condition_code RECEIVE_MESSAGE)
-          )
+        (or
+          (= condition_code SEND_MESSAGE)
+          (= condition_code RECEIVE_MESSAGE)
         )
         (if (= (f (r (r condition_rest))) coin_id)
           (x)
@@ -64,6 +81,7 @@
   )
 
   (defun-inline calculate-coin-id (parent puzzle_hash amount)
+    ; TODO: change for new operator `coinid`
     (assert (size_b32 parent) (size_b32 puzzle_hash) (> amount -1)
       (sha256 parent puzzle_hash amount)
     )

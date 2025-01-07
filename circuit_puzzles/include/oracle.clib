@@ -50,6 +50,16 @@
     )
   )
 
+  (defun above-threshold (prices new_price auto_approve_price_threshold_bps)
+    (if prices
+      (if (> (/ (* (abs (- (f (f prices)) new_price)) 10000) (f (f prices))) auto_approve_price_threshold_bps)
+        ONE
+        (above-threshold (r prices) new_price auto_approve_price_threshold_bps)
+      )
+      ()
+    )
+  )
+
   (defun generate-ann-conditions (
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
@@ -58,10 +68,10 @@
     (if price_announcers
       (assign
         announcer (f price_announcers)
-        ; price_announcers -> ((inner_puzzle_hash_sha256 args_hash price))
-        (inner_puzzle_hash args_hash price) announcer
+        ; price_announcers -> ((launcher_id args_hash price))
+        (launcher_id args_hash price) announcer
         announcer_puzzle_hash (assert
-          (size_b32 inner_puzzle_hash)
+          (size_b32 launcher_id)
           (size_b32 args_hash)
           (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
         )
@@ -72,14 +82,17 @@
               announcer_puzzle_hash
               PROTOCOL_PREFIX
               (sha256tree
-                (c STATUTES_STRUCT (c inner_puzzle_hash (c ONE price))) ; ONE indicates that announcer is approved
+                (c STATUTES_STRUCT (c launcher_id (c ONE price))) ; ONE indicates that announcer is approved
               )
             )
           )
-          (generate-ann-conditions
-            STATUTES_STRUCT
-            ATOM_ANNOUNCER_MOD_HASH
-            (r price_announcers)
+          (c
+            (list REMARK launcher_id price)
+            (generate-ann-conditions
+              STATUTES_STRUCT
+              ATOM_ANNOUNCER_MOD_HASH
+              (r price_announcers)
+            )
           )
         )
       )
@@ -103,6 +116,15 @@
     (if lst
       (list-length (r lst) (+ count 1))
       count
+    )
+  )
+  (defun not-contains-flat-silent (lst item)
+    (if lst
+      (if (= (f lst) item)
+        ()
+        (not-contains-flat-silent (r lst) item)
+      )
+      1
     )
   )
 
@@ -136,7 +158,6 @@
     )
   )
 
-
   (defun-inline endp (L)
     (if L
       (if (r L)
@@ -152,7 +173,6 @@
         (c (_reverse L ()) Z)
         (_split (r Z) (c (f Z) L) (r (r R))))
     )
-
 
   (defun _merge ((@ L ((_ _ L_price) . L_rest)) (@ R ((_ _ R_price) . R_rest)) A)
     (if (any L R)
@@ -170,7 +190,6 @@
     )
   )
 
-
   ; thanks @geoff for the mergesort implementation on https://aggsig.me/mergesort.html
   (defun mergesort (Z)
     (if Z
@@ -185,12 +204,12 @@
     )
   )
 
-
   (defun-inline get-median-index (length)
     ; if odd, we return the middle value
     ; if even, we return the one smaller since prices are sorted in descending order
     (/ length TWO)
   )
+
   (defun get-price (prices index curr_index)
     (if prices
       (if (= index curr_index)

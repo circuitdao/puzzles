@@ -1,0 +1,102 @@
+(mod (
+      OUTLIER_RESOLVER_MOD_HASH ; next 3 hashes are curried into the operation, not required by oracle puzzle to keep
+      CAT_MOD_HASH
+      CRT_TAIL_HASH
+      ; oracle state
+      MOD_HASH
+      STATUTES_STRUCT
+      PRICES
+      TEMP_BAN_LIST  ; (expiry_timestamp . list of banned launcher_id announcers)
+      OUTLIER_INFO  ; ( (decision_bool amount decision_timestamp) . (price_timestamp . price))
+      ; solution
+      new_outlier_resolution  ; (temp_ban_list my_coin_id outlier_resolution_coin_id drop/approve conditions amount)
+      input_announcement_asserts
+      )
+  (include *standard-cl-23.1*)
+  (include curry.clib)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include condition_codes.clib)
+  (include oracle.clib)
+
+  (assign
+    (program_mod statutes_inner_puzzle_hash new_temp_ban_list cooldown_interval outlier_approval_interval
+     outlier_resolver_parent_id inner_puzzle new_decision_bool new_amount current_timestamp) new_outlier_resolution
+    (decision_timestamp current_decision_bool prev_temp_ban_list current_amount) (if (f OUTLIER_INFO) (f OUTLIER_INFO) (list 0 0 () 0))
+    matured (all decision_timestamp (> (- current_timestamp decision_timestamp) outlier_approval_interval))
+    (price_to_apply temp_ban_list outlier_info)
+      ; we have a decision, check if it's time to resolve it
+      (if matured
+        ; decision has passed approval interval, apply it
+        (list (r OUTLIER_INFO) (r (f (r (r (f OUTLIER_INFO))))) ())
+        ; still can override, but only if parent is set
+        (assert outlier_resolver_parent_id
+          (list
+            ()  ; we're setting new decision, no price to apply yet
+            TEMP_BAN_LIST  ; using old temp ban list
+            ; we set a new outline decision info, but leave the price data
+            (c (list current_timestamp new_decision_bool (c current_timestamp new_temp_ban_list) new_amount) (r OUTLIER_INFO))
+          )
+        )
+      )
+    prices (if price_to_apply
+      (c price_to_apply PRICES)
+      PRICES
+    )
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+
+    outlier_resolver_coin_id (if (all (not matured) outlier_resolver_parent_id)
+      (calculate-coin-id
+        outlier_resolver_parent_id
+        (curry_hashes CAT_MOD_HASH
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE CRT_TAIL_HASH)
+          (curry_hashes OUTLIER_RESOLVER_MOD_HASH
+            (sha256tree inner_puzzle)
+          )
+        )
+        new_amount
+      )
+      ()
+    )
+    (assert
+      (size_b32 statutes_inner_puzzle_hash)
+      (size_uint32 cooldown_interval)
+      (size_b1 new_decision_bool)
+      ; new resolution needs to have higher amount of CRTs
+      (any (not outlier_resolver_coin_id) (> new_amount current_amount))
+      (> current_timestamp decision_timestamp)
+      (li
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+        ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
+        ; within a boundary of last_block > current_timestamp - 1 block < next block
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        ; receive message from CRT coin with custom puzzle, if parent coin is set
+        (if outlier_resolver_coin_id
+          (list RECEIVE_MESSAGE 0x3f
+            (concat PROTOCOL_PREFIX (sha256tree new_temp_ban_list) new_decision_bool cooldown_interval new_amount)
+            outlier_resolver_coin_id
+          )
+          (list REMARK)
+        )
+        ; enforce correct interval to use when cooling down after coin is created for making outlier resolutions
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_PUZZLE_COOLDOWN_INTERVAL cooldown_interval)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_APPROVAL_INTERVAL outlier_approval_interval)
+        (list
+          CREATE_COIN
+          (curry_hashes MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256tree prices)
+            (sha256tree temp_ban_list)
+            (sha256tree outlier_info)
+          )
+          ; min singleton amount, force it to be ONE
+          ONE
+        )
+        (list REMARK prices () temp_ban_list outlier_info)
+        &rest (verify-announcement-asserts input_announcement_asserts ())
+      )
+    )
+  )
+)
