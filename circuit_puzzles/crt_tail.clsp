@@ -4,7 +4,9 @@
 ; CRT tokens can be melted in surplus auctions.
 (mod (
       GENESIS_ID STATUTES_STRUCT
-      Truths parent_is_cat lineage_proof delta
+      Truths parent_is_cat
+      lineage_proof ; TODO: this never used?
+      delta
       inner_conditions
       solution
      )

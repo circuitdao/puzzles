@@ -28,7 +28,13 @@
       ; we have a decision, check if it's time to resolve it
       (if matured
         ; decision has passed approval interval, apply it
-        (list (r OUTLIER_INFO) (r (f (r (r (f OUTLIER_INFO))))) ())
+        (list
+          ; add price to apply if decision is true, else skip
+          (if current_decision_bool (r OUTLIER_INFO) ())
+          ; add current timestamp to use as expiry for temp ban list
+          (c current_timestamp (r (f (r (r (f OUTLIER_INFO))))))
+          ()
+        )
         ; still can override, but only if parent is set
         (assert outlier_resolver_parent_id
           (list
@@ -39,8 +45,9 @@
           )
         )
       )
+    ; prices are sorted by timestamp, oldest first
     prices (if price_to_apply
-      (c price_to_apply PRICES)
+      (merge-lists PRICES (list price_to_apply))
       PRICES
     )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)

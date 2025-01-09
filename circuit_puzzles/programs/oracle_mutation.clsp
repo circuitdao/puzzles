@@ -16,7 +16,7 @@
           temp_ban_interval
           price_delay
           current_timestamp
-          ; price_announcers -> ((inner_puzzle_hash args_hash price))
+          ; price_announcers -> ((launcher_id args_hash price))
           price_announcers_unfiltered
         )
       )
@@ -30,15 +30,7 @@
   (include utils.clib)
   (include oracle.clib)
 
-  (defun filter-banned (price_announcers banned)
-    (if price_announcers
-      (if (not-contains-flat-silent banned (f (f price_announcers)))
-        (c (f price_announcers) (filter-banned (r price_announcers) banned))
-        (filter-banned (r price_announcers) banned)
-      )
-      ()
-    )
-  )
+
 
   (assign
     expired_ban_list (if TEMP_BAN_LIST (> (- current_timestamp (f TEMP_BAN_LIST)) temp_ban_interval) 0)
