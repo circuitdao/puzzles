@@ -77,14 +77,14 @@
                       start_price
                       step_price_decrease_factor
                     )
-                    PERCENT_PRECISION
+                    PRECISION_BPS
                   )
                   ; current price
                   (/ (- current_timestamp auction_start_time) step_time_interval)
                 )
                 start_price
               )
-              PERCENT_PRECISION)
+              PRECISION_BPS)
             )
             10
           )

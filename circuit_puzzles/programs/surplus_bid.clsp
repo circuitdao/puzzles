@@ -38,7 +38,7 @@
       ; TTL for bid hasn't expired yet
       (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
       ; bid_crt_amount is min_bid_increase_bps higher than my_amount
-      (> bid_crt_amount (/ (* my_amount (+ PERCENT_PRECISION min_bid_increase_bps)) PERCENT_PRECISION))
+      (> bid_crt_amount (/ (* my_amount (+ PRECISION_BPS min_bid_increase_bps)) PRECISION_BPS))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
         ; recreate with new top bid and new timestamp
