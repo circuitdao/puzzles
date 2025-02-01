@@ -46,8 +46,8 @@
       input_announcement_asserts
       (assign
         (current_timestamp price_delay) announce_args
-        delayed_timestamp (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
-        (last_matured_price_info . _) (cut-price-infos PRICE_INFOS delayed_timestamp ())
+        cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
+        (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
         (oldest_price . oldest_updated) (if last_matured_price_info last_matured_price_info (c () ()))
         (list
           (list CREATE_COIN

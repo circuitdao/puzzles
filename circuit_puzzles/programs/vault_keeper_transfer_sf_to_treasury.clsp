@@ -35,7 +35,7 @@
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
-      (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
+      (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; LATER: remove 3 tx block time factor to not unnecessarily penalize vault owner
       (r price_info)
     )
     undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))

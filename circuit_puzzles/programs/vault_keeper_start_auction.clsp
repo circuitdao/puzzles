@@ -38,7 +38,7 @@
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
       liquidation_penalty_bps
-    ) (if start_only start_only (assert (all AUCTION_STATE (not start_only)) (list 0 0 1 1 1 0)))
+    ) (if start_only start_only (assert (all AUCTION_STATE (not start_only)) (list 0 0 1 1 1 0))) ; if-statement should be (if start_only (assert (not AUCTION_STATE) start_only) (assert AUCTION_STATE (list 0 0 1 1 1 0)))
     ; start only
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
