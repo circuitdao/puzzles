@@ -8,6 +8,7 @@
   (defconst PRECISION_BPS 10000)
   (defconst PRICE_PRECISION 100)
   (defconst MAX_TX_BLOCK_TIME 120)
+  (defconst PRICE_PRECISION 100)
   (defconst PRECISION 10000000000)
   (defconst ONE_MINUTE 60)
   (defconst b32 32)
