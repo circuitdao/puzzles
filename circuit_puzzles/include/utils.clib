@@ -7,6 +7,7 @@
   (defconst PERCENT_PRECISION 10000) ; LATER: delete once using PRECISION_BPS everywhere
   (defconst PRECISION_BPS 10000)
   (defconst MAX_TX_BLOCK_TIME 120)
+  (defconst PRICE_PRECISION 100)
   (defconst PRECISION 10000000000)
   (defconst ONE_MINUTE 60)
   (defconst b32 32)

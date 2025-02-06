@@ -9,7 +9,7 @@
     )
     (@ args
       (
-        tx_current_timestamp
+        current_timestamp
         byc_bid_amount
         byc_melting_coin_info
         byc_treasury_coin_info
@@ -32,7 +32,6 @@
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
-    current_timestamp (+ tx_current_timestamp (* 3 MAX_TX_BLOCK_TIME))
     ; parse auction state as we'll need to verify it's still running and hasn't timed out
     (
       auction_start_time
@@ -62,36 +61,26 @@
     ; leftover debt
     debt (+ initiator_incentive_balance byc_to_treasury_balance byc_to_melt_balance)
     leftover_debt (- debt byc_bid_amount)
-    ; use all byc provided from keeper to get a piece of collateral
+    ; use all byc provided by keeper to get a piece of collateral
     bid_xch_collateral_amount_pre (/
-      (*
-        (/
-          (* byc_bid_amount PRECISION)
+      (/
+        (* byc_bid_amount PERCENT_PRECISION PRICE_PRECISION MOJOS)
+        (-
+          (* start_price PERCENT_PRECISION)
           (*
-            (- start_price
+            (*
+              start_price
+              step_price_decrease_factor
+            ) ; price decrease per step
             (/
-              (*
-                (* ; current price factor
-                  (/
-                    (*
-                      start_price
-                      step_price_decrease_factor
-                    )
-                    PERCENT_PRECISION
-                  )
-                  ; current price
-                  (/ (- current_timestamp auction_start_time) step_time_interval)
-                )
-                start_price
-              )
-              PERCENT_PRECISION)
-            )
-            10
-          )
-        )
-        MOJOS)
-      PRECISION
-    )
+              (- current_timestamp auction_start_time)
+              step_time_interval
+            ) ; no. (completed) steps
+          ) ; total price decrease
+        ) ; auction price
+      )
+    1000
+    ) ; amount of collateral (in mojos)
     bid_xch_collateral_amount (
       if (> bid_xch_collateral_amount_pre COLLATERAL)
         COLLATERAL
@@ -159,7 +148,6 @@
       (any (> byc_to_treasury min_treasury_delta) (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0))
       (list 
         (list
-          ;0 ; leftover_transferred_fees
           leftover_collateral
           0 ; leftover_principal
           auction_state
@@ -168,8 +156,8 @@
         )
         (assign
           conditions (list
-            (list ASSERT_SECONDS_ABSOLUTE (- tx_current_timestamp MAX_TX_BLOCK_TIME))
-            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ tx_current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
             ; validate coin id
