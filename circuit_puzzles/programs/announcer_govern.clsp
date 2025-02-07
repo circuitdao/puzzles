@@ -16,7 +16,7 @@
   (assign
     toggle_activation (assert (any (= input_toggle_activation 0) (= input_toggle_activation 1)) input_toggle_activation)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    min_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor) PRECISION) PERCENT_PRECISION))
+    min_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor) PRECISION) PRECISION_BPS))
     operation_conditions (recreate-myself-condition MOD_HASH
       STATUTES_STRUCT
       LAUNCHER_ID

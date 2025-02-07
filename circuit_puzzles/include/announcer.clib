@@ -2,7 +2,7 @@
   
   (include prefixes.clib)
 
-  (defconst ANN_PREFIX 'A') ; used to receive custom messages
+  (defconst ANN_PREFIX 'A') ; used to receive custom messages ; LATER: this constant is probably obsolete and can be deleted
 
   (defun-inline recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
                                     deposit delay atom_value min_deposit cooldown_start last_penalty_interval timestamp_expires input_conditions)

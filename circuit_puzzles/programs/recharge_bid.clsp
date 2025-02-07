@@ -38,7 +38,7 @@
       (> crt_price min_crt_price)
       (any
         (= last_crt_price 0)
-        (> crt_price (/ (* last_crt_price (+ PERCENT_PRECISION min_bid_increase_bps)) PERCENT_PRECISION))
+        (> crt_price (/ (* last_crt_price (+ PRECISION_BPS min_bid_increase_bps)) PRECISION_BPS))
       )
       ; bids can't be smaller than this
       (> byc_bid_amount minimum_byc_bid_amount)

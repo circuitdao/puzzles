@@ -4,8 +4,9 @@
   (defconst MINUS_ONE -1)
   (defconst TWO 2)
   (defconst MOJOS 1000000000000)
-  (defconst PERCENT_PRECISION 10000) ; LATER: delete once using PRECISION_BPS everywhere
+  (defconst PRECISION_PCT 100)
   (defconst PRECISION_BPS 10000)
+  (defconst PRICE_PRECISION 100)
   (defconst MAX_TX_BLOCK_TIME 120)
   (defconst PRICE_PRECISION 100)
   (defconst PRECISION 10000000000)

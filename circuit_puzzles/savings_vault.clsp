@@ -2,11 +2,11 @@
 ;       collateral vaults and new treasury coin puzzle
 (mod (CAT_MOD_HASH
       MOD_HASH
-      BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_DEPOSIT INNER_PUZZLE
+      BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
-      my_coin_id
+      my_coin_id ; LATER: not needed. remove
       statutes_cumulative_interest_df current_timestamp current_interest_df price_info min_treasury_delta
       inner_solution
       .
@@ -83,7 +83,7 @@
     )
     interest_amount (if treasury_coin_info
       (calculate-interest
-        DISCOUNTED_DEPOSIT
+        DISCOUNTED_BALANCE
         current_amount
         (calculate-cumulative-discount-factor ; cumulative withdrawal interest
           statutes_cumulative_interest_df
@@ -96,10 +96,10 @@
     )
     new_amount (f (r create_coin_body))
     delta_amount (- new_amount current_amount)
-    new_discounted_deposit (if treasury_coin_info
+    new_discounted_balance (if treasury_coin_info
       ; discount with interest
-      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
-      (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_DEPOSIT)
+      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_BALANCE)
+      (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_BALANCE)
     )
     
     treasury_coin_id (if treasury_coin_info
@@ -175,7 +175,7 @@
     (assert
       (> interest_amount MINUS_ONE)
       (size_b32 inner_puzzle_hash)
-      (c (list REMARK PROTOCOL_PREFIX new_discounted_deposit new_amount inner_puzzle_hash memos)
+      (c (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount inner_puzzle_hash memos)
         (c
           (list ASSERT_MY_COIN_ID my_coin_id)
           (c
@@ -197,7 +197,7 @@
                               (sha256 ONE MOD_HASH)
                               (sha256 ONE BYC_TAIL_HASH)
                               statutes_struct_hash
-                              (sha256 ONE new_discounted_deposit)
+                              (sha256 ONE new_discounted_balance)
                               inner_puzzle_hash
                             )
                             (c new_amount

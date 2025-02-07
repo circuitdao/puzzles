@@ -1,5 +1,5 @@
-; mutation of announcers curried values by owner
-; can mutate the atom value only, or also deactivate itself or topup deposit
+; owner operation
+; updates atom value of the announcer. can optionally topup or reduce deposit
 (mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions

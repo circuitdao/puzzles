@@ -21,7 +21,7 @@
           DEPOSIT
           penalty_factor_per_interval
         )
-        PERCENT_PRECISION
+        PRECISION_BPS
       )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (assert
