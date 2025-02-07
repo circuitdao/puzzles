@@ -64,9 +64,9 @@
     ; use all byc provided by keeper to get a piece of collateral
     bid_xch_collateral_amount_pre (/
       (/
-        (* byc_bid_amount PERCENT_PRECISION PRICE_PRECISION MOJOS)
+        (* byc_bid_amount PRECISION_BPS PRICE_PRECISION MOJOS)
         (-
-          (* start_price PERCENT_PRECISION)
+          (* start_price PRECISION_BPS)
           (*
             (*
               start_price

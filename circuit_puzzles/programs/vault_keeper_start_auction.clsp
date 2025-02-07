@@ -62,7 +62,7 @@
     )
     ; start and restart
     start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
-    prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
+    ;prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
     auction_state (list
       auction_start_time
       start_price
@@ -125,7 +125,7 @@
         ; restart auction
         (assert
           ; auction must have timed out
-          (> (- auction_start_time prev_auction_start_time) auction_timeout)
+          (> (- auction_start_time (f AUCTION_STATE)) auction_timeout)
           ; there should be collateral to auction off, o/w it's bad debt
           (> COLLATERAL 0)
           conditions
