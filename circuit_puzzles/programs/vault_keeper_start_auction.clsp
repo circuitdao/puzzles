@@ -14,7 +14,7 @@
         step_price_decrease_factor
         price_info
         starting_price_factor
-        initiator_puzzle_hash ; can provide new initiator_puzzle_hash on restart. desirable or not?
+        initiator_puzzle_hash ; LATER: can provide new initiator_puzzle_hash on restart. desirable or not?
         auction_timeout
         minimum_debt_amount
       )
@@ -38,7 +38,7 @@
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
       liquidation_penalty_bps
-    ) (if start_only start_only (assert (all AUCTION_STATE (not start_only)) (list 0 0 1 1 1 0))) ; if-statement should be (if start_only (assert (not AUCTION_STATE) start_only) (assert AUCTION_STATE (list 0 0 1 1 1 0)))
+    ) (if start_only (assert (not AUCTION_STATE) start_only) (assert AUCTION_STATE (list 0 0 1 1 1 0)))
     ; start only
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -62,7 +62,6 @@
     )
     ; start and restart
     start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
-    ;prev_auction_start_time (if AUCTION_STATE (f AUCTION_STATE) auction_start_time)
     auction_state (list
       auction_start_time
       start_price
