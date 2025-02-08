@@ -64,8 +64,7 @@
         (size_uint32 price)
         ; confirm oracle price info to update statutes price info
         (list
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+          ; no need to check current_timestamp as this is already done by oracle
           (list ASSERT_PUZZLE_ANNOUNCEMENT
             (sha256
               ; generate oracle singleton puzzle hash
