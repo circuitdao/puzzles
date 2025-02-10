@@ -25,7 +25,6 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include surplus_auction.clib)
 
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
