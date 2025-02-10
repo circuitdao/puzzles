@@ -3,8 +3,12 @@
 (mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (current_timestamp statutes_inner_puzzle_hash input_toggle_activation max_disapproval_penalty_factor)
-     )
+      (
+        statutes_inner_puzzle_hash
+        input_toggle_activation
+        max_disapproval_penalty_factor_or_min_deposit ; penalty factor when disapproving, min deposit when approving
+      )
+    )
 
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
@@ -14,14 +18,19 @@
   (include announcer.clib)
 
   (assign
-    toggle_activation (assert (any (= input_toggle_activation 0) (= input_toggle_activation 1)) input_toggle_activation)
+    toggle_activation (assert
+      (any
+        (all (= input_toggle_activation 0) APPROVED)
+        (all (= input_toggle_activation 1) (not APPROVED))
+      )
+      input_toggle_activation
+    )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    min_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor) PRECISION) PRECISION_BPS))
     operation_conditions (recreate-myself-condition MOD_HASH
       STATUTES_STRUCT
       LAUNCHER_ID
       INNER_PUZZLE_HASH
-      input_toggle_activation
+      toggle_activation
       deposit
       DELAY
       ATOM_VALUE
@@ -29,23 +38,39 @@
       COOLDOWN_START
       LAST_PENALTY_INTERVAL
       TIMESTAMP_EXPIRES
-      (if (all (= toggle_activation 0) APPROVED)
-        ; we're disapproving, use deposit for fees, but can't pay more than the penalty
-        (if (all (> DEPOSIT deposit) (> deposit (- min_deposit 1)))
+      (if (= toggle_activation 0)
+        ; we're disapproving. use deposit for fees
+        (assign
+          min_penalized_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor_or_min_deposit) PRECISION) PRECISION_BPS))
+          (assert
+            ; can't deduct more for fees than penalty
+            (all (> (+ DEPOSIT 1) deposit) (> deposit (- min_penalized_deposit 1)))
+            (c
+              (list RESERVE_FEE (- DEPOSIT deposit))
+              (c
+                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS max_disapproval_penalty_factor_or_min_deposit)
+                input_conditions
+              )
+            )
+          )
+        )
+        ; we're approving
+        (assert
+          ; we're not requiring that DELAY <= Statutes max delay or that price is not expired in case an announcer has a
+          ;  technical issue just when governance wants to enact approval. but we always want DEPOSIT and MIN_DEPOSIT
+          ;  to be set properly so that announcer can be penalized
+          (= deposit DEPOSIT) ; can't steal deposit ; NEW
+          ; deposit must be no less than both announcer and statutes min deposit
+          (> deposit (- MIN_DEPOSIT 1)) ; NEW
+          (> MIN_DEPOSIT (- max_disapproval_penalty_factor_or_min_deposit 1)) ; NEW
           (c
-            (list RESERVE_FEE (- DEPOSIT deposit))
+            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT max_disapproval_penalty_factor_or_min_deposit) ; NEW
             input_conditions
           )
-          ; can't pay more than the penalty
-          (x)
         )
-        input_conditions
       )
     )
     (li
-      (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS max_disapproval_penalty_factor)
-      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
       (list RECEIVE_MESSAGE 0x10
         (concat
           PROTOCOL_PREFIX

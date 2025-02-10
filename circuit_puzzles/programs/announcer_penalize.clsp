@@ -2,7 +2,7 @@
 (mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes announcer_min_deposit announcer_max_delay current_timestamp)
+      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit announcer_max_delay current_timestamp)
      )
 
   (include *standard-cl-23.1*)
@@ -30,21 +30,23 @@
       (any
         ; if it's expired, we penalize on expiration time
         (> current_timestamp TIMESTAMP_EXPIRES)
-        ; penalize if announcers deposit is below min
-        (> announcer_min_deposit DEPOSIT)
+        ; penalize if deposit is below announcer's min deposit
+        (> MIN_DEPOSIT DEPOSIT) ; NEW
+        ; penalize if announcer's min deposit is below Statues min deposit
+        (> min_deposit MIN_DEPOSIT) ; NEW: modified from requiring DEPOSIT to be no less than statutes min deposit
         ; penalize if announcers delay is above expected delay
         (> DELAY announcer_max_delay)
       )
       APPROVED
       LAUNCHER_ID
       (> DEPOSIT penalized_deposit)
-      (> penalized_deposit 0)
+      (> penalized_deposit MINUS_ONE)
       (li
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval_in_minutes)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL_BPS penalty_factor_per_interval)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT announcer_min_deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PRICE_TTL announcer_max_delay)
         (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
         &rest

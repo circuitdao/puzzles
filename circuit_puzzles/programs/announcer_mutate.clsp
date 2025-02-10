@@ -24,10 +24,10 @@
   (if (all
         LAUNCHER_ID
         inner_puzzle_hash ; must be owner
-        (any
-          (= MIN_DEPOSIT 0) ; launch
-          (> deposit MIN_DEPOSIT) ; deposit must be more than min deposit to pay for fees
-        )
+        ;(any
+        ;  (= MIN_DEPOSIT 0) ; launch NEW: no longer needed as included in expression below
+        (> deposit (- MIN_DEPOSIT 1)) ; deposit must be no less than announcer min deposit to pay for fees and penalties
+        ;)
       )
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
