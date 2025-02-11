@@ -21,6 +21,19 @@
     )
   )
 
+  (defun filter-banned (price_announcers banned)
+    (if banned
+      (if price_announcers
+        (if (not-contains-flat-silent banned (f (f price_announcers)))
+          (c (f price_announcers) (filter-banned (r price_announcers) banned))
+          (filter-banned (r price_announcers) banned)
+        )
+        ()
+      )
+      price_announcers
+    )
+  )
+
   (defun verify-announcement-asserts (input_announcement_asserts conditions)
     (if input_announcement_asserts
       (if
