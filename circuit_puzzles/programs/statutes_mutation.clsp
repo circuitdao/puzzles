@@ -18,10 +18,7 @@
   (defconst CUSTOM_CONDITIONS_MUTATION_INDEX -1)
 
   ; filter custom conditions
-  ; fails on:
-  ; - CREATE_COIN
-  ; - protocol conditions, unless
-  ;     condition is a SEND_MESSAGE condition with CUSTOM_CONDITION_PREFIX
+  ; fails on CREATE_COIN and protocol conditions
   ; all other conditions are allowed
   (defun filter-custom-conditions (
     (@ conditions
@@ -43,10 +40,7 @@
           )
           (if (= condition_code SEND_MESSAGE)
             (assert
-              (any
-                (is-valid-msg-cond condition_body)
-                (is-custom-msg-cond condition_body)
-              )
+              (is-valid-msg-cond condition_body)
               (filter-custom-conditions rest (c condition filtered_conditions))
             )
             (if (any (= condition_code RECEIVE_MESSAGE))
