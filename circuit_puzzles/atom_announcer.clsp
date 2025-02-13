@@ -80,7 +80,7 @@
             (= DEPOSIT 0)
             (= DELAY 0)
             (= ATOM_VALUE 0)
-            (= MIN_DEPOSIT 0) ; NEW
+            (= MIN_DEPOSIT 0)
             (= COOLDOWN_START 0)
             (= TIMESTAMP_EXPIRES 0)
             (= LAST_PENALTY_INTERVAL 0)

@@ -20,7 +20,7 @@
   (include announcer.clib)
 
   (if args
-    ; we configure the announcer
+    ; configure the announcer
     (assign
       (
         current_timestamp
@@ -89,7 +89,7 @@
         ; must be owner
         inner_puzzle_hash
         ; must be higher than the minimum deposit statute for announcer to have stake in announcing
-        (> deposit (- new_min_deposit 1)) ; NEW: greater then or equal instead of greater than
+        (> deposit (- new_min_deposit 1))
         ; must be lower or equal than the maximum delay statute to enforce timely announcements
         (> (+ max_delay 1) new_delay)
         (li
@@ -100,8 +100,8 @@
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           &rest
-          ; NEW: only enforce new MIN_DEPOSIT >= Statute min deposit if approved. this allows announcer to be run with no deposit when not approved.
-          ;  we explicitly allow new MIN_DEPOSIT > Statute min deposit so that announcers can increase their MIN_DEPOSIT in advance of the Statute increasing
+          ; only enforce new MIN_DEPOSIT >= Statute min deposit if approved. this allows announcer to be run with no deposit when not approved.
+          ; we explicitly allow new MIN_DEPOSIT > Statute min deposit so that announcers can increase their MIN_DEPOSIT in advance of the Statute increasing
           (if approved
             (assert
               (> new_min_deposit (- min_deposit 1))
@@ -119,7 +119,7 @@
         )
       )
     )
-    ; we are exiting announcer layer
+    ; exit announcer layer
     (assert
       (not APPROVED) ; can't exit approved announcer
       ; melting into normal XCH coin

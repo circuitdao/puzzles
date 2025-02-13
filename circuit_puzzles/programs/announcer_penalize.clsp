@@ -28,13 +28,13 @@
       ; penalize once per interval
       (> current_penalty_interval LAST_PENALTY_INTERVAL)
       (any
-        ; if it's expired, we penalize on expiration time
+        ; penalize if expired
         (> current_timestamp TIMESTAMP_EXPIRES)
-        ; penalize if deposit is below announcer's min deposit
-        (> MIN_DEPOSIT DEPOSIT) ; NEW
-        ; penalize if announcer's min deposit is below Statues min deposit
-        (> min_deposit MIN_DEPOSIT) ; NEW: modified from requiring DEPOSIT to be no less than statutes min deposit
-        ; penalize if announcers delay is above expected delay
+        ; penalize if deposit is less than announcer's min deposit
+        (> MIN_DEPOSIT DEPOSIT)
+        ; penalize if announcer's min deposit is less than Statues min deposit
+        (> min_deposit MIN_DEPOSIT)
+        ; penalize if announcer's delay is above expected delay
         (> DELAY announcer_max_delay)
       )
       APPROVED

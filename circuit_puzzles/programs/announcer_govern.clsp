@@ -59,12 +59,12 @@
           ; we're not requiring that DELAY <= Statutes max delay or that price is not expired in case an announcer has a
           ;  technical issue just when governance wants to enact approval. but we always want DEPOSIT and MIN_DEPOSIT
           ;  to be set properly so that announcer can be penalized
-          (= deposit DEPOSIT) ; can't steal deposit ; NEW
+          (= deposit DEPOSIT) ; can't steal deposit
           ; deposit must be no less than both announcer and statutes min deposit
-          (> deposit (- MIN_DEPOSIT 1)) ; NEW
-          (> MIN_DEPOSIT (- max_disapproval_penalty_factor_or_min_deposit 1)) ; NEW
+          (> deposit (- MIN_DEPOSIT 1))
+          (> MIN_DEPOSIT (- max_disapproval_penalty_factor_or_min_deposit 1))
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT max_disapproval_penalty_factor_or_min_deposit) ; NEW
+            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT max_disapproval_penalty_factor_or_min_deposit)
             input_conditions
           )
         )
