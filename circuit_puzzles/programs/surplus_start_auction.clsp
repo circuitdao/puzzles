@@ -18,7 +18,6 @@
   (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
-  (include surplus_auction.clib)
   (include utils.clib)
 
   ; LATER: can we simplify treasury coins list by using curried_args_hash instead of individual inner puzzle args?
