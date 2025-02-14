@@ -42,7 +42,7 @@
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     sorted_prices (mergesort price_announcers)
     ; get median price, divide length by 2 and add 1 to get the middle when length is even
-    mean_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
+    median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     announcer_conditions (generate-ann-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
@@ -53,11 +53,11 @@
     (price_to_apply outlier_info) (if OUTLIER_INFO
       ; outlier is set, block all price mutations, only price resolver can be used
       (x)
-      (if (or (not cut_price_infos) (above-threshold cut_price_infos mean_price auto_approve_price_threshold_bps))
+      (if (or (not cut_price_infos) (above-threshold cut_price_infos median_price auto_approve_price_threshold_bps))
         ; we have a price outlier, set the outlier info
-        (list 0 (c () (c mean_price current_timestamp)))
+        (list 0 (c () (c median_price current_timestamp)))
         ; price is within threshold, no change, no outlier info
-        (list (c mean_price current_timestamp) ())
+        (list (c median_price current_timestamp) ())
       )
     )
     new_price_infos (if price_to_apply
@@ -69,16 +69,6 @@
     )
     (next_price . next_price_updated) (if matured_price_info matured_price_info (c () ()))
     (last_price . last_price_updated) (last-item PRICES)
-    ;temp_ban_list (if TEMP_BAN_LIST
-    ;  (if expired_ban_list
-    ;    ; ban has expired, reset it
-    ;    ()
-    ;    ; ban is still active
-    ;    TEMP_BAN_LIST
-    ;  )
-    ;  ()
-    ;)
-    ;  new coin will have updated price, increase the counter of updates
     ;###  main expression
     ; check that we haven't updated the price recently OR new price is much higher than previous
     (assert
@@ -89,7 +79,7 @@
       (any
         (> (- current_timestamp last_price_updated) price_updatable_after_seconds)
         (if (> last_price 0)
-          (> (abs (/ (* (- last_price mean_price) PRECISION_BPS) last_price) ) price_updatable_threshold_bps)
+          (> (abs (/ (* (- last_price median_price) PRECISION_BPS) last_price) ) price_updatable_threshold_bps)
           ; no prices in buffer, update now
           ONE
         )
