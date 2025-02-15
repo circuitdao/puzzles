@@ -111,6 +111,22 @@
       (= LAUNCHER_ID 0)
       (= BYC_LOT_AMOUNT 0)
       (li
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (curry_hashes
+              MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE BYC_LOT_AMOUNT)
+              (sha256 ONE BYC_TAIL_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (sha256 ONE ()) ; no bid
+            )
+          )
+        )
         ; recreate itself setting the launcher_id, empty bid and coin amount is 0
         (list
           CREATE_COIN
@@ -122,7 +138,7 @@
             (sha256 ONE lot_amount)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
-            (sha256 ONE ())
+            (sha256 ONE ()) ; no bid
           )
           0
         )

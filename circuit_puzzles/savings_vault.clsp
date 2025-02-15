@@ -1,7 +1,6 @@
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
-(mod (CAT_MOD_HASH
-      MOD_HASH
+(mod (CAT_MOD_HASH MOD_HASH
       BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
@@ -62,14 +61,14 @@
     )
   )
 
-  (defun-inline calculate-interest (discounted_deposit principal cumulative_interest_df)
-    (- (/ (* discounted_deposit cumulative_interest_df) PRECISION) principal)
+  (defun-inline calculate-interest (discounted_balance principal cumulative_interest_df)
+    (- (/ (* discounted_balance cumulative_interest_df) PRECISION) principal)
   )
 
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
-    cumulative_deposit_interest_df (calculate-cumulative-discount-factor
+    cumulative_interest_df (calculate-cumulative-discount-factor
       statutes_cumulative_interest_df
       current_interest_df
       current_timestamp
@@ -97,8 +96,8 @@
     delta_amount (- new_amount current_amount)
     new_discounted_balance (if treasury_coin_info
       ; discount with interest
-      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_deposit_interest_df) DISCOUNTED_BALANCE)
-      (+ (/ (* delta_amount PRECISION) cumulative_deposit_interest_df) DISCOUNTED_BALANCE)
+      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
+      (+ (/ (* delta_amount PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
     )
     
     treasury_coin_id (if treasury_coin_info
@@ -120,26 +119,41 @@
     )
     new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
     pre_final_conditions (if lineage_proof
-      ; lineage_proof -> (parent_id, amount, discounted_deposit, inner_puzzle_hash)
+      ; lineage_proof -> (parent_id, amount, discounted_balance, inner_puzzle_hash)
       (c
-        (list ASSERT_MY_PARENT_ID
-          (calculate-coin-id
-            (f lineage_proof)
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
               (sha256 ONE BYC_TAIL_HASH)
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256 ONE BYC_TAIL_HASH)
-                statutes_struct_hash
-                (sha256 ONE (f (r (r lineage_proof)))) ; discounted deposit
-                (f (r (r (r lineage_proof)))) ; inner puzzle hash
-              )
+              statutes_struct_hash
+              (sha256 ONE DISCOUNTED_BALANCE)
+              (sha256tree INNER_PUZZLE)
             )
-            (f (r lineage_proof)) ; amount
           )
         )
-        conditions
+        (c
+          (list ASSERT_MY_PARENT_ID
+            (calculate-coin-id
+              (f lineage_proof)
+              (curry_hashes CAT_MOD_HASH
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE BYC_TAIL_HASH)
+                (curry_hashes MOD_HASH
+                  (sha256 ONE MOD_HASH)
+                  (sha256 ONE BYC_TAIL_HASH)
+                  statutes_struct_hash
+                  (sha256 ONE (f (r (r lineage_proof)))) ; discounted balance
+                  (f (r (r (r lineage_proof)))) ; inner puzzle hash
+                )
+              )
+              (f (r lineage_proof)) ; amount
+            )
+          )
+          conditions
+        )
       )
       ; this is a launch, verify we're starting with zero amounts
       (c

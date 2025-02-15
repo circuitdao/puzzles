@@ -1,8 +1,6 @@
 (mod (
     CAT_MOD_HASH
-    (MOD_HASH
-     ;CAT_MOD_HASH
-     BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
+    (MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID CRT_LOT_AMOUNT)
     statutes_puzzle_hash lineage_proof announcements
     (
       start_time
@@ -62,6 +60,21 @@
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ start_time (* 5 MAX_TX_BLOCK_TIME)))
         ; start balance should be zero
         (list ASSERT_MY_AMOUNT 0)
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (curry_hashes
+              MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256 ONE BYC_TAIL_HASH)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE START_TIME)
+              (sha256 ONE ()) ; no bids
+            )
+          )
+        )
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
             (f lineage_proof)
