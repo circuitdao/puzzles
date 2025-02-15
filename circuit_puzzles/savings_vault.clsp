@@ -6,7 +6,6 @@
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
-      my_coin_id ; LATER: not needed. remove
       statutes_cumulative_interest_df current_timestamp current_interest_df price_info min_treasury_delta
       inner_solution
       .
@@ -27,12 +26,11 @@
     (if conditions
       (if (= condition_code CREATE_COIN)
         (if found_first_create_coin
-          ; this is not the first create coin encountered. prepend to conditions list
-          (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
+          (x) ; only one create coin condition allowed
           ; this is the first create coin encountered. extract condition body
           (filter-conditions
             rest_of_conditions
-            condition_body ; extract first create coin condition body
+            condition_body ; extract create coin condition body
             filtered_conditions ; don't prepend to conditions list
           )
         )
@@ -57,7 +55,8 @@
           )
         )
       )
-      (assert found_first_create_coin
+      (assert
+        found_first_create_coin ; must create a child coin
         (list found_first_create_coin filtered_conditions)
       )
     )
@@ -175,59 +174,57 @@
     (assert
       (> interest_amount MINUS_ONE)
       (size_b32 inner_puzzle_hash)
-      (c (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount inner_puzzle_hash memos)
+      (c
+        (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount inner_puzzle_hash memos)
         (c
-          (list ASSERT_MY_COIN_ID my_coin_id)
+          (list ASSERT_MY_AMOUNT current_amount)
           (c
-            (list ASSERT_MY_AMOUNT current_amount)
+            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
+              (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
               (c
-                (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
+                (assert-price-info statutes_puzzle_hash price_info)
                 (c
-                  (assert-price-info statutes_puzzle_hash price_info)
+                  (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
                   (c
-                    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+                    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
                     (c
-                      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-                      (c
-                        (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
+                      (c CREATE_COIN ; constructing CREATE_COIN so we can prepend to whatever memos we got
+                        (c
+                          (curry_hashes MOD_HASH ; puzzle hash
+                            (sha256 ONE MOD_HASH)
+                            (sha256 ONE BYC_TAIL_HASH)
+                            statutes_struct_hash
+                            (sha256 ONE new_discounted_balance)
+                            inner_puzzle_hash
+                          )
+                          (c new_amount
+                            memos
+                          )
+                        )
+                      )
+                      (if treasury_coin_id
+                        (assert
+                          ; current treasury coin should have enough amount to cover interest
+                          (> treasury_coin_amount (- interest_amount 1))
+                          ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
+                          (> interest_amount min_treasury_delta)
                           (c
-                            (curry_hashes MOD_HASH ; puzzle hash
-                              (sha256 ONE MOD_HASH)
-                              (sha256 ONE BYC_TAIL_HASH)
-                              statutes_struct_hash
-                              (sha256 ONE new_discounted_balance)
-                              inner_puzzle_hash
-                            )
-                            (c new_amount
-                              memos
-                            )
-                          )
-                        )
-                        (if treasury_coin_id
-                          (assert
-                            ; current treasury coin should have enough amount to cover interest
-                            (> treasury_coin_amount min_treasury_delta)
-                            ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
-                            (> interest_amount min_treasury_delta)
+                            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
                             (c
-                              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
-                              (c
-                                (list SEND_MESSAGE 0x3f
-                                  (concat
-                                    PROTOCOL_PREFIX
-                                    (sha256tree (c (* MINUS_ONE interest_amount) new_treasury_coin_amount))
-                                  )
-                                  treasury_coin_id
+                              (list SEND_MESSAGE 0x3f
+                                (concat
+                                  PROTOCOL_PREFIX
+                                  (sha256tree (c (* MINUS_ONE interest_amount) new_treasury_coin_amount))
                                 )
-                                final_conditions
+                                treasury_coin_id
                               )
+                              final_conditions
                             )
                           )
-                          ; return conditions as in, we assume driver is handling withdrawals and announcements properly
-                          final_conditions
                         )
+                        ; return conditions as is, we assume driver is handling withdrawals and announcements properly
+                        final_conditions
                       )
                     )
                   )

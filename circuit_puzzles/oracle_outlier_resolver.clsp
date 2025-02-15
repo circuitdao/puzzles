@@ -6,6 +6,7 @@
 (mod (INNER_PUZZLE decision new_temp_ban_list oracle_coin_id cooldown_interval amount inner_solution)
 
   (include condition_codes.clib)
+  (include prefixes.clib)
 
   (defconstant ONE 1)
   (defconstant TWO 2)
@@ -18,6 +19,37 @@
     )
   )
 
+  ; true/false for non-protocol/protocol ..._MESSAGE condition
+  (defun-inline is-valid-msg-cond (condition_body)
+    (not
+      (all
+        (= (strlen (f (r condition_body))) 33)
+        (= (substr (f (r condition_body)) 0 1) PROTOCOL_PREFIX)
+      )
+    )
+  )
+
+  ; filter conditions
+  ; fails on protocol SEND_MESSAGE condition
+  ; all other conditions are allowed, even protocol conditions to save costs
+  (defun filter-conditions (
+    conditions ; -> ((condition_code . condition_body) . rest)
+    filtered_conditions
+  )
+    (if conditions
+      (if (= (f (f conditions)) SEND_MESSAGE)
+        (if (is-valid-msg-cond (r (f conditions)))
+          (filter-conditions (r conditions) (c (f conditions) filtered_conditions))
+          (x) ; protocol condition not allowed
+        )
+        ; all other conditions allowed
+        (filter-conditions (r conditions) (c (f conditions) filtered_conditions))
+      )
+      filtered_conditions
+    )
+  )
+
+
   (c
     ; ensure this coin was created before the cooldown interval
     (list ASSERT_SECONDS_RELATIVE cooldown_interval)
@@ -29,15 +61,16 @@
         (c
           (list SEND_MESSAGE
             0x3f
-            (concat "C" (sha256tree new_temp_ban_list) decision cooldown_interval amount)
+            (concat "C" (sha256tree (c new_temp_ban_list (c decision (c cooldown_interval amount)))))
             oracle_coin_id
           )
-          (a INNER_PUZZLE inner_solution)
+          (filter-conditions (a INNER_PUZZLE inner_solution) ())
         )
         ; just run the inner solution if no oracle coin id
         ; to allow the owner to exit this puzzle or change the inner puzzle
-        (a INNER_PUZZLE inner_solution)
+        (filter-conditions (a INNER_PUZZLE inner_solution) ())
       )
     )
   )
+
 )

@@ -35,18 +35,6 @@
     )
   )
 
-  ; true/false for custom ..._MESSAGE condition
-  (defun-inline is-custom-msg-cond (condition_body)
-    (and
-      (l condition_body)
-      (l (r condition_body))
-      (not (l (f (r condition_body))))
-      (= (strlen (f (r condition_body))) 34)
-      ; not checking PROTOCOL_PREFIX to allow for communicating with other protocols
-      (= (substr (f (r condition_body)) 1 2) CUSTOM_CONDITION_PREFIX)
-    )
-  )
-
   ; true/false if non-protocol/protocol remark condition
   (defun-inline is-valid-rmk-cond (condition_body)
     (not
