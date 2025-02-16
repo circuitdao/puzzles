@@ -53,7 +53,7 @@
   (defconst STATUTE_ORACLE_OUTLIER_APPROVAL_INTERVAL 41)
 
 
-  (defconst STATUTES_MAX_IDX 37) ; max Statutes index
+  (defconst STATUTES_MAX_IDX 42) ; max Statutes index
 
   (defconst STATUTE_PREFIX "s")
   (defconst STATUTE_FULL_PREFIX "S")
