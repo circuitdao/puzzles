@@ -2,7 +2,7 @@
 (mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (registry_mod_hash registry_args_hash approval_mod_hashes statutes_inner_puzzle_hash)
+      (registry_mod_hash registry_args_hash approval_mod_hashes statutes_inner_puzzle_hash min_deposit)
      )
 
   (include *standard-cl-23.1*)
@@ -20,7 +20,8 @@
       APPROVED
       (size_b32 registry_mod_hash)
       (l approval_mod_hashes)
-      (> deposit MIN_DEPOSIT)  ; deposit must be more than min deposit to pay for fees
+      (> deposit (- MIN_DEPOSIT 1)) ; must not be penalizable for deposit
+      (> MIN_DEPOSIT (- min_deposit 1)) ; must not be penalizable for min deposit
       (= registry_mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry
       (c
         (list SEND_MESSAGE 0x12
@@ -36,23 +37,27 @@
           )
           announcer_registry_puzhash
         )
-        ; should not be expired
-        (c (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
+        ; must not be expired
+        (c
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
           (c
             (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
-            (recreate-myself-condition MOD_HASH
-              STATUTES_STRUCT
-              LAUNCHER_ID
-              INNER_PUZZLE_HASH
-              APPROVED
-              deposit
-              DELAY
-              ATOM_VALUE
-              MIN_DEPOSIT
-              COOLDOWN_START
-              LAST_PENALTY_INTERVAL
-              TIMESTAMP_EXPIRES
-              input_conditions
+            (c
+              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
+              (recreate-myself-condition MOD_HASH
+                STATUTES_STRUCT
+                LAUNCHER_ID
+                INNER_PUZZLE_HASH
+                APPROVED
+                deposit
+                DELAY
+                ATOM_VALUE
+                MIN_DEPOSIT
+                COOLDOWN_START
+                LAST_PENALTY_INTERVAL
+                TIMESTAMP_EXPIRES
+                input_conditions
+              )
             )
           )
         )

@@ -1,9 +1,0 @@
-(
-
-  (defconst TREASURY_COIN_ANN_PREFIX 0x24) ; -> '$'
-  (defconst ANN_PREFIX '^')
-  (defconst START_AUCTION 1)
-  (defconst BID 2)
-  (defconst WIN 3) ; NOTE: this also melts the coin
-
-)

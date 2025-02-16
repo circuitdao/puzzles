@@ -48,6 +48,9 @@
       (list
         (list new_deposited_amount PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
         (list
+          ; validate current timestamp is within bounds
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           ; assert liquidation ratio
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           ; assert collateral price

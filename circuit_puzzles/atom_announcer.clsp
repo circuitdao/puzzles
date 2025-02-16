@@ -41,7 +41,10 @@
           )
         )
       )
-      (list final_conditions found_create_coin)
+      (list
+        final_conditions
+        (assert found_create_coin found_create_coin) ; must have encountered a CREATE_COIN
+      )
     )
   )
 
@@ -54,11 +57,7 @@
       ; otherwise, solution_or_conditions is conditions
       solution_or_conditions
     )
-    (input_conditions (new_puzzle_hash deposit (operation . args)))
-      (if raw_conditions
-        (restrict-conditions raw_conditions () ())
-        (list () (list INNER_PUZZLE_HASH DEPOSIT (list 0 0)))
-      )
+    (input_conditions (new_puzzle_hash deposit (operation . args))) (restrict-conditions raw_conditions () ())
     (assert
       (any inner_puzzle_hash (all (not inner_puzzle_hash) (= new_puzzle_hash INNER_PUZZLE_HASH)))
       (contains OPERATIONS (sha256tree operation))
@@ -77,18 +76,19 @@
           )
           ; launch
           (assert
+            (= APPROVED 0)
             (= DEPOSIT 0)
             (= DELAY 0)
-            (= COOLDOWN_START 0)
-            (= APPROVED 0)
             (= ATOM_VALUE 0)
+            (= MIN_DEPOSIT 0)
+            (= COOLDOWN_START 0)
             (= TIMESTAMP_EXPIRES 0)
             (= LAST_PENALTY_INTERVAL 0)
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
           )
         )
         (c
-          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct
+          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct ; LATER: needed? operations should enforce this
           (a
             operation
             (list
