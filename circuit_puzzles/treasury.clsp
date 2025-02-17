@@ -165,7 +165,7 @@
               (curry_hashes
                 MOD_HASH
                 (sha256 ONE MOD_HASH)
-                statutes_struct_hash ; (sha256tree STATUTES_STRUCT)
+                statutes_struct_hash
                 (sha256 ONE LAUNCHER_ID)
                 (sha256 ONE RING_PREV_LAUNCHER_ID)
               )
@@ -219,13 +219,12 @@
                     (if (l approver_mod_curried_args_hash)
                       ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
                       (assert
-                        (= (f approver_mod_curried_args_hash) CAT_MOD_HASH)
-                        (size_b32 (f (r (r approver_mod_curried_args_hash))))
                         (size_b32 (f (r approver_mod_curried_args_hash)))
+                        (size_b32 (f approver_mod_curried_args_hash))
                         (curry_hashes CAT_MOD_HASH
                           (sha256 ONE CAT_MOD_HASH)
-                          (sha256 ONE (f (r approver_mod_curried_args_hash)))
-                          (tree_hash_of_apply approver_mod_hash (f (r (r approver_mod_curried_args_hash))))
+                          (sha256 ONE (f approver_mod_curried_args_hash))
+                          (tree_hash_of_apply approver_mod_hash (f (r approver_mod_curried_args_hash)))
                         )
                       )
                       ; ELSE puzzle is not wrapped
