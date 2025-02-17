@@ -48,10 +48,10 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE BYC_LOT_AMOUNT)
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE CRT_TAIL_HASH)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE BYC_LOT_AMOUNT)
               (sha256tree LAST_BID)
             )
           )
@@ -63,10 +63,10 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE BYC_LOT_AMOUNT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
+            (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE BYC_LOT_AMOUNT)
             (sha256tree (c target_puzzle_hash current_timestamp))
           )
           bid_crt_amount

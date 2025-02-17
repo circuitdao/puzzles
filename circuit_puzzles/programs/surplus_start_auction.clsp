@@ -20,7 +20,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
-  ; LATER: can we simplify treasury coins list by using curried_args_hash instead of individual inner puzzle args?
+
   (defun assert-treasury-coins-withdrawal (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
         treasury_coins ; any subset of treasury coins -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
         lot_amount ; amount to withdraw from treasury coins
@@ -107,7 +107,7 @@
       ; to guarantee uniqueness based on the amount we're taking from treasury
       ; ie: there's a limited amount that can be taken from treasury
       ;     and coin_id is unique per spend. Once this coin is filled from treasury
-      ;     it can't be filled again, hence can be used as unique event in this coins history
+      ;     it can't be filled again, hence can be used as unique event in this coin's history
       (= LAUNCHER_ID 0)
       (= BYC_LOT_AMOUNT 0)
       (li
@@ -119,10 +119,10 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE BYC_LOT_AMOUNT)
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE CRT_TAIL_HASH)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE BYC_LOT_AMOUNT)
               (sha256 ONE ()) ; no bid
             )
           )
@@ -134,20 +134,15 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE my_coin_id)
-            (sha256 ONE lot_amount)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
+            (sha256 ONE my_coin_id)
+            (sha256 ONE lot_amount)
             (sha256 ONE ()) ; no bid
           )
           0
         )
-        ; TODO: comment below can be deleted. requiring amount = 0 is not strictly speaking required.
-        ;   it simply stops us from launching multiple Surplus Auctions from same parent coin.
-        ;; it's important to force the amount to zero, since we don't want parent to create multiple coins
-        ;; with the same amount and launcher_id, which would enable sibling coins to mess with the state and takeover
-        ;; the auction and the lot
-        (list ASSERT_MY_AMOUNT 0)
+        (list ASSERT_MY_AMOUNT 0) ; enforece eve amount
         (list ASSERT_MY_COIN_ID my_coin_id)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
         (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
