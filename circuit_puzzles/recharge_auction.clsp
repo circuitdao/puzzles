@@ -1,5 +1,5 @@
 (mod (OPERATIONS MOD_HASH
-    BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
+    STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID START_TIME LAST_BID
     statutes_inner_puzzle_hash lineage_proof operation . op_args
   )
 

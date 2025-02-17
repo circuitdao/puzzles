@@ -53,9 +53,9 @@
           (curry_hashes
             MOD_HASH
             (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
-            (sha256tree STATUTES_STRUCT)
             (sha256 ONE START_TIME)
             (sha256tree (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp))
           )
@@ -85,9 +85,9 @@
             (curry_hashes
               MOD_HASH
               (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
-              (sha256tree STATUTES_STRUCT)
               (sha256 ONE START_TIME)
               (sha256tree LAST_BID)
             )

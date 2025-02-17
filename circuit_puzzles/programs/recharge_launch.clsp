@@ -25,9 +25,9 @@
         (curry_hashes
           MOD_HASH
           (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
           (sha256 ONE BYC_TAIL_HASH)
           (sha256 ONE my_coin_id)
-          (sha256tree STATUTES_STRUCT)
           (sha256 ONE 0)
           (sha256 ONE ())
         )

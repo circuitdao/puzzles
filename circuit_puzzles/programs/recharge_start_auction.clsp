@@ -37,9 +37,9 @@
           (curry_hashes
             MOD_HASH
             (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
-            (sha256tree STATUTES_STRUCT)
             (sha256 ONE start_time)
             (sha256 ONE ())
           )
@@ -67,9 +67,9 @@
             (curry_hashes
               MOD_HASH
               (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
-              (sha256tree STATUTES_STRUCT)
               (sha256 ONE START_TIME)
               (sha256 ONE ()) ; no bids
             )
