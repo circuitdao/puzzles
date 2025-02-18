@@ -8,7 +8,7 @@
     )
     (@ args
       (
-        start_only ; -> (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
+        start_only ; -> () or (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
         auction_start_time
         step_time_interval
         step_price_decrease_factor
@@ -47,7 +47,7 @@
       (+ auction_start_time (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
+    undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
     min_collateral_amount (get-min-collateral-amount
       undiscounted_principal
       liquidation_ratio

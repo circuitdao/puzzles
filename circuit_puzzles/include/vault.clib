@@ -1,5 +1,9 @@
 (
 
+  (defun-inline undiscount-principal (discounted_principal cumulative_stability_fee_df)
+    (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_df) PRECISION))
+  )
+
   (defun-inline available-to-mint (collateral debt liquidation_ratio_pct xch_price)
     (- (/ (/ (* collateral xch_price 1000 PRECISION_PCT) (* liquidation_ratio_pct PRICE_PRECISION)) MOJOS) debt)
   )
@@ -11,7 +15,6 @@
 
   (defun-inline calculate-total-fees (undiscounted_principal principal liquidation_penalty_bps)
     (assign
-      ;undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_df) PRECISION))
       stability_fees (if (> undiscounted_principal principal)
         (- undiscounted_principal principal)
         0
