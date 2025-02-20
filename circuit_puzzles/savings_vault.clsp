@@ -9,7 +9,10 @@
       inner_solution
       .
       (@ treasury_coin_info ((treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
-                             treasury_coin_prev_launcher_id treasury_coin_amount )))
+                             treasury_coin_prev_launcher_id treasury_coin_amount
+                             treasury_withdraw_amount ; NEW. amount of interest to be paid
+                             ))
+      )
      )
 
   (include *standard-cl-23.1*)
@@ -79,27 +82,29 @@
       0 ; found first create coin set to false
       ()
     )
-    interest_amount (if treasury_coin_info
-      (calculate-interest
-        DISCOUNTED_BALANCE
-        current_amount
-        (calculate-cumulative-discount-factor ; cumulative withdrawal interest
-          statutes_cumulative_interest_df
-          current_interest_df
-          (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest
-          (r price_info)
+    (accrued_interest . interest_payment) (if treasury_coin_info
+      (c
+        (calculate-interest
+          DISCOUNTED_BALANCE
+          current_amount
+          (calculate-cumulative-discount-factor ; cumulative withdrawal interest
+            statutes_cumulative_interest_df
+            current_interest_df
+            (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest
+            (r price_info)
+          )
         )
+        treasury_withdraw_amount
       )
-      0
+      (c 0 0)
     )
     new_amount (f (r create_coin_body))
     delta_amount (- new_amount current_amount)
     new_discounted_balance (if treasury_coin_info
       ; discount with interest
-      (+ (/ (* (- delta_amount interest_amount) PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
+      (+ (/ (* (- delta_amount interest_payment) PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
       (+ (/ (* delta_amount PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
     )
-    
     treasury_coin_id (if treasury_coin_info
       (calculate-coin-id
         treasury_coin_parent_id
@@ -117,7 +122,7 @@
       )
       ()
     )
-    new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_amount) 0)
+    new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_payment) 0)
     pre_final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_balance, inner_puzzle_hash)
       (c
@@ -186,7 +191,7 @@
     inner_puzzle_hash (f create_coin_body)
     memos (r (r create_coin_body))
     (assert
-      (> interest_amount MINUS_ONE)
+      (> interest_payment MINUS_ONE)
       (size_b32 inner_puzzle_hash)
       (c
         (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount inner_puzzle_hash memos)
@@ -219,17 +224,19 @@
                       )
                       (if treasury_coin_id
                         (assert
-                          ; current treasury coin should have enough amount to cover interest
-                          (> treasury_coin_amount (- interest_amount 1))
+                          ; treasury must not pay more than accrued interest
+                          (> accrued_interest (- interest_payment 1))
+                          ; current treasury coin should have enough amount to cover withdraw amount
+                          (> treasury_coin_amount (- interest_payment 1))
                           ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
-                          (> interest_amount min_treasury_delta)
+                          (> interest_payment min_treasury_delta)
                           (c
                             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
                             (c
                               (list SEND_MESSAGE 0x3f
                                 (concat
                                   PROTOCOL_PREFIX
-                                  (sha256tree (c (* MINUS_ONE interest_amount) new_treasury_coin_amount))
+                                  (sha256tree (c (* MINUS_ONE interest_payment) new_treasury_coin_amount))
                                 )
                                 treasury_coin_id
                               )
