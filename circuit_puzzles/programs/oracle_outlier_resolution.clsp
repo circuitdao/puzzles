@@ -9,7 +9,7 @@
       TEMP_BAN_LIST  ; (expiry_timestamp . list of banned announcer launcher_ids)
       OUTLIER_INFO  ; ((decision_timestamp decision_bool prev_temp_ban_list amount) . (price . price_timestamp))
       ; solution
-      new_outlier_resolution  ; (temp_ban_list my_coin_id outlier_resolution_coin_id drop/approve conditions amount)
+      new_outlier_resolution  ; see below for definition
       input_announcement_asserts
       )
   (include *standard-cl-23.1*)
@@ -20,9 +20,24 @@
   (include oracle.clib)
 
   (assign
-    (program_mod statutes_inner_puzzle_hash new_temp_ban_list cooldown_interval outlier_approval_interval
-     outlier_resolver_parent_id inner_puzzle new_decision_bool new_amount current_timestamp) new_outlier_resolution
-    (decision_timestamp current_decision_bool prev_temp_ban_list current_amount) (if (f OUTLIER_INFO) (f OUTLIER_INFO) (list 0 0 () 0))
+    (
+      program_mod ; LATER: not used anywhere, delete
+      statutes_inner_puzzle_hash
+      new_temp_ban_list ; excludes timestamp, i.e. announcer launcher ids only
+      cooldown_interval ; LATER: rename to activation_delay?
+      outlier_approval_interval
+      outlier_resolver_parent_id
+      inner_puzzle ; LATER: only puzzle hash needed, and rename to outlier_resolver_inner_puzzle_hash
+      new_decision_bool
+      new_amount
+      current_timestamp
+    ) new_outlier_resolution
+    (
+      decision_timestamp
+      current_decision_bool
+      prev_temp_ban_list
+      current_amount
+    ) (if (f OUTLIER_INFO) (f OUTLIER_INFO) (list 0 0 () 0))
     matured (all decision_timestamp (> (- current_timestamp decision_timestamp) outlier_approval_interval))
     (price_info_to_apply temp_ban_list outlier_info)
       ; we have a decision, check if it's time to resolve it
@@ -31,16 +46,17 @@
         (list
           ; add price to apply if decision is true, else skip
           (if current_decision_bool (r OUTLIER_INFO) ())
-          ; add current timestamp to use as expiry for temp ban list
-          (c current_timestamp (r (f (r (r (f OUTLIER_INFO))))))
-          ()
+          ; temp ban list set in previous decision becomes effective but we update the timestamp
+          (c current_timestamp (r prev_temp_ban_list)) ; (r (f (r (r (f OUTLIER_INFO))))))
+          () ; reset outlier info
         )
         ; vote. still can override, but only if parent is set
         (assert outlier_resolver_parent_id
           (list
-            ()  ; we're setting new decision, no price to apply yet
-            TEMP_BAN_LIST  ; using old temp ban list
-            ; we set a new outline decision info, but leave the price data
+            ()  ; we're setting a new decision, no price to apply yet
+            TEMP_BAN_LIST  ; keep old temp ban list in effect
+            ; we set a new outlier decision info, but leave the price data
+            ; LATER: no need to store the timestamp twice in OUTLIER_INFO. suggestion: drop it from outlier info temp ban list
             (c (list current_timestamp new_decision_bool (c current_timestamp new_temp_ban_list) new_amount) (r OUTLIER_INFO))
           )
         )
