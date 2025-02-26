@@ -3,7 +3,10 @@
       STATUTES_STRUCT LAUNCHER_ID RING_PREV_LAUNCHER_ID
       ; lineage proof is:
       ; -> () at launch. this mod enforces launch to be a change ring ordering operation
-      ; -> (parent_parent_id parent_ring_prev_launcher_id parent_amount) otherwise 
+      ; -> (parent_parent_id parent_ring_prev_launcher_id parent_amount) otherwise
+      ; LATER: should be able to shorten lineage proof to two elements only:
+      ; LATER:   -> (parent_parent_id parent_ring_prev_launcher_id ONE) if ring ordering was changed (ONE to indicate that we're providing parent prev launcher id, not amount
+      ; LATER:   -> (parent_parent_id parent_amount) if balance was changed
       lineage_proof 
       statutes_inner_puzzle_hash current_amount
       input_conditions
@@ -91,14 +94,14 @@
                       (sha256 ONE MOD_HASH)
                       statutes_struct_hash
                       (sha256 ONE LAUNCHER_ID)
-                      (if (any (not (l args)) (not lineage_proof)) ; (= (f lineage_proof) LAUNCHER_ID))
+                      (if (any (not (l args)) (not lineage_proof))
                         ; we're changing ring ordering
                         (sha256 ONE args) ; new ring_prev_launcher_id
                         ; we're spending/announcing
                         (sha256 ONE RING_PREV_LAUNCHER_ID)
                       )
                     )
-    parent_id (if (not lineage_proof) ; (= (f lineage_proof) LAUNCHER_ID)
+    parent_id (if (not lineage_proof)
       ; this is eve spend, assert launcher id
       LAUNCHER_ID
       ; non-eve spend, assert parent id
