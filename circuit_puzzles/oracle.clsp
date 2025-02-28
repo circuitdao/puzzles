@@ -34,7 +34,7 @@
             PRICE_INFOS
             TEMP_BAN_LIST
             OUTLIER_INFO
-            oracle_program_args
+            (r oracle_program_args)
             input_announcement_asserts
           )
         )

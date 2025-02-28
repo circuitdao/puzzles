@@ -12,6 +12,7 @@
       new_outlier_resolution  ; see below for definition
       input_announcement_asserts
       )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include utils.clib)
@@ -21,13 +22,12 @@
 
   (assign
     (
-      program_mod ; LATER: not used anywhere, delete
       statutes_inner_puzzle_hash
       new_temp_ban_list ; excludes timestamp, i.e. announcer launcher ids only
       cooldown_interval ; LATER: rename to activation_delay?
       outlier_approval_interval
       outlier_resolver_parent_id
-      inner_puzzle ; LATER: only puzzle hash needed, and rename to outlier_resolver_inner_puzzle_hash
+      outlier_resolver_inner_puzzle_hash
       new_decision_bool
       new_amount
       current_timestamp
@@ -47,7 +47,7 @@
           ; add price to apply if decision is true, else skip
           (if current_decision_bool (r OUTLIER_INFO) ())
           ; temp ban list set in previous decision becomes effective but we update the timestamp
-          (c current_timestamp (r prev_temp_ban_list)) ; (r (f (r (r (f OUTLIER_INFO))))))
+          (c current_timestamp (r prev_temp_ban_list))
           () ; reset outlier info
         )
         ; vote. still can override, but only if parent is set
@@ -75,7 +75,7 @@
           (sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
           (curry_hashes OUTLIER_RESOLVER_MOD_HASH
-            (sha256tree inner_puzzle)
+            outlier_resolver_inner_puzzle_hash
           )
         )
         new_amount
