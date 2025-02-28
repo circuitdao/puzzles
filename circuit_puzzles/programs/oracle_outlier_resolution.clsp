@@ -7,11 +7,11 @@
       STATUTES_STRUCT
       PRICE_INFOS
       TEMP_BAN_LIST  ; (expiry_timestamp . list of banned announcer launcher_ids)
-      OUTLIER_INFO  ; ((decision_timestamp decision_bool prev_temp_ban_list amount) . (price . price_timestamp))
+      OUTLIER_INFO  ; ((decision_timestamp decision_bool prev_temp_ban_list amount) price . price_timestamp)
       ; solution
       new_outlier_resolution  ; see below for definition
       input_announcement_asserts
-      )
+    )
 
   (include *standard-cl-23.1*)
   (include curry.clib)
@@ -46,8 +46,8 @@
         (list
           ; add price to apply if decision is true, else skip
           (if current_decision_bool (r OUTLIER_INFO) ())
-          ; temp ban list set in previous decision becomes effective but we update the timestamp
-          (c current_timestamp (r prev_temp_ban_list))
+          ; temp ban list set in previous decision becomes effective. we attache current timestamp
+          (c current_timestamp prev_temp_ban_list)
           () ; reset outlier info
         )
         ; vote. still can override, but only if parent is set
@@ -56,8 +56,7 @@
             ()  ; we're setting a new decision, no price to apply yet
             TEMP_BAN_LIST  ; keep old temp ban list in effect
             ; we set a new outlier decision info, but leave the price data
-            ; LATER: no need to store the timestamp twice in OUTLIER_INFO. suggestion: drop it from outlier info temp ban list
-            (c (list current_timestamp new_decision_bool (c current_timestamp new_temp_ban_list) new_amount) (r OUTLIER_INFO))
+            (c (list current_timestamp new_decision_bool new_temp_ban_list new_amount) (r OUTLIER_INFO))
           )
         )
       )
