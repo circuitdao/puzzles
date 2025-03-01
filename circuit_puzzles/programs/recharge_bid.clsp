@@ -1,7 +1,6 @@
 (mod (
     CAT_MOD_HASH
-    (MOD_HASH
-    BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+    (MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
     (
       (byc_bid_amount . crt_bid_amount) ; new bid
@@ -54,9 +53,9 @@
           (curry_hashes
             MOD_HASH
             (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
-            (sha256tree STATUTES_STRUCT)
             (sha256 ONE START_TIME)
             (sha256tree (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp))
           )
@@ -79,6 +78,21 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (curry_hashes
+              MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE BYC_TAIL_HASH)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE START_TIME)
+              (sha256tree LAST_BID)
+            )
+          )
+        )
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
             (f lineage_proof)

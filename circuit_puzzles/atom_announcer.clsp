@@ -89,16 +89,35 @@
         )
         (c
           (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct ; LATER: needed? operations should enforce this
-          (a
-            operation
-            (list
-              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
-              inner_puzzle_hash new_puzzle_hash deposit input_conditions
-              args
+          (c
+            (list ASSERT_MY_PUZZLE_HASH
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE LAUNCHER_ID)
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256 ONE APPROVED)
+                (sha256 ONE DEPOSIT)
+                (sha256 ONE DELAY)
+                (sha256 ONE ATOM_VALUE)
+                (sha256 ONE MIN_DEPOSIT)
+                (sha256 ONE COOLDOWN_START)
+                (sha256 ONE LAST_PENALTY_INTERVAL)
+                (sha256 ONE TIMESTAMP_EXPIRES)
+              )
+            )
+            (a
+              operation
+              (list
+                (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+                inner_puzzle_hash new_puzzle_hash deposit input_conditions
+                args
+              )
             )
           )
         )
       )
     )
   )
+
 )

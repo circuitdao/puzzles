@@ -40,6 +40,22 @@
       (> bid_crt_amount (/ (* my_amount (+ PRECISION_BPS min_bid_increase_bps)) PRECISION_BPS))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (curry_hashes
+              MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE BYC_TAIL_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE BYC_LOT_AMOUNT)
+              (sha256tree LAST_BID)
+            )
+          )
+        )
         ; recreate with new top bid and new timestamp
         (list
           CREATE_COIN
@@ -47,10 +63,10 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE BYC_LOT_AMOUNT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
+            (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE BYC_LOT_AMOUNT)
             (sha256tree (c target_puzzle_hash current_timestamp))
           )
           bid_crt_amount

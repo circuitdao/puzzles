@@ -35,10 +35,10 @@
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
-      (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; LATER: remove 3 tx block time factor to not unnecessarily penalize vault owner
+      current_timestamp
       (r price_info)
     )
-    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
+    undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
     new_treasury_amount (+ fees_to_treasury treasury_amount)
@@ -67,10 +67,8 @@
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins
       (> fees_to_treasury min_treasury_delta)
-      ; only if it hasn't entered liquidation yet
+      ; only if vault is not in liquidation or bad debt
       (not AUCTION_STATE)
-      ; only if there are outstanding loans
-      (> PRINCIPAL 0)
       (list
         (list
           COLLATERAL

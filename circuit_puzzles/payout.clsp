@@ -4,9 +4,7 @@
 ; every spend needs to be approved by the surplus auction coin
 (mod (CAT_MOD_HASH SURPLUS_AUCTION_MOD_HASH
       MOD_HASH
-      ;CAT_MOD_HASH
       CRT_TAIL_HASH
-      ;SURPLUS_AUCTION_MOD_HASH
       SURPLUS_AUCTION_LAUNCHER_ID
       surplus_auction_parent_id
       surplus_auction_curried_args_hash
@@ -47,8 +45,7 @@
         ; recreate ourselves with the surplus BYC lot amount
         (list
           CREATE_COIN
-          (curry_hashes
-            MOD_HASH
+          (curry_hashes MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256 ONE CRT_TAIL_HASH)
             (sha256 ONE SURPLUS_AUCTION_LAUNCHER_ID)

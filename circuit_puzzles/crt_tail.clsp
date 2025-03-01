@@ -67,12 +67,11 @@
             (sha256 ONE crt_tail_hash)
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
-              ;CAT_MOD_HASH_HASH
               statutes_struct_hash
-              (sha256 ONE launcher_id)
-              (sha256 ONE byc_lot_amount)
               (sha256 ONE byc_tail_hash)
               (sha256 ONE crt_tail_hash)
+              (sha256 ONE launcher_id)
+              (sha256 ONE byc_lot_amount)
               (sha256tree last_bid)
             )
         )

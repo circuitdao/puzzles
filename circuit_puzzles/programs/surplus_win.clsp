@@ -8,7 +8,6 @@
     (
       ttl
       current_timestamp
-      my_amount
       crt_tail_puzzle
       payout_coin_parent_id
       payout_mod_hash
@@ -51,8 +50,8 @@
       ; check lot matches
       (= lot_amount BYC_LOT_AMOUNT)
       (li
-        (list ASSERT_MY_AMOUNT my_amount)
         ; no recreate here, we create melting condition
+        ; not asserting my puzzle hash and my amount in present puzzle as crt tail does this on melt
         (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)

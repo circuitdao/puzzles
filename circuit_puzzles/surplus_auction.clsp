@@ -1,10 +1,10 @@
 (mod (OPERATIONS CAT_MOD_HASH
       MOD_HASH
       STATUTES_STRUCT ; to assert statutes
-      LAUNCHER_ID ; to assert uniqueness of launcher_id
-      BYC_LOT_AMOUNT ; amount of BYC in a lot to win
       BYC_TAIL_HASH ; hash of BYC tail puzzle that we're giving out
       CRT_TAIL_HASH ; hash of CRT tail puzzle that we're giving out
+      LAUNCHER_ID ; to assert uniqueness of launcher_id
+      BYC_LOT_AMOUNT ; amount of BYC in a lot to win
       LAST_BID ; holds bid data -> (target_puzzle_hash . timestamp). amount of CRT bid is surplus auction coin amount
       statutes_inner_puzzle_hash
       lineage_proof ; -> (parent_id launcher_id amount last_bid)

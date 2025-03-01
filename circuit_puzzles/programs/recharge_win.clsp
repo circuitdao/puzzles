@@ -1,7 +1,6 @@
 (mod (
     CAT_MOD_HASH
     (MOD_HASH
-    ;CAT_MOD_HASH
     BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
     (
@@ -41,9 +40,9 @@
           (curry_hashes
             MOD_HASH
             (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
-            (sha256tree STATUTES_STRUCT)
             (sha256 ONE 0)
             (sha256 ONE ())
           )
@@ -73,6 +72,21 @@
             )
           )
           funding_coin_id
+        )
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (curry_hashes
+              MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE BYC_TAIL_HASH)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE START_TIME)
+              (sha256tree LAST_BID)
+            )
+          )
         )
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
