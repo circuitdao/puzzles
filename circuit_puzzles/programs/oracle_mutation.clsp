@@ -6,7 +6,6 @@
       OUTLIER_INFO
       (@ oracle_mutation
         (
-          oracle_mutation_program
           statutes_inner_puzzle_hash
           m_of_n
           price_updatable_after_seconds

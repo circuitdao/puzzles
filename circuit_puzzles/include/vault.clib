@@ -1,17 +1,23 @@
 (
 
+  (defun-inline undiscount-principal (discounted_principal cumulative_stability_fee_df)
+    (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_df) PRECISION))
+  )
+
   (defun-inline available-to-mint (collateral debt liquidation_ratio_pct xch_price)
+    ; returns amount of byc that can be borrowed + 1
+    ; used when borrowing
     (- (/ (/ (* collateral xch_price 1000 PRECISION_PCT) (* liquidation_ratio_pct PRICE_PRECISION)) MOJOS) debt)
   )
 
   (defun-inline get-min-collateral-amount (debt liquidation_ratio_pct xch_price)
     ; returns min collateral value for given debt, liquidation ratio and XCH price. Multiplications by -1 to ceil the division
-    (/ (* MINUS_ONE (* (/ (* MINUS_ONE debt PRICE_PRECISION) xch_price) liquidation_ratio_pct) MOJOS) (* PRECISION_PCT 1000))
+    ; used when withdrawing collateral and starting liquidation auctions
+    (* MINUS_ONE (/ (* MINUS_ONE debt PRICE_PRECISION liquidation_ratio_pct MOJOS) (* xch_price PRECISION_PCT 1000)))
   )
 
   (defun-inline calculate-total-fees (undiscounted_principal principal liquidation_penalty_bps)
     (assign
-      ;undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE discounted_principal cumulative_stability_fee_df) PRECISION))
       stability_fees (if (> undiscounted_principal principal)
         (- undiscounted_principal principal)
         0

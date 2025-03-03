@@ -114,15 +114,8 @@
         args
       )
     )
-    
     inner_conditions (merge-lists conditions vault_conditions)
-    
-    ; if someone messes with curried params when it's launched, setting BYC minted to a high number, and with very little collateral
-    ; then they would be able to liquidate that vault immediately and inflate amount of BYC, but wait!
-    ; they would have to provide that BYC to liquidate the vault, so they would have to have that BYC in the first place
-    ; bu this still messes up with our accounting and creates under collateralized vaults that messes with our metrics overall
-    ; assert lineage
-    ;  final_auction_state final_inner_puzzle_hash final_discounted_principal)
+    ;### MAIN EXPRESSION ###
     (c
       (c
         CREATE_COIN
@@ -142,50 +135,61 @@
           )
         )
       )
-      (if lineage_proof
-        (li
-          ; verify lineage by calculating parent coin id based on lineage proof
-          (list
-            ASSERT_MY_PARENT_ID
-            (calculate-coin-id
-              (f lineage_proof)
-              (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
-              (f (r (r lineage_proof)))
-            )
-          )
-          (list ASSERT_MY_AMOUNT COLLATERAL)
-          (list
-            ; this is for the driver code to make it easy to generate puzzle reveal
-            REMARK
-            PROTOCOL_PREFIX
-            final_collateral_amount
-            final_principal_amount
-            final_auction_state
-            final_inner_puzzle_hash
-            final_discounted_principal
-          )
-          &rest
-          inner_conditions
+      (c
+        (list
+          ; this is for the driver code to make it easy to generate puzzle reveal
+          REMARK
+          PROTOCOL_PREFIX
+          final_collateral_amount
+          final_principal_amount
+          final_auction_state
+          final_inner_puzzle_hash
+          final_discounted_principal
         )
-        ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
-        ; otherwise launching a vault with pre-existing debt could cause a lot of issues
-        (li
-          (list
-            ASSERT_MY_PUZZLE_HASH
-            (curry_hashes MOD_HASH
-              (sha256tree MOD_HASH)
-              statutes_struct_hash
-              ;(sha256 ONE 0)
-              (sha256 ONE 0)
-              (sha256 ONE 0)
-              (sha256 ONE ())
-              (sha256 ONE INNER_PUZZLE_HASH)
-              (sha256 ONE 0)
+        (if lineage_proof
+          (li
+            ; verify lineage by calculating parent coin id based on lineage proof
+            (list
+              ASSERT_MY_PARENT_ID
+              (calculate-coin-id
+                (f lineage_proof)
+                (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
+                (f (r (r lineage_proof)))
+              )
             )
+            (list ASSERT_MY_PUZZLE_HASH
+              (curry_hashes MOD_HASH
+                (sha256tree MOD_HASH)
+                statutes_struct_hash
+                (sha256 ONE COLLATERAL)
+                (sha256 ONE PRINCIPAL)
+                (sha256tree AUCTION_STATE)
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256 ONE DISCOUNTED_PRINCIPAL)
+              )
+            )
+            (list ASSERT_MY_AMOUNT COLLATERAL)
+            &rest
+            inner_conditions
           )
-          (list ASSERT_MY_AMOUNT 0)
-          &rest
-          inner_conditions
+          ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
+          ; otherwise launching a vault with pre-existing debt could cause a lot of issues
+          (li
+            (list ASSERT_MY_PUZZLE_HASH
+              (curry_hashes MOD_HASH
+                (sha256tree MOD_HASH)
+                statutes_struct_hash
+                (sha256 ONE 0)
+                (sha256 ONE 0)
+                (sha256 ONE ())
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256 ONE 0)
+              )
+            )
+            (list ASSERT_MY_AMOUNT 0)
+            &rest
+            inner_conditions
+          )
         )
       )
     )

@@ -2,8 +2,8 @@
       (MUTATION_PROGRAM_HASH . OUTLIER_RESOLUTION_PROGRAM_HASH) MOD_HASH
       STATUTES_STRUCT
       PRICE_INFOS
-      TEMP_BAN_LIST
-      OUTLIER_INFO
+      TEMP_BAN_LIST ; () or (expiry_timestamp . list of banned announcer launcher_ids)
+      OUTLIER_INFO ; () or (() price . price_timestamp) or ((decision_timestamp decision_bool prev_temp_ban_list amount) price . price_timestamp)
       ; solution
       oracle_program_args
       input_announcement_asserts
@@ -34,7 +34,7 @@
             PRICE_INFOS
             TEMP_BAN_LIST
             OUTLIER_INFO
-            oracle_program_args
+            (r oracle_program_args)
             input_announcement_asserts
           )
         )

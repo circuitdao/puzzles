@@ -3,7 +3,14 @@
 ;; When oracle gets a price update that's an outlier, it's paused until outlier is resolved by CRT holders
 ;; bidding with this resolver coin. Each coin has a cooldown interval so can't be reused once used for that period.
 ;; Holders can override previous decision if they have higher amount of CRTs.
-(mod (INNER_PUZZLE decision new_temp_ban_list oracle_coin_id cooldown_interval amount inner_solution)
+(mod (
+    INNER_PUZZLE
+    decision
+    new_temp_ban_list ; excludes expiry timestamp
+    oracle_coin_id
+    cooldown_interval
+    amount inner_solution
+  )
 
   (include condition_codes.clib)
   (include prefixes.clib)

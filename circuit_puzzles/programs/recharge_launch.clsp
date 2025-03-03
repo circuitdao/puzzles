@@ -1,8 +1,5 @@
 (mod (
-    (MOD_HASH
-    ;CAT_MOD_HASH
-    BYC_TAIL_HASH
-    LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+    (MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash
     lineage_proof
     announcements
@@ -17,8 +14,8 @@
   (include recharge_auction.clib)
 
   (assert
-    ; can't run if LAST_BID is set
-    (= LAST_BID ())
+    ; enforce eve state
+    (= LAST_BID ()) 
     (= LAUNCHER_ID 0)
     (= START_TIME 0)
     (size_b32 statutes_puzzle_hash)
@@ -28,9 +25,9 @@
         (curry_hashes
           MOD_HASH
           (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
           (sha256 ONE BYC_TAIL_HASH)
           (sha256 ONE my_coin_id)
-          (sha256tree STATUTES_STRUCT)
           (sha256 ONE 0)
           (sha256 ONE ())
         )
@@ -47,9 +44,8 @@
           (list ASSERT_MY_AMOUNT 0)
           (c
             (list ASSERT_MY_COIN_ID my_coin_id)
-            ; not LAUNCHER set, this is a launch, we need to get approval from statutes
             (c
-              ; confirm back to statutes that we indeed updated the curried args
+              ; get approval from statutes
               (list RECEIVE_MESSAGE 0x12
                 (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX (sha256tree '*'))
                 statutes_puzzle_hash

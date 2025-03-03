@@ -185,21 +185,32 @@
           (list ASSERT_COIN_ANNOUNCEMENT (sha256 (f (r STATUTES_STRUCT)) lineage_proof))
         )
         (c
-          (list CREATE_COIN
+          (list ASSERT_MY_PUZZLE_HASH
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256tree announcer_registry)
-              (sha256 ONE claim_interval_number)
+              (sha256tree ANNOUNCER_REGISTRY)
+              (sha256 ONE CLAIM_ITERATION)
             )
-            0 ; coin amount always zero since it only keeps the registry and mints new coins
           )
           (c
-            (list REMARK PROTOCOL_PREFIX announcer_registry claim_interval_number)
-            operation_conditions
+            (list CREATE_COIN
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256tree announcer_registry)
+                (sha256 ONE claim_interval_number)
+              )
+              0 ; coin amount always zero since it only keeps the registry and mints new coins
+            )
+            (c
+              (list REMARK PROTOCOL_PREFIX announcer_registry claim_interval_number)
+              operation_conditions
+            )
           )
         )
       )
     )
   )
+
 )
