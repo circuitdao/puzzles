@@ -7,6 +7,8 @@
       veto_amount
       veto_inner_puzzle_hash
       veto_bill_hash
+      parent_parent_id
+      parent_bill_hash
     )
   )
 
@@ -44,6 +46,20 @@
             (list ASSERT_BEFORE_SECONDS_RELATIVE veto_seconds)
             ; noop
             (list ASSERT_SECONDS_RELATIVE veto_seconds)
+          )
+          (list ASSERT_MY_PUZZLE_HASH
+            (curry_hashes CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CRT_TAIL_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256tree BILL)
+              )
+            )
           )
           (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_VETOED)))
           ; assert announcement from another CRT coin with higher amount than this one

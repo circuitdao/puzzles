@@ -17,6 +17,8 @@
         delay_seconds
         max_delta
       ))
+      parent_parent_id
+      prev_bill_hash
     )
   )
 
@@ -50,20 +52,32 @@
         (c veto_seconds (+ veto_seconds delay_seconds))
         new_bill
       )
-      (c
+      (list
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
+        ; mod_hash should be same as parent
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE INNER_PUZZLE_HASH)
+              (sha256tree BILL)
+            )
+          )
+        )
         ; assert that passed statute index correlates to correct statute
         ; and that passed statute values are correct
-        (list
-          (assert-full-statute
-            statutes_puzzle_hash
-            ; we use special statute for custom conditions limits
-            (if (= statute_index -1) STATUTE_CUSTOM_CONDITIONS statute_index)
-            current_statute
-          )
+        (assert-full-statute
+          statutes_puzzle_hash
+          ; we use special statute for custom conditions limits
+          (if (= statute_index -1) STATUTE_CUSTOM_CONDITIONS statute_index)
+          current_statute
         )
       )
     )
   )
-
 )

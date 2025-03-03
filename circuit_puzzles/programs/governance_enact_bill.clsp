@@ -32,23 +32,19 @@
       ()
       ; conditions to return
       (list
-        ; proposal coin must have a parent that was a governance coin
-        (list ASSERT_MY_PARENT_ID
-          (calculate-coin-id
-            parent_parent_id
-            (curry_hashes CAT_MOD_HASH
+        ; mod hash must match the parent mod hash to keep integrity
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
               (sha256 ONE CAT_MOD_HASH)
               (sha256 ONE CRT_TAIL_HASH)
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE CRT_TAIL_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256 ONE INNER_PUZZLE_HASH)
-                prev_bill_hash
-              )
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE INNER_PUZZLE_HASH)
+              (sha256tree BILL)
             )
-            amount
           )
         )
         ; has enough time passed since this coin was last spent (veto included)

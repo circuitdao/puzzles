@@ -57,8 +57,8 @@
         (list 
           (if BILL
             ; we are vetoing from a proposal coin. must have a parent that was a governance coin to prevent
-            ;  eve governance coin having curried bill and being enactable in next spend without ever having
-            ;  had to perform a propose spend.
+            ; eve governance coin having curried bill and being enact-able in next spend without ever having
+            ; had to perform a propose spend.
             (list ASSERT_MY_PARENT_ID
               (calculate-coin-id
                 (f lineage_proof) ; parent parent id
@@ -78,6 +78,20 @@
               )
             )
             (list REMARK)
+          )
+          (list ASSERT_MY_PUZZLE_HASH
+            (curry_hashes CAT_MOD_HASH
+              (sha256 ONE CAT_MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CRT_TAIL_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256tree BILL)
+              )
+            )
           )
           ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
           (list ASSERT_SECONDS_RELATIVE relative_time_spent)
