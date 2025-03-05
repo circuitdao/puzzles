@@ -277,11 +277,14 @@
       parent_id
       lineage_proof
     )
-    (= parent_id
+    (if (= parent_id
       (calculate_coin_id (f lineage_proof)
         (cat_puzzle_hash cat_mod_struct (f (r lineage_proof)))
         (f (r (r lineage_proof)))
       )
+    )
+      1
+      (x parent_id lineage_proof)
     )
   )
 

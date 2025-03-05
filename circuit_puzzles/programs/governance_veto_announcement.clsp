@@ -55,30 +55,6 @@
           ()
         )
         (list 
-          (if BILL
-            ; we are vetoing from a proposal coin. must have a parent that was a governance coin to prevent
-            ; eve governance coin having curried bill and being enact-able in next spend without ever having
-            ; had to perform a propose spend.
-            (list ASSERT_MY_PARENT_ID
-              (calculate-coin-id
-                (f lineage_proof) ; parent parent id
-                (curry_hashes CAT_MOD_HASH
-                  (sha256tree CAT_MOD_HASH)
-                  (sha256tree CRT_TAIL_HASH)
-                  (curry_hashes MOD_HASH
-                    (sha256tree MOD_HASH)
-                    (sha256tree CAT_MOD_HASH)
-                    (sha256tree CRT_TAIL_HASH)
-                    (sha256tree STATUTES_STRUCT)
-                    (sha256tree INNER_PUZZLE_HASH)
-                    (f (r lineage_proof)) ; parent bill hash
-                  )
-                )
-                (f (r (r lineage_proof))) ; parent amount
-              )
-            )
-            (list REMARK)
-          )
           (list ASSERT_MY_PUZZLE_HASH
             (curry_hashes CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
