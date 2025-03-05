@@ -2,11 +2,9 @@
       CAT_MOD_HASH BYC_TAIL_MOD_HASH MOD_HASH
       STATUTES_STRUCT LAUNCHER_ID RING_PREV_LAUNCHER_ID
       ; lineage proof is:
-      ; -> () at launch. this mod enforces launch to be a change ring ordering operation
-      ; -> (parent_parent_id parent_ring_prev_launcher_id parent_amount) otherwise
-      ; LATER: should be able to shorten lineage proof to two elements only:
-      ; LATER:   -> (parent_parent_id parent_ring_prev_launcher_id ONE) if ring ordering was changed (ONE to indicate that we're providing parent prev launcher id, not amount
-      ; LATER:   -> (parent_parent_id parent_amount) if balance was changed
+      ; -> () at launch (enforced to be a change ring ordering spend)
+      ; -> (parent_parent_id parent_ring_prev_launcher_id) if ring ordering changed after launch
+      ; -> (parent_parent_id . parent_amount) if balance changed
       lineage_proof 
       statutes_inner_puzzle_hash current_amount
       input_conditions
@@ -86,10 +84,6 @@
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
-    ; 1. we're withdrawing/depositing/announcing, lineage proof is parent_id of parent coin and amount, we need to assert
-    ;    that assert_parent_id is `(parent_id . previous_amount)`
-    ; 2. we're changing lineage, lineage proof is `(parent_id . prev_launcher_id)` and
-    ;    asserts announcement from statutes vote
     new_puzzle_hash (curry_hashes MOD_HASH ; inner puzzle hash
                       (sha256 ONE MOD_HASH)
                       statutes_struct_hash
@@ -114,10 +108,17 @@
             (sha256 ONE MOD_HASH)
             statutes_struct_hash
             (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE (f (r lineage_proof))) ; parent ring_prev_launcher_id
+            (sha256 ONE (if (l (r lineage_proof))
+                (f (r lineage_proof))
+                RING_PREV_LAUNCHER_ID
+              ) ; parent ring_prev_launcher_id
+            ) 
           )
         )
-        (f (r (r lineage_proof))) ; parent amount
+        (if (l (r lineage_proof))
+          current_amount
+          (r lineage_proof)
+        ) ; parent amount
       )
     )
     new_amount (if (l args)
@@ -177,7 +178,7 @@
           (c
             (list ASSERT_MY_PARENT_ID parent_id)
             (if (any (not (l args)) (not lineage_proof))
-              ; change ring ordering, require approval from statutes
+              ; change ring ordering, require approval from statutes custom condition
               (assert
                 (= withdraw_amount 0)
                 (size_b32 args)
