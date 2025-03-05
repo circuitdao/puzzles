@@ -260,7 +260,13 @@
                       )
                       (c
                         (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID) ; for driver code
-                        conditions
+                        ; in case of surplus auction, assert crt tail hash
+                        (if (= (f (r approval_mod_hashes)) approver_mod_hash)
+                          (c (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH (f approver_mod_curried_args_hash))
+                            conditions
+                          )
+                          conditions
+                        )
                       )
                     )
                   )
