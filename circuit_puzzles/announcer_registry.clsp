@@ -87,6 +87,8 @@
                 issuance_coin_id
               )
               (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
+              (assert-statute statutes_puzzle_hash STATUTE_CAT_MOD_HASH cat_mod_hash) ; NEW
+              (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash) ; NEW
               (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_PER_INTERVAL crt_credits_per_interval)
