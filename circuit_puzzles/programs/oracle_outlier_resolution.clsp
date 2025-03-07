@@ -112,6 +112,7 @@
             (sha256tree price_infos)
             (sha256tree temp_ban_list)
             (sha256tree outlier_info)
+;            (x price_infos temp_ban_list outlier_info)
           )
           ; min singleton amount, force it to be ONE
           ONE
