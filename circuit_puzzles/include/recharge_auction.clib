@@ -32,7 +32,7 @@
     )
   )
 
-  ; asserts post-deposit treasury ring amounts,  ensuring intended amount has been deposited to treasury
+  ; asserts post-deposit treasury ring amounts, ensuring intended amount has been deposited to treasury
   ; total deposited to treasury = no. treasury coins * deposit_amount_per_coin + remainder
   (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
                               treasury_minimum statutes_puzzle_hash
