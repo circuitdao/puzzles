@@ -1,6 +1,7 @@
 (mod (
-      (MUTATION_PROGRAM_HASH . OUTLIER_RESOLUTION_PROGRAM_HASH) MOD_HASH
+      (MUTATION_PROGRAM_HASH OUTLIER_VOTE_PROGRAM_HASH OUTLIER_RESOLVE_PROGRAM_HASH) MOD_HASH
       STATUTES_STRUCT
+      OUTLIER_VOTE_SEQUENCE
       PRICE_INFOS
       TEMP_BAN_LIST ; () or (expiry_timestamp . list of banned announcer launcher_ids)
       OUTLIER_INFO ; () or (() price . price_timestamp) or ((decision_timestamp decision_bool prev_temp_ban_list amount) price . price_timestamp)
@@ -24,13 +25,15 @@
       (assert
         (any
           (= oracle_program_hash MUTATION_PROGRAM_HASH)
-          (= oracle_program_hash OUTLIER_RESOLUTION_PROGRAM_HASH)
+          (= oracle_program_hash OUTLIER_VOTE_PROGRAM_HASH)
+          (= oracle_program_hash OUTLIER_RESOLVE_PROGRAM_HASH)
         )
         (a
           (f oracle_program_args)
           (list
             MOD_HASH
             STATUTES_STRUCT
+            OUTLIER_VOTE_SEQUENCE
             PRICE_INFOS
             TEMP_BAN_LIST
             OUTLIER_INFO
@@ -54,6 +57,7 @@
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
+              (sha256 ONE OUTLIER_VOTE_SEQUENCE)
               (sha256tree PRICE_INFOS)
               (sha256tree TEMP_BAN_LIST)
               ; oracle can't announce if outlier is not resolved

@@ -1,4 +1,4 @@
-(mod (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT_HASH inner_puzzle_hash my_parents_parent_id amount)
+(mod (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT_HASH current_timestamp inner_puzzle_hash my_parents_parent_id amount)
   (include condition_codes.clib)
   (include curry.clib)
 
@@ -29,12 +29,18 @@
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE CRT_TAIL_HASH)
         STATUTES_STRUCT_HASH
+        (sha256 ONE current_timestamp)
+        (sha256 ONE 0) ; last outlier vote sequence
         (sha256 ONE inner_puzzle_hash)
         (sha256 ONE ())
       )
       amount
       (list inner_puzzle_hash)
     )
+    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+    ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
+    ; within a boundary of last_block > current_timestamp - 1 block < next block
+    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
     (list ASSERT_MY_PARENT_ID
       (calculate-coin-id
         my_parents_parent_id
@@ -61,6 +67,6 @@
         amount
       )
     )
-    (list REMARK 'C' () () inner_puzzle_hash)
+    (list REMARK 'C' () () inner_puzzle_hash current_timestamp 0)
   )
 )

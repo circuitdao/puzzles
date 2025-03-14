@@ -7,6 +7,8 @@
       CAT_MOD_HASH ; TODO: move before MOD_HASH as fixed?
       CRT_TAIL_HASH 
       STATUTES_STRUCT
+      LAUNCH_TIMESTAMP
+      LAST_OUTLIER_VOTE_SEQUENCE
       INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
       BILL ; -> (proposal_periods statute_index statute)
       lineage_proof
@@ -25,14 +27,16 @@
   (defconst VETO_PROPOSED_BILL -1)
 
   ; used to filter raw_inner_conditions
-  (defun filter-conditions (EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+  (defun filter-conditions (EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
+                            STATUTES_STRUCT LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
                             final_bill bill_operation
                             (@ conditions ((condition_code . condition_body) . rest_of_conditions))
                             found_create_coin filtered_conditions)
     (if conditions
       (if (= condition_code CREATE_COIN)
         (filter-conditions
-          EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+          EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+          LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
           final_bill bill_operation
           rest_of_conditions
           1 ; we found a create coin condition
@@ -48,17 +52,21 @@
                 bill_operation
                 final_bill
                 (f condition_body) ; inner puzzle hash
+                LAUNCH_TIMESTAMP
+                LAST_OUTLIER_VOTE_SEQUENCE
               )
               (c
                 (c
                   CREATE_COIN
                   (c
-                    (if (f condition_body)
+                    (if (size_b32 (f condition_body))
                       (curry_hashes MOD_HASH
                         (sha256 ONE MOD_HASH)
                         (sha256 ONE CAT_MOD_HASH)
                         (sha256 ONE CRT_TAIL_HASH)
                         (sha256tree STATUTES_STRUCT)
+                        (sha256 ONE LAUNCH_TIMESTAMP)
+                        (sha256 ONE LAST_OUTLIER_VOTE_SEQUENCE)
                         (sha256 ONE (f condition_body))
                         (sha256tree final_bill)
                       )
@@ -71,7 +79,7 @@
                     (r condition_body)
                   )
                 )
-                (if (f condition_body)
+                (if (size_b32 (f condition_body))
                   filtered_conditions
                   (c
                     ; confirm spend of exit coin to break the lineage from governance coin
@@ -88,17 +96,24 @@
                         )
                       )
                     )
-                    filtered_conditions
+                    (c
+                      (list ASSERT_SECONDS_RELATIVE (f condition_body))
+                      (c
+                        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_COOLDOWN_INTERVAL (f condition_body))
+                        filtered_conditions
+                      )
+                    )
                   )
                 )
-             )
-           )
-         )
+              )
+            )
+          )
         )
         (if (= condition_code REMARK)
           (if (is-valid-rmk-cond condition_body)
             (filter-conditions
-              EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+              EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
+              STATUTES_STRUCT LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
               final_bill bill_operation
               rest_of_conditions
               found_create_coin
@@ -106,7 +121,8 @@
             )
             ; discard protocol REMARK conditions
             (filter-conditions
-              EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+              EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
+              STATUTES_STRUCT LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
               final_bill bill_operation
               rest_of_conditions
               found_create_coin
@@ -117,7 +133,8 @@
             (assert
               (is-valid-msg-cond condition_body)
               (filter-conditions
-                EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
+                STATUTES_STRUCT LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
                 final_bill bill_operation
                 rest_of_conditions
                 found_create_coin
@@ -128,7 +145,8 @@
               (assert
                 (is-valid-ann-cond condition_body)
                 (filter-conditions
-                  EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                  EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
+                  STATUTES_STRUCT LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
                   final_bill bill_operation
                   rest_of_conditions
                   found_create_coin
@@ -137,7 +155,8 @@
               )
               ; all other conditions allowed
               (filter-conditions
-                EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+                EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
+                STATUTES_STRUCT LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE INNER_PUZZLE_HASH statutes_puzzle_hash
                 final_bill bill_operation
                 rest_of_conditions
                 found_create_coin
@@ -222,11 +241,12 @@
       )
       ()
     )
-    (final_bill bill_conditions) (if operation
+    (final_bill bill_conditions . new_outlier_vote_sequence) (if operation
       (a
         operation
         (list
-          (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
+          (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+                LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE statutes_puzzle_hash)
           (c new_coin_amount args)
         )
       )
@@ -238,7 +258,9 @@
     ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
     ; add a REMARK for driver assistance
     (filter-conditions
-      EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT INNER_PUZZLE_HASH
+      EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+      LAUNCH_TIMESTAMP (if new_outlier_vote_sequence (f new_outlier_vote_sequence) LAST_OUTLIER_VOTE_SEQUENCE)
+      INNER_PUZZLE_HASH statutes_puzzle_hash
       final_bill bill_operation
       raw_inner_conditions 0
       (c
@@ -258,6 +280,8 @@
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256 ONE CRT_TAIL_HASH)
                     (sha256tree STATUTES_STRUCT)
+                    (sha256 ONE LAUNCH_TIMESTAMP)
+                    (sha256 ONE (f (r (r lineage_proof)))) ; parent outlier vote sequence
                     (sha256 ONE INNER_PUZZLE_HASH)
                     (f (r lineage_proof)) ; parent bill hash
                   )

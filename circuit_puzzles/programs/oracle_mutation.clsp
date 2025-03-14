@@ -1,6 +1,7 @@
 (mod (ATOM_ANNOUNCER_MOD_HASH
       MOD_HASH
       STATUTES_STRUCT
+      OUTLIER_VOTE_SEQUENCE
       PRICES
       TEMP_BAN_LIST ; -> (expiry_timestamp . list of banned announcer launcher_ids)
       OUTLIER_INFO
@@ -29,10 +30,16 @@
   (include utils.clib)
   (include oracle.clib)
 
-
+  (defun get-launcher_ids (price_announcers)
+    (if price_announcers
+      (c (f (f price_announcers)) (get-launcher_ids (r price_announcers)))
+      ()
+    )
+  )
 
   (assign
     expired_ban_list (if TEMP_BAN_LIST (> (- current_timestamp (f TEMP_BAN_LIST)) temp_ban_interval) 0)
+    ; price_announcers -> ((launcher_id args_hash price)...)
     (price_announcers . temp_ban_list) (if (all TEMP_BAN_LIST (not expired_ban_list))
       (c (filter-banned price_announcers_unfiltered (r TEMP_BAN_LIST)) TEMP_BAN_LIST)
       (c price_announcers_unfiltered ())
@@ -49,14 +56,25 @@
     )
     ; we add latest price to the end of the list
     (matured_price_info . cut_price_infos) (cut-price-infos PRICES (- current_timestamp price_delay) ())
-    (price_to_apply outlier_info) (if OUTLIER_INFO
-      ; outlier is set, block all price mutations, only price resolver can be used
+    (price_to_apply outlier_vote_sequence outlier_info) (if OUTLIER_INFO
+      ; outlier is set, block all price mutations, only price resolver operation can be used
       (x)
       (if (or (not cut_price_infos) (above-threshold cut_price_infos median_price auto_approve_price_threshold_bps))
         ; we have a price outlier, set the outlier info
-        (list 0 (c () (c median_price current_timestamp)))
+        (list
+          ()  ; no price to apply
+          (+ OUTLIER_VOTE_SEQUENCE ONE)  ; we have a new voting round increment outlier vote sequence
+          (c
+            () ; start with no vote
+            (c
+              ; get launcher_id of price_announcers only
+              (get-launcher_ids price_announcers)
+              (c median_price current_timestamp) ; price that requires approval / resolution
+            )
+          )
+        )
         ; price is within threshold, no change, no outlier info
-        (list (c median_price current_timestamp) ())
+        (list (c median_price current_timestamp) OUTLIER_VOTE_SEQUENCE ())
       )
     )
     new_price_infos (if price_to_apply
@@ -108,6 +126,7 @@
           (curry_hashes MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
+            (sha256 ONE outlier_vote_sequence)
             (sha256tree new_price_infos)
             (sha256tree temp_ban_list)
             (sha256tree outlier_info)
@@ -115,7 +134,7 @@
           ; min singleton amount, force it to be ONE
           ONE
         )
-        (list REMARK new_price_infos next_price temp_ban_list outlier_info)
+        (list REMARK new_price_infos next_price temp_ban_list outlier_info outlier_vote_sequence)
         &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
       )
     )

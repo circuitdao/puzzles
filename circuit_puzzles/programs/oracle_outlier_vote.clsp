@@ -1,0 +1,160 @@
+(mod (
+      GOVERNANCE_MOD_HASH ; next 3 hashes are curried into the operation, not required by oracle puzzle to keep
+      CAT_MOD_HASH
+      CRT_TAIL_HASH
+      ; oracle state
+      MOD_HASH
+      STATUTES_STRUCT
+      OUTLIER_VOTE_SEQUENCE
+      PRICE_INFOS
+      TEMP_BAN_LIST
+      OUTLIER_INFO
+      ; solution
+      new_outlier_resolution  ; see below for definition
+      input_announcement_asserts
+    )
+
+  (include *standard-cl-23.1*)
+  (include curry.clib)
+  (include utils.clib)
+  (include statutes_utils.clib)
+  (include condition_codes.clib)
+  (include oracle.clib)
+
+  (defun process-vote-mask (ids mask vote_amount bit-pos)
+    ; ids is a list of announcer ids
+    ; mask is the integer mask of banned announcers (max 5 bytes)
+    ; vote_amount is the amount of the vote coin
+    ; bit-pos is the current bit position in the mask
+    ; each banned announcer id is represented by a bit in the mask
+    ; if the bit is set, the announcer is banned
+    ; function adds vote_amount to each banned announcer id
+    (if ids
+      (c
+        (if (= (logand mask (ash 1 bit-pos)) 0)
+          0  ; current bit is not set, skip announcer
+          vote_amount  ; current bit is set, add announcer to the banned list
+        )
+        (process-vote-mask (r ids) mask vote_amount (+ bit-pos 1))  ; recursive call for next announcer id
+      )
+      ()  ; if no more announcer ids, return nil
+    )
+  )
+
+  ; merge the banned announcers list with the new vote list
+  ; existing_votes is a list of announcer ids with corresponding vote amounts
+  ; new_votes is a list of announcer ids with corresponding vote amounts
+  ; function sums the vote amounts for each announcer id
+  (defun merge-ban-votes (existing_votes new_votes)
+    (if existing_votes
+      (c
+        (+ (f existing_votes) (f new_votes)) ; sum corresponding numeric votes
+        (merge-ban-votes (r existing_votes) (r new_votes)) ; proceed recursively
+      )
+      new_votes
+    )
+  )
+
+  (assign
+    (
+      statutes_inner_puzzle_hash
+      announcers_ban_mask ; integer mask of banned announcers
+      min_allowed_amount
+      max_voting_interval
+      vote_extension_interval
+      crt_resolver_parent_id
+      crt_puzzle_args_hash ; hash of the CRT govt puzzle arguments
+      amount_direction  ; negative for reject, positive for accept
+      my_last_outlier_vote_sequence
+      current_timestamp
+    ) new_outlier_resolution
+    ; OUTLIER_INFO -> ((aggregate vote info) (participating_announcers price_info)
+    (
+      first_vote_timestamp
+      prev_vote_timestamp
+      agg_ban_votes_list
+      agg_amount_direction
+      agg_amount
+    ) (if (f OUTLIER_INFO) (f OUTLIER_INFO) (list current_timestamp () 0 0 0))
+    active_announcer_ids (f (r OUTLIER_INFO))
+    vote_amount (abs amount_direction)
+    vote_ban_announcer_ids (process-vote-mask active_announcer_ids announcers_ban_mask amount_direction 0)
+    merged_agg_ban_votes_list (merge-ban-votes agg_ban_votes_list vote_ban_announcer_ids)
+    merged_agg_amount_direction (+ agg_amount_direction amount_direction)
+    merged_agg_amount (+ agg_amount vote_amount)
+    outlier_info (c
+      (list
+        first_vote_timestamp
+        current_timestamp
+        merged_agg_ban_votes_list
+        merged_agg_amount_direction
+        merged_agg_amount
+      )
+      (r OUTLIER_INFO)
+    )
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    crt_resolver_coin_id
+      (calculate-coin-id
+        crt_resolver_parent_id
+        (curry_hashes CAT_MOD_HASH
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE CRT_TAIL_HASH)
+          (tree_hash_of_apply GOVERNANCE_MOD_HASH crt_puzzle_args_hash)
+        )
+        vote_amount
+      )
+    (assert_debug
+      ; they shouldn't be able to vote with the same sequence number
+      (> OUTLIER_VOTE_SEQUENCE my_last_outlier_vote_sequence)
+      ; bitmask for announcers should hold at least 32 bits
+      (size_uint32 announcers_ban_mask)
+      (size_b32 statutes_inner_puzzle_hash)
+      ; ensure that the vote amount is greater than the min allowed amount
+      (> vote_amount min_allowed_amount)
+      ; new vote should be within the vote interval
+      (all
+        (> current_timestamp prev_vote_timestamp)
+        (any
+          (> (+ prev_vote_timestamp vote_extension_interval) current_timestamp)
+          (= prev_vote_timestamp 0)
+        )
+      )
+      ; new vote should be within the max approval interval
+      (all
+        (> current_timestamp (- first_vote_timestamp 1))
+        (> (+ first_vote_timestamp max_voting_interval) current_timestamp)
+      )
+      ; amount direction should not be 0, since we can't make a decision with 0 amount
+      (not (= merged_agg_amount_direction 0))
+      (li
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+        ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
+        ; within a boundary of last_block > current_timestamp - 1 block < next block
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        ; receive message from CRT coin with custom puzzle, if parent coin is set
+        (list SEND_MESSAGE 0x17
+          (concat PROTOCOL_PREFIX (sha256tree (list amount_direction current_timestamp announcers_ban_mask OUTLIER_VOTE_SEQUENCE)))
+          crt_resolver_coin_id
+        )
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_APPROVAL_INTERVAL vote_extension_interval)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_MIN_ALLOWED_AMOUNT min_allowed_amount)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_MAX_APPROVAL_INTERVAL max_voting_interval)
+        (list
+          CREATE_COIN
+          (curry_hashes MOD_HASH
+            (sha256 ONE MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE OUTLIER_VOTE_SEQUENCE)
+            (sha256tree PRICE_INFOS)
+            (sha256tree TEMP_BAN_LIST)
+            (sha256tree outlier_info)
+          )
+          ; min singleton amount, force it to be ONE
+          ONE
+        )
+        (list REMARK PRICE_INFOS () TEMP_BAN_LIST outlier_info OUTLIER_VOTE_SEQUENCE)
+        &rest (verify-announcement-asserts input_announcement_asserts ())
+      )
+    )
+  )
+)
