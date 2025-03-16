@@ -64,6 +64,7 @@
       vote_extension_interval
       max_voting_interval
       current_timestamp
+      temp_ban_interval
     ) outlier_resolve_info
     ; OUTLIER_INFO -> ((aggregate vote info) (participating_announcers price_info)
     (
@@ -83,13 +84,17 @@
       PRICE_INFOS
     )
     prev_ban_list (if TEMP_BAN_LIST
-      (if (> (f TEMP_BAN_LIST) current_timestamp)
+      (if (> (+ (f TEMP_BAN_LIST) temp_ban_interval) current_timestamp)
         (r TEMP_BAN_LIST)
         ()
       )
       ()
     )
     new_ban_list (get-banned-announcer-ids active_announcer_ids agg_ban_votes_list min_ban_vote_amount prev_ban_list)
+    full_ban_list (if new_ban_list
+      (c current_timestamp new_ban_list)
+      ()
+    )
     (assert
       ; new vote should be within the vote interval
       (any
@@ -110,13 +115,13 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE OUTLIER_VOTE_SEQUENCE)
             (sha256tree price_infos)
-            (sha256tree (c current_timestamp new_ban_list))
+            (sha256tree full_ban_list)
             (sha256 ONE ()) ; disable outlier since we have a resolution
           )
           ; min singleton amount, force it to be ONE
           ONE
         )
-        (list REMARK price_infos () (c current_timestamp new_ban_list) () OUTLIER_VOTE_SEQUENCE)
+        (list REMARK price_infos () full_ban_list () OUTLIER_VOTE_SEQUENCE)
         &rest (verify-announcement-asserts input_announcement_asserts ())
       )
     )

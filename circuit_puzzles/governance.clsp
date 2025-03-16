@@ -51,7 +51,10 @@
                 PROTOCOL_PREFIX
                 bill_operation
                 final_bill
-                (f condition_body) ; inner puzzle hash
+                (if (size_b32 (f condition_body))
+                  (f condition_body)
+                  () ; signal exit to driver
+                ) ; inner puzzle hash
                 LAUNCH_TIMESTAMP
                 LAST_OUTLIER_VOTE_SEQUENCE
               )
@@ -91,8 +94,8 @@
                         (sha256 ONE CAT_MOD_HASH)
                         (sha256 ONE CRT_TAIL_HASH)
                         (curry_hashes EXIT_MOD_HASH
-                          (sha256 ONE INNER_PUZZLE_HASH)
-                          (sha256 ONE (f (r condition_body)))
+                          (sha256 ONE INNER_PUZZLE_HASH) ; we're exiting to curried inner puzzle
+                          (sha256 ONE (f (r condition_body))) ; create coin amount
                         )
                       )
                     )

@@ -53,9 +53,9 @@
               (c 0 0)
               (if (= COOLDOWN_START 0)
                 ; cooldown not set yet, setting cooldown start timestamp
-                (c 1 current_timestamp)
+                (x 1 current_timestamp)
                 ; we're in cooldown period but it's not over yet, keep the current state
-                (c 1 COOLDOWN_START)
+                (x 1 COOLDOWN_START)
               )
             )
             ; input toggle activation is
