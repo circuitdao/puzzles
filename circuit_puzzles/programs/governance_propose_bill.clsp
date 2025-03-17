@@ -18,8 +18,6 @@
         delay_seconds
         max_delta
       ))
-      parent_parent_id
-      prev_bill_hash
     )
   )
 

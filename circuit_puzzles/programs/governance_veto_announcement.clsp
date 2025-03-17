@@ -7,7 +7,6 @@
       target_bill_hash
       relative_time_spent
       target_coin_id
-      lineage_proof ; -> (parent_parent_id parent_bill_hash parent_amount) if BILL, else ()
     )
   )
 
