@@ -1,6 +1,6 @@
 (mod (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-     LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE statutes_puzzle_hash)
+     statutes_puzzle_hash)
     (
       amount
       (@ new_bill (
@@ -63,8 +63,6 @@
               (sha256 ONE CAT_MOD_HASH)
               (sha256 ONE CRT_TAIL_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCH_TIMESTAMP)
-              (sha256 ONE LAST_OUTLIER_VOTE_SEQUENCE)
               (sha256 ONE INNER_PUZZLE_HASH)
               (sha256tree BILL)
             )

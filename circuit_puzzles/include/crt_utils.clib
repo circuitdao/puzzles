@@ -1,15 +1,12 @@
 (
 
   (defun-inline calculate-gov-puzzle-hash (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-                                           LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE
                                            governance_inner_puzzle_hash bill_hash)
     (curry_hashes GOVERNANCE_MOD_HASH
       (sha256 ONE GOVERNANCE_MOD_HASH)
       (sha256 ONE CAT_MOD_HASH)
       (sha256 ONE CRT_TAIL_HASH)
       (sha256tree STATUTES_STRUCT)
-      (sha256 ONE LAUNCH_TIMESTAMP)
-      (sha256 ONE LAST_OUTLIER_VOTE_SEQUENCE)
       (sha256 ONE governance_inner_puzzle_hash)
       bill_hash
     )
@@ -18,7 +15,6 @@
   ; calculate puzzle hash of a CRT coin in goverance mode
   ; Note: STATUTES_STRUCT must be full singleton struct with three elements
   (defun-inline calculate-full-gov-puzzle-hash (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-                                                LAUNCH_TIMESTAMP LAST_OUTLIER_VOTE_SEQUENCE
                                                 governance_inner_puzzle_hash bill_hash)
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
@@ -27,8 +23,6 @@
           CAT_MOD_HASH
           CRT_TAIL_HASH
           STATUTES_STRUCT
-          LAUNCH_TIMESTAMP
-          LAST_OUTLIER_VOTE_SEQUENCE
           governance_inner_puzzle_hash
           bill_hash)
       )

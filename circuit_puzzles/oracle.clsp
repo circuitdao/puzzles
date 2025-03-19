@@ -1,10 +1,7 @@
 (mod (
-      (MUTATION_PROGRAM_HASH OUTLIER_VOTE_PROGRAM_HASH OUTLIER_RESOLVE_PROGRAM_HASH) MOD_HASH
+      MUTATION_PROGRAM_HASH MOD_HASH
       STATUTES_STRUCT
-      OUTLIER_VOTE_SEQUENCE
       PRICE_INFOS
-      TEMP_BAN_LIST ; () or (expiry_timestamp . list of banned announcer launcher_ids)
-      OUTLIER_INFO ; () or (() price . price_timestamp) or ((decision_timestamp decision_bool prev_temp_ban_list amount) price . price_timestamp)
       ; solution
       oracle_program_args
       input_announcement_asserts
@@ -19,28 +16,18 @@
   (include oracle.clib)
 
 
-  (if oracle_program_args
-    (assign
-      oracle_program_hash (sha256tree (f oracle_program_args))
-      (assert
-        (any
-          (= oracle_program_hash MUTATION_PROGRAM_HASH)
-          (= oracle_program_hash OUTLIER_VOTE_PROGRAM_HASH)
-          (= oracle_program_hash OUTLIER_RESOLVE_PROGRAM_HASH)
-        )
-        (a
-          (f oracle_program_args)
-          (list
-            MOD_HASH
-            STATUTES_STRUCT
-            OUTLIER_VOTE_SEQUENCE
-            PRICE_INFOS
-            TEMP_BAN_LIST
-            OUTLIER_INFO
-            (r oracle_program_args)
-            input_announcement_asserts
-          )
-        )
+  (if (and
+      oracle_program_args
+      (= (sha256tree (f oracle_program_args)) MUTATION_PROGRAM_HASH)
+    )
+    (a
+      (f oracle_program_args)
+      (list
+        MOD_HASH
+        STATUTES_STRUCT
+        PRICE_INFOS
+        (r oracle_program_args)
+        input_announcement_asserts
       )
     )
     ; no updates, just assert and announce
@@ -57,11 +44,7 @@
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE OUTLIER_VOTE_SEQUENCE)
               (sha256tree PRICE_INFOS)
-              (sha256tree TEMP_BAN_LIST)
-              ; oracle can't announce if outlier is not resolved
-              (assert (not OUTLIER_INFO) (sha256 ONE ()))
             )
             ; min singleton amount, force it to be this
             ONE
