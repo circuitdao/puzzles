@@ -34,21 +34,6 @@
       ()
       ; conditions to return
       (list
-        ; mod hash must match the parent mod hash to keep integrity
-        (list ASSERT_MY_PUZZLE_HASH
-          (curry_hashes CAT_MOD_HASH
-            (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE CRT_TAIL_HASH)
-            (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE INNER_PUZZLE_HASH)
-              (sha256tree BILL)
-            )
-          )
-        )
         ; has enough time passed since this coin was last spent (veto included)
         (list ASSERT_SECONDS_RELATIVE enact_seconds)
         (list SEND_MESSAGE 0x12

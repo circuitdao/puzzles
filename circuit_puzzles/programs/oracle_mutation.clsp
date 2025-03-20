@@ -23,13 +23,6 @@
   (include utils.clib)
   (include oracle.clib)
 
-  (defun get-launcher_ids (price_announcers)
-    (if price_announcers
-      (c (f (f price_announcers)) (get-launcher_ids (r price_announcers)))
-      ()
-    )
-  )
-
   (assign
     price_announcers_length (list-length price_announcers 0)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)

@@ -26,7 +26,6 @@
     (list CREATE_COIN
       (curry_hashes GOVERNANCE_MOD_HASH
         (sha256 ONE GOVERNANCE_MOD_HASH)
-        (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE CRT_TAIL_HASH)
         STATUTES_STRUCT_HASH
         (sha256 ONE inner_puzzle_hash)

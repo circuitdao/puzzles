@@ -142,7 +142,6 @@
         price_update_counter
       )
       (list REMARK PROTOCOL_PREFIX prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
-      ; TODO: add CRT TAIL hash announcements
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -9 CAT_MOD_HASH))))
       ) ; NEW

@@ -56,20 +56,6 @@
           ()
         )
         (list 
-          (list ASSERT_MY_PUZZLE_HASH
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE CRT_TAIL_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256 ONE INNER_PUZZLE_HASH)
-                (sha256tree BILL)
-              )
-            )
-          )
           ; this timestamp must be in the past, so it's up to the voter to push it as close to present as possible
           (list ASSERT_SECONDS_RELATIVE relative_time_spent)
           (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree target_bill_hash)) target_coin_id)
