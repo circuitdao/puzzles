@@ -1,0 +1,12 @@
+(mod (INNER_PUZZLE_HASH AMOUNT parent_id)
+  (include condition_codes.clib)
+
+  (list
+    ; check and verify our parent coin
+    (list ASSERT_MY_PARENT_ID parent_id)
+    ; CREATE_COIN for CRT coin to exit from governance
+    (list CREATE_COIN INNER_PUZZLE_HASH AMOUNT (list INNER_PUZZLE_HASH))
+    ; SEND_MESSAGE with protocol prefix and inner puzzle hash to confirm exit (010111 for msg mode)
+    (list SEND_MESSAGE 0x17 (concat "C" INNER_PUZZLE_HASH) parent_id)
+  )
+)

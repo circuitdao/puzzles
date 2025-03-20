@@ -1,4 +1,4 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES
      (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
      inner_puzzle
      solution_or_conditions
@@ -79,7 +79,7 @@
             (= APPROVED 0)
             (= DEPOSIT 0)
             (= DELAY 0)
-            (= ATOM_VALUE 0)
+            (= VALUE 0)
             (= MIN_DEPOSIT 0)
             (= COOLDOWN_START 0)
             (= TIMESTAMP_EXPIRES 0)
@@ -99,7 +99,7 @@
                 (sha256 ONE APPROVED)
                 (sha256 ONE DEPOSIT)
                 (sha256 ONE DELAY)
-                (sha256 ONE ATOM_VALUE)
+                (sha256tree VALUE)
                 (sha256 ONE MIN_DEPOSIT)
                 (sha256 ONE COOLDOWN_START)
                 (sha256 ONE LAST_PENALTY_INTERVAL)
@@ -109,7 +109,7 @@
             (a
               operation
               (list
-                (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+                (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
                 inner_puzzle_hash new_puzzle_hash deposit input_conditions
                 args
               )

@@ -1,6 +1,6 @@
 ; governance
 ; we either activate this announcer or deactivate, can happen at any time via CRT vote
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (
@@ -33,7 +33,7 @@
       toggle_activation
       deposit
       DELAY
-      ATOM_VALUE
+      VALUE
       MIN_DEPOSIT
       COOLDOWN_START
       LAST_PENALTY_INTERVAL
