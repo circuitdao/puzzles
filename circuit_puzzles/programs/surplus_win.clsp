@@ -11,7 +11,6 @@
       crt_tail_puzzle
       payout_coin_parent_id
       payout_mod_hash
-      lot_amount
       limitation_solution
     )
   )
@@ -47,8 +46,6 @@
       (= crt_tail_hash CRT_TAIL_HASH)
       ; ttl for last bid should've expired
       (> (- current_timestamp timestamp) ttl)
-      ; check lot matches
-      (= lot_amount BYC_LOT_AMOUNT)
       (li
         ; no recreate here, we create melting condition
         ; not asserting my puzzle hash and my amount in present puzzle as crt tail does this on melt
@@ -63,7 +60,7 @@
         (list SEND_MESSAGE 0x3f
           (concat
             PROTOCOL_PREFIX
-            (sha256tree (c lot_amount (c target_puzzle_hash LAUNCHER_ID)))
+            (sha256tree (c BYC_LOT_AMOUNT (c target_puzzle_hash LAUNCHER_ID)))
           )
           payout_coin_id
         )
