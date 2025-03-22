@@ -2,9 +2,10 @@
 
   (include prefixes.clib)
 
-  (defconst STATUTE_CAT_MOD_HASH -9) ; NEW
-  (defconst STATUTE_CRT_TAIL_HASH -8) ; NEW
-  (defconst STATUTE_PRICE_UPDATE_COUNTER -7)
+  (defconst STATUTE_CAT_MOD_HASH -10) ; NEW
+  (defconst STATUTE_CRT_TAIL_HASH -9) ; NEW
+  (defconst STATUTE_PRICE_UPDATE_COUNTER -8)
+  (defconst STATUTE_RUN_TAIL_MOD_HASH -7)
   (defconst STATUTE_PAYOUT_MOD_HASH -6)
   (defconst STATUTE_OFFER_MOD_HASH -5)
   (defconst STATUTE_TREASURY_MOD_HASH -4)

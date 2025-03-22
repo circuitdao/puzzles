@@ -15,6 +15,7 @@
          byc_treasury_coin_info treasury_mod_hash
          min_treasury_delta
          price_info current_stability_fee_df current_timestamp
+         run_tail_mod_hash
       )
     )
   )
@@ -69,7 +70,11 @@
     byc_coin_id_to_melt (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
-      byc_melting_coin_info
+      (list
+        (f byc_melting_coin_info)
+        (r byc_melting_coin_info)
+        run_tail_mod_hash
+      )
     )
     (assert
       (> repay_amount MINUS_ONE) ; repay amount must not be negative (but can be 0)
@@ -89,6 +94,7 @@
             (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
+            (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
             (assert-price-info statutes_puzzle_hash price_info)
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
@@ -115,7 +121,7 @@
             )
           )
           (if (> sf_transfer_amount 0)
-            ; get an announcement from offer module that BYC was paid into treasury
+            ; get a message from offer module that BYC was paid into treasury
             ; approve treasury coin to receive a deposit
             (c
               (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
