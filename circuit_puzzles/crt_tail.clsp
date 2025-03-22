@@ -17,6 +17,7 @@
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
+  (include condition_filtering.clib)
 
   (defun-inline get-statutes-puzzle-hash (statutes_struct statutes_inner_puzzle_hash)
     (c
@@ -43,7 +44,7 @@
     )
   )
 
-  (if delta
+  (if (and delta (check-tail-conditions inner_conditions))
     (if (> 0 delta)
       ; melting only by surplus auction, positive delta means melting
       (assign
