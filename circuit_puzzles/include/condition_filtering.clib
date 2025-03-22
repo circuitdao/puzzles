@@ -47,6 +47,8 @@
     )
   )
 
+  ; LATER: check throughout protocol what cost saving is of checking conditions
+  ;  as below instead of returning filtered conditions
   (defun check-tail-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
     (if conditions
       (if (= condition_code REMARK)
