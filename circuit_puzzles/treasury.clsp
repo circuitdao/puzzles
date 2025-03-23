@@ -169,7 +169,6 @@
                   rebalance_delta
                   prev_delta_sum
                   baseline_amount
-                  _ ; new_amount extracted above
                 ) rebalance_args
                 delta (- new_amount current_amount)
                 delta_sum (+ delta prev_delta_sum)

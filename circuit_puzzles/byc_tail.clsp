@@ -40,7 +40,7 @@
       CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
       byc_tail_hash (cat_tail_program_hash_truth Truths)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-      (assert_debug
+      (assert
         ; check for cheeky conditions
         (check-tail-conditions inner_conditions)
         (size_b32 vault_curried_args_hash)
@@ -48,6 +48,7 @@
         (any
           ; when melting, parent must be a cat, and delta must match negative new_byc_coin_amount
           (all parent_is_cat (= new_byc_coin_amount (+ current_coin_amount delta)))
+          ; when issuing, parent must not be a cat, and delta must be 0
           (all (not parent_is_cat) (= 0 delta))
         )
         (list

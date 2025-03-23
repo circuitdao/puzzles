@@ -95,7 +95,7 @@
           (not (r (r (r (r (r mutation_value))))))
         )
         (li
-          ; get confirmation from a CRT voting coin that mutation was applied
+          ; get confirmation from a CRT voting puzzle that mutation was applied
           (list RECEIVE_MESSAGE 0x12
             (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
             (curry_hashes CAT_MOD_HASH
@@ -104,6 +104,7 @@
               governance_puzzle_hash
             )
           )
+
           &rest
           (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
             ; filter custom conditions, otherwise ignore  
