@@ -3,8 +3,7 @@
       parent_is_cat
       lineage_proof
       delta
-      inner_conditions ; we don't check these as since they're checked in vault puzzle,
-                       ; which is the only one that can approve minting
+      inner_conditions
       (@ solution
         (
           vault_parent_id

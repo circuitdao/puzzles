@@ -121,8 +121,7 @@
             )
           )
           (if (> sf_transfer_amount 0)
-            ; get a message from offer module that BYC was paid into treasury
-            ; approve treasury coin to receive a deposit
+            ; send message to treasury coin ensure deposit was made
             (c
               (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
               (c 
