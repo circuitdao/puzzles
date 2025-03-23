@@ -1,6 +1,6 @@
 ;; Bid to active surplus auction coin. There can be multiple active surplus auctions.
 ;; Surplus auction puzzle is inner puzzle of CRT coin. So bids are are in CRT CAT values.
-;; The bid amount is bidding for BYC_LOT_AMOUNT. Bid amount must be at least STATUTE_MIN_BID_INCREASE_BPS higher
+;; The bid amount is bidding for BYC_LOT_AMOUNT. Bid amount must be at least STATUTE_MINIMUM_BID_INCREASE_BPS higher
 ;; than the current bid if any to avoid spamming the network with small bids.
 (mod
   (
@@ -82,7 +82,7 @@
         )
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_MIN_BID_INCREASE_BPS min_bid_increase_bps)
+        (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
