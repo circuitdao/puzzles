@@ -47,4 +47,31 @@
     )
   )
 
+  ; LATER: check throughout protocol what cost saving is of checking conditions
+  ;  as below instead of returning filtered conditions
+  (defun check-tail-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
+    (if conditions
+      (if (= condition_code REMARK)
+        (assert
+          (is-valid-rmk-cond condition_body)
+          (check-tail-conditions rest_of_conditions)
+        )
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          (assert
+            (is-valid-msg-cond condition_body)
+            (check-tail-conditions rest_of_conditions)
+          )
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+            (assert
+              (is-valid-ann-cond condition_body)
+              (check-tail-conditions rest_of_conditions)
+            )
+            ; all other conditions allowed
+            (check-tail-conditions rest_of_conditions)
+          )
+        )
+      )
+      1
+    )
+  )
 )

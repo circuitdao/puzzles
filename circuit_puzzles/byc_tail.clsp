@@ -3,8 +3,7 @@
       parent_is_cat
       lineage_proof
       delta
-      inner_conditions ; we don't check these as since they're checked in vault puzzle,
-                       ; which is the only one that can approve minting
+      inner_conditions
       (@ solution
         (
           vault_parent_id
@@ -13,6 +12,7 @@
           vault_amount
           statutes_inner_puzzle_hash
           approval_mod_hashes
+          run_tail_mod_hash
           current_coin_amount
           new_byc_coin_amount ; new amount of BYC coin being issued or melted from
         )
@@ -25,6 +25,7 @@
   (include curry.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+  (include condition_filtering.clib)
 
   (if (any (= delta 0) (> 0 delta))
     ; we're issuing or melting
@@ -34,8 +35,13 @@
         (tree_hash_of_apply vault_mod_hash vault_curried_args_hash)
         vault_amount
       )
+      CAT_MOD_HASH (cat_mod_hash_truth Truths)
+      CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
+      byc_tail_hash (cat_tail_program_hash_truth Truths)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-      (assert
+      (assert_debug
+        ; check for cheeky conditions
+        (check-tail-conditions inner_conditions)
         (size_b32 vault_curried_args_hash)
         (= vault_mod_hash (f approval_mod_hashes))
         (any
@@ -45,6 +51,14 @@
         )
         (list
           (list ASSERT_MY_AMOUNT current_coin_amount)
+          ; this tail can only be called in run tail puzzle to avoid misuse
+          (list ASSERT_MY_PUZZLE_HASH
+            (curry_hashes CAT_MOD_HASH
+              CAT_MOD_HASH_HASH
+              (sha256tree byc_tail_hash)
+              run_tail_mod_hash
+            )
+          )
           (list RECEIVE_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
@@ -59,6 +73,7 @@
             vault_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+          (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
         )
       )
     )

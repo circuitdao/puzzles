@@ -18,6 +18,7 @@
         current_timestamp
         current_stability_fee_df
         price_info
+        run_tail_mod_hash
       )
     )
   )
@@ -45,7 +46,11 @@
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
-      byc_issuing_coin_info
+      (list
+        (f byc_issuing_coin_info)
+        (r byc_issuing_coin_info)
+        run_tail_mod_hash
+      )
     )
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
@@ -93,11 +98,12 @@
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta) ;minimum_sf_transfer_amount)
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
           (assert-price-info statutes_puzzle_hash price_info)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
+          (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
         )
       )
     )

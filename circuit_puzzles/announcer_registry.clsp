@@ -59,12 +59,13 @@
         current_iteration (/ statutes_price_updates claim_interval)
         announcers_count (list-length ANNOUNCER_REGISTRY 0)
         change_amount (r (divmod crt_credits_per_interval announcers_count))
+        run_tail_mod_hash (f (r issuance_coin_info))
         issuance_coin_id (calculate-coin-id
           (f issuance_coin_info)
           (curry_hashes cat_mod_hash
             (sha256 ONE cat_mod_hash)
             (sha256 ONE crt_tail_hash)
-            (f (r issuance_coin_info))
+            run_tail_mod_hash
           )
           (f (r (r issuance_coin_info)))
         )
@@ -87,12 +88,13 @@
                 issuance_coin_id
               )
               (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
-              (assert-statute statutes_puzzle_hash STATUTE_CAT_MOD_HASH cat_mod_hash) ; NEW
-              (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash) ; NEW
+              (assert-statute statutes_puzzle_hash STATUTE_CAT_MOD_HASH cat_mod_hash)
+              (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash)
               (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_PER_INTERVAL crt_credits_per_interval)
               (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_updates)
+              (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
                   (curry_hashes cat_mod_hash

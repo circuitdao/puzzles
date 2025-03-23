@@ -17,6 +17,7 @@
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
+  (include condition_filtering.clib)
 
   (defun-inline get-statutes-puzzle-hash (statutes_struct statutes_inner_puzzle_hash)
     (c
@@ -43,7 +44,7 @@
     )
   )
 
-  (if delta
+  (if (and delta (check-tail-conditions inner_conditions))
     (if (> 0 delta)
       ; melting only by surplus auction, positive delta means melting
       (assign
@@ -119,6 +120,7 @@
           approval_mod_hashes
           statutes_inner_puzzle_hash
           target_puzzle_hash  ; where this coin is going to
+          run_tail_mod_hash
         ) solution
         (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         approver_coin_id (calculate-coin-id
@@ -176,8 +178,16 @@
               )
               approver_coin_id
             )
+            (list ASSERT_MY_PUZZLE_HASH
+              (curry_hashes CAT_MOD_HASH
+                CAT_MOD_HASH_HASH
+                (sha256tree crt_tail_hash)
+                run_tail_mod_hash
+              )
+            )
             (list ASSERT_MY_AMOUNT issuance_amount)
             (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+            (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
           )
         )
       )

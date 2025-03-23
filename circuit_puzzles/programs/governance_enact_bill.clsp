@@ -7,7 +7,7 @@
       amount
       parent_parent_id
       prev_bill_hash
-      enactment_timeout_seconds
+      enactment_interval
     )
   )
 
@@ -43,8 +43,8 @@
         )
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_ENACTED)))
         ; enactment must happen within enactment timeout seconds otherwise times out and resets the bill
-        (list ASSERT_BEFORE_SECONDS_RELATIVE (+ enact_seconds enactment_timeout_seconds))
-        (assert-statute statutes_puzzle_hash STATUTE_ENACTMENT_TIMEOUT_SECONDS enactment_timeout_seconds)
+        (list ASSERT_BEFORE_SECONDS_RELATIVE (+ enact_seconds enactment_interval))
+        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_ENACTMENT_INTERVAL enactment_interval)
       )
     )
   )

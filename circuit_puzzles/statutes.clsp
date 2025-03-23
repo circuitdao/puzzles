@@ -6,6 +6,7 @@
         TREASURY_MOD_HASH
         OFFER_MOD_HASH
         PAYOUT_MOD_HASH
+        RUN_TAIL_MOD_HASH
       )
       CAT_MOD_HASH ; TODO: move before MOD_HASH?
       CRT_TAIL_HASH
@@ -55,7 +56,7 @@
 
   (defun-inline create-coin-condition (MOD_HASH
                                         APPROVAL_MOD_HASHES_HASH
-                                        TREASURY_MOD_HASH PAYOUT_MOD_HASH
+                                        TREASURY_MOD_HASH PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
                                         CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         prev_announce statutes price_info
                                         cumulative_stability_fee_df cumulative_interest_df price_update_counter)
@@ -69,6 +70,7 @@
             TREASURY_MOD_HASH
             OFFER_MOD_HASH
             PAYOUT_MOD_HASH
+            RUN_TAIL_MOD_HASH
           )
         )
         (sha256 ONE CAT_MOD_HASH)
@@ -131,6 +133,7 @@
         APPROVAL_MOD_HASHES_HASH
         TREASURY_MOD_HASH
         PAYOUT_MOD_HASH
+        RUN_TAIL_MOD_HASH
         CAT_MOD_HASH
         OFFER_MOD_HASH
         CRT_TAIL_HASH
@@ -143,13 +146,16 @@
       )
       (list REMARK PROTOCOL_PREFIX prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -9 CAT_MOD_HASH))))
-      ) ; NEW
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -10 CAT_MOD_HASH))))
+      )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -8 CRT_TAIL_HASH))))
-      ) ; NEW
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -9 CRT_TAIL_HASH))))
+      )
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -7 price_update_counter))))
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -8 price_update_counter))))
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -7 RUN_TAIL_MOD_HASH))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -6 PAYOUT_MOD_HASH))))
