@@ -26,25 +26,45 @@
     )
   )
 
-  (defun validate-target-coin ((@ conditions ((condition_code . condition_rest) . rest_of_conditions)) found_create_coin)
-    ; find all CREATE_COIN conditions, check that there's only one and return that,
-    ; fail if there's more CREATE_COIN conditions. other conditions are fine and get skipped
+
+  (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_create_coin filtered_conditions)
+    ; verify that there's exactly one CREATE_COIN condition and return its body.
+    ; fail on protocol conditions. all other conditions are fine and get returned.
     (if conditions
       (if (= condition_code CREATE_COIN)
         (if found_create_coin
           (x)
-          (validate-target-coin rest_of_conditions condition_rest)
+          (filter-conditions rest_of_conditions condition_body filtered_conditions)
         )
-        (validate-target-coin rest_of_conditions found_create_coin)
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body)
+            (filter-conditions rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-conditions rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-conditions rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+              )
+              ; all other conditions allowed
+              (filter-conditions rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+            )
+          )
+        )
       )
       (if found_create_coin
-        found_create_coin
+        (c found_create_coin filtered_conditions)
         (x)
       )
     )
   )
 
-  (if (and delta (check-tail-conditions inner_conditions))
+  (if delta
     (if (> 0 delta)
       ; melting only by surplus auction, positive delta means melting
       (assign
@@ -145,7 +165,7 @@
           )
           amount
         )
-        (found_target_puzzle_hash found_target_amount . rest) (validate-target-coin inner_conditions 0)
+        ((found_target_puzzle_hash found_target_amount . rest) . filtered_conditions) (filter-conditions inner_conditions 0 ())
         curried_target_puzzle_hash (curry_hashes CAT_MOD_HASH
           CAT_MOD_HASH_HASH
           (sha256 ONE crt_tail_hash)
@@ -164,7 +184,7 @@
           (= found_target_puzzle_hash curried_target_puzzle_hash)
           (= found_target_amount issuance_amount)
           (= delta 0)
-          (list
+          (li
             (list RECEIVE_MESSAGE 0x3f
               (concat
                 PROTOCOL_PREFIX
@@ -188,6 +208,8 @@
             (list ASSERT_MY_AMOUNT issuance_amount)
             (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
             (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
+            &rest
+            filtered_conditions
           )
         )
       )
