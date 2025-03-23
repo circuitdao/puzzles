@@ -8,7 +8,7 @@
   )
 
   ; logical AND function that evaluates clauses left to right
-  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
+  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) ONE))
 
   ; true/false for non-protocol/protocol CREATE_..._ANNOUNCEMENT condition
   (defun-inline is-valid-ann-cond (condition_body)
@@ -17,7 +17,7 @@
         (l condition_body)
         (not (l (f condition_body)))
         (= (strlen (f condition_body)) 33)
-        (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
+        (= (substr (f condition_body) 0 ONE) PROTOCOL_PREFIX)
       )
     )
   )
@@ -30,7 +30,7 @@
         (l (r condition_body))
         (not (l (f (r condition_body))))
         (= (strlen (f (r condition_body))) 33)
-        (= (substr (f (r condition_body)) 0 1) PROTOCOL_PREFIX)
+        (= (substr (f (r condition_body)) 0 ONE) PROTOCOL_PREFIX)
       )
     )
   )
@@ -41,8 +41,8 @@
       (and
         (l condition_body)
         (not (l (f condition_body)))
-        (= (strlen (f condition_body)) 1)
-        (= (substr (f condition_body) 0 1) PROTOCOL_PREFIX)
+        (= (strlen (f condition_body)) ONE)
+        (= (substr (f condition_body) 0 ONE) PROTOCOL_PREFIX)
       )
     )
   )
@@ -69,7 +69,7 @@
           )
         )
       )
-      1
+      ONE
     )
   )
 )

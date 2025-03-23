@@ -17,10 +17,10 @@
    
   (include *standard-cl-23.1*)
   (include curry.clib)
+  (include utils.clib)
   (include condition_codes.clib)
   (include condition_filtering.clib)
   (include statutes_utils.clib)
-  (include utils.clib)
 
   (defconst VETO_PROPOSED_BILL -1)
 

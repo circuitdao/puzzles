@@ -116,7 +116,7 @@
             ; keep remaining mutable state unchanged
             STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER
             ; operation conditions
-            (if (> PREV_ANNOUNCE 1)
+            (if (> PREV_ANNOUNCE ONE)
               ; eve spend
               ()
               ; non-eve spend

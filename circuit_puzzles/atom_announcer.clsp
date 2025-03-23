@@ -6,9 +6,9 @@
 
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
+  (include utils.clib)
   (include condition_filtering.clib)
   (include curry.clib)
-  (include utils.clib)
   (include statutes_utils.clib)
 
   (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
