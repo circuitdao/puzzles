@@ -18,6 +18,7 @@
         my_coin_id
         offer_mod_hash
         treasury_mod_hash
+        run_tail_mod_hash
       )
     )
   )
@@ -91,7 +92,11 @@
       (calculate-byc-coin-id
         CAT_MOD_HASH
         byc_tail_hash
-        byc_melting_coin_info
+        (list
+          (f byc_melting_coin_info)
+          (r byc_melting_coin_info)
+          run_tail_mod_hash
+        )
       )
       ()
     )
@@ -160,6 +165,7 @@
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
             (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
+            (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC

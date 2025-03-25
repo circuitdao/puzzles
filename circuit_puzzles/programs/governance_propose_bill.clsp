@@ -64,7 +64,7 @@
           (if (= statute_index -1) STATUTE_CUSTOM_CONDITIONS statute_index)
           current_statute
         )
-        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_NEW_BILL_PROPOSAL_FEE_MOJOS new_bill_proposal_fee_mojos)
+        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_BILL_PROPOSAL_FEE_MOJOS new_bill_proposal_fee_mojos)
       )
     )
   )

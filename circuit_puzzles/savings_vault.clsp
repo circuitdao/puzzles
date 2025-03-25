@@ -10,7 +10,7 @@
       .
       (@ treasury_coin_info ((treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
                              treasury_coin_prev_launcher_id treasury_coin_amount
-                             treasury_withdraw_amount ; NEW. amount of interest to be paid
+                             treasury_withdraw_amount ; amount of interest to be paid
                              ))
       )
      )
