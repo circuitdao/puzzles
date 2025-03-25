@@ -17,10 +17,10 @@
 
   (include *standard-cl-23.1*)
   (include curry.clib)
+  (include utils.clib)
   (include condition_codes.clib)
   (include condition_filtering.clib)
   (include statutes_utils.clib)
-  (include utils.clib)
 
   (defun filter-conditions ((@ conditions ( (condition_code . condition_body) . rest_of_conditions))
                             found_first_create_coin

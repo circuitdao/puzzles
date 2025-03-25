@@ -28,6 +28,7 @@
   (include curry.clib)
 
   (assign
+    ; we want cat puzzle to use the same statutes struct in the tail as this puzzle
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     ; calculate the latest cumulative stability fee discount factor
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
