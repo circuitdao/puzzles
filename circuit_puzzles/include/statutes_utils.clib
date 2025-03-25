@@ -106,7 +106,7 @@
       (sha256
         statutes_puzzle_hash
         PROTOCOL_PREFIX
-        (sha256tree (c PRICE_PREFIX price_info)) ; (sha256tree price_info)
+        (sha256tree (c PRICE_PREFIX price_info))
       )
     )
   )
