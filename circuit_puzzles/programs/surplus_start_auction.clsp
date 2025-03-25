@@ -163,8 +163,6 @@
           lot_amount
           0
           ()
-          BYC_TAIL_HASH
-          CRT_TAIL_HASH
         ) 
         &rest
         (assert-treasury-coins-withdrawal
