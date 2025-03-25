@@ -26,12 +26,13 @@
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
+    run_tail_mod_hash (f (r funding_coin_info))
     funding_coin_id (calculate-coin-id
       (f funding_coin_info)
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE crt_tail_hash)
-        (f (r funding_coin_info))
+        run_tail_mod_hash
       )
       (f (r (r funding_coin_info)))
     )
@@ -68,6 +69,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
+        (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
