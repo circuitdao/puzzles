@@ -91,7 +91,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c delta new_amount))
+              (sha256tree (c STATUTES_STRUCT (c delta new_amount)))
             )
             treasury_coin_id
           )
@@ -103,8 +103,10 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c new_prev_amount
-                      next_ring_prev_launcher_id ; ensure treasury coin links to prev treasury coin
+                    (c STATUTES_STRUCT
+                      (c new_prev_amount
+                        next_ring_prev_launcher_id ; ensure treasury coin links to prev treasury coin
+                      )
                     )
                   )
                 )

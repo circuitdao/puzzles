@@ -69,7 +69,7 @@
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat PROTOCOL_PREFIX
-              (sha256tree (c "i" (c borrow_amount STATUTES_STRUCT)))
+              (sha256tree (c STATUTES_STRUCT (c "i" borrow_amount)))
             )
             byc_issuing_coin_id
           )

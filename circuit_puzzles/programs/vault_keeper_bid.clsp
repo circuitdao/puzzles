@@ -174,10 +174,8 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c 'x'
-                      (c (* -1 byc_to_melt)
-                        STATUTES_STRUCT
-                      )
+                    (c STATUTES_STRUCT
+                      (c 'x' (* -1 byc_to_melt))
                     )
                   )
                 )
@@ -193,7 +191,7 @@
                   offer_mod_hash
                   (sha256tree
                     (c
-                      my_coin_id ; nonce. LATER: needed?
+                      my_coin_id
                       (list
                         (list
                           target_puzzle_hash
@@ -218,7 +216,7 @@
                   )
                   ; nonce = my_coin_id, payments = (initiator puzzle hash, initiator incentive fee)
                   (sha256tree
-                    (c my_coin_id ; nonce. LATER: needed?
+                    (c my_coin_id
                       (list
                         (list initiator_puzzle_hash initiator_incentive (list initiator_puzzle_hash))
                       )
@@ -237,7 +235,7 @@
                 (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (sha256tree (c byc_to_treasury new_treasury_amount))
+                    (sha256tree (c STATUTES_STRUCT (c byc_to_treasury new_treasury_amount)))
                   )
                   treasury_coin_id
                 )
