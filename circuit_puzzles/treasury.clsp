@@ -356,7 +356,17 @@
                             (c (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH (f approver_mod_curried_args_hash))
                               conditions
                             )
-                            conditions
+                            (if
+                              (any
+                                (= (f (r (r approval_mod_hashes))) approver_mod_hash) ; recharge auction
+                                (= (f (r (r (r approval_mod_hashes)))) approver_mod_hash) ; savings_vault
+                              )
+                              (assert
+                                (= byc_tail_hash (f approver_mod_curried_args_hash))
+                                conditions
+                              )
+                              conditions
+                            )
                           )
                         )
                       )
