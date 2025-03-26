@@ -28,9 +28,9 @@
           (concat
             PROTOCOL_PREFIX
             (sha256tree
-              (c INNER_PUZZLE_HASH
-                (c APPROVED
-                  STATUTES_STRUCT
+              (c STATUTES_STRUCT
+                (c INNER_PUZZLE_HASH
+                  APPROVED
                 )
               )
             )

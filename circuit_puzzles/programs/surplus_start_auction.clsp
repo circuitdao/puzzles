@@ -55,7 +55,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c (* -1 withdraw_amount) (- current_amount withdraw_amount)))
+              (sha256tree (c STATUTES_STRUCT (c (* -1 withdraw_amount) (- current_amount withdraw_amount))))
             )
             treasury_coin_id
           )
@@ -163,8 +163,6 @@
           lot_amount
           0
           ()
-          BYC_TAIL_HASH
-          CRT_TAIL_HASH
         ) 
         &rest
         (assert-treasury-coins-withdrawal

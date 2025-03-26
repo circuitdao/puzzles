@@ -77,8 +77,6 @@
           BYC_LOT_AMOUNT
           bid_crt_amount
           (c target_puzzle_hash current_timestamp)
-          BYC_TAIL_HASH ; TODO: no need to include as immutable and known to driver
-          CRT_TAIL_HASH ; TODO: no need to include as immutable and known to driver
         )
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)

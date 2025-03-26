@@ -104,10 +104,8 @@
                   (concat
                     PROTOCOL_PREFIX
                     (sha256tree
-                      (c "x"
-                        (c (* -1 reconcile_amount)
-                          STATUTES_STRUCT ; LATER: not needed as already used in calculation of treasury_coin_id?
-                        )
+                      (c STATUTES_STRUCT
+                        (c "x" (* -1 reconcile_amount))
                       )
                     )
                   )
@@ -118,7 +116,7 @@
                   (list SEND_MESSAGE 0x3f
                     (concat
                       PROTOCOL_PREFIX
-                      (sha256tree (c (* -1 reconcile_amount) new_treasury_amount))
+                      (sha256tree (c STATUTES_STRUCT (c (* -1 reconcile_amount) new_treasury_amount)))
                     )
                     treasury_coin_id
                   )

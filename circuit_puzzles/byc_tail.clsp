@@ -64,9 +64,9 @@
             (concat
               PROTOCOL_PREFIX
               (sha256tree
-                (c (if (> 0 delta) "x" "i")
-                  (c (if (> 0 delta) delta new_byc_coin_amount)
-                    STATUTES_STRUCT ; statutes_struct_hash ; need to tie it to statutes struct
+                (c STATUTES_STRUCT ; need to tie it to statutes struct
+                  (c (if (> 0 delta) "x" "i")
+                    (if (> 0 delta) delta new_byc_coin_amount)
                   )
                 )
               )
