@@ -40,6 +40,8 @@
           byc_tail_hash
           surplus_mod_hash
           launcher_id
+          bid_ttl
+          min_bid_increase_bps
           byc_lot_amount
           last_bid
           statutes_inner_puzzle_hash
@@ -57,6 +59,8 @@
               (sha256 ONE byc_tail_hash)
               (sha256 ONE crt_tail_hash)
               (sha256 ONE launcher_id)
+              (sha256 ONE bid_ttl)
+              (sha256 ONE min_bid_increase_bps)
               (sha256 ONE byc_lot_amount)
               (sha256tree last_bid)
             )

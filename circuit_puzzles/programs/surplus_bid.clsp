@@ -4,7 +4,8 @@
 ;; than the current bid if any to avoid spamming the network with small bids.
 (mod
   (
-    (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
+    ;(MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
+    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     statutes_inner_puzzle_hash
     lineage_proof ; -> (parent_parent_id parent_amount parent_cat_inner_puzzle_hash)
     announcements
@@ -13,10 +14,10 @@
       target_puzzle_hash
       current_timestamp
       my_amount
-      ttl
+      ;ttl ; NEW: removed
       my_coin_id
       offer_mod_hash
-      min_bid_increase_bps
+      ;min_bid_increase_bps ; NEW: removed
     )
   )
 
@@ -35,9 +36,9 @@
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> bid_crt_amount 0)) (> bid_crt_amount my_amount))
       ; TTL for bid hasn't expired yet
-      (any (not last_bid_timestamp) (> ttl (- current_timestamp last_bid_timestamp)))
+      (any (not last_bid_timestamp) (> BID_TTL (- current_timestamp last_bid_timestamp)))
       ; bid_crt_amount is min_bid_increase_bps higher than my_amount
-      (> bid_crt_amount (/ (* my_amount (+ PRECISION_BPS min_bid_increase_bps)) PRECISION_BPS))
+      (> bid_crt_amount (/ (* my_amount (+ PRECISION_BPS MIN_BID_INCREASE_BPS)) PRECISION_BPS))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
         (list ASSERT_MY_PUZZLE_HASH
@@ -51,6 +52,8 @@
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE CRT_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE BID_TTL)
+              (sha256 ONE MIN_BID_INCREASE_BPS)
               (sha256 ONE BYC_LOT_AMOUNT)
               (sha256tree LAST_BID)
             )
@@ -66,6 +69,8 @@
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE CRT_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE BID_TTL)
+            (sha256 ONE MIN_BID_INCREASE_BPS)
             (sha256 ONE BYC_LOT_AMOUNT)
             (sha256tree (c target_puzzle_hash current_timestamp))
           )
@@ -74,13 +79,15 @@
         (list REMARK  ; this is for the driver to create the reveal
           PROTOCOL_PREFIX
           LAUNCHER_ID
+          BID_TTL
+          MIN_BID_INCREASE_BPS
           BYC_LOT_AMOUNT
           bid_crt_amount
           (c target_puzzle_hash current_timestamp)
         )
-        (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
+        ;(assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
+        ;(assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
