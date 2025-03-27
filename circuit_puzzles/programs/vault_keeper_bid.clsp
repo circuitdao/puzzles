@@ -1,6 +1,6 @@
 (mod
   (
-    CAT_MOD_HASH BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH RUN_TAIL_MOD_HASH TREASURY_MOD_HASH OFFER_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -16,9 +16,6 @@
         min_treasury_delta
         target_puzzle_hash
         my_coin_id
-        offer_mod_hash
-        treasury_mod_hash
-        run_tail_mod_hash
       )
     )
   )
@@ -95,7 +92,7 @@
         (list
           (f byc_melting_coin_info)
           (r byc_melting_coin_info)
-          run_tail_mod_hash
+          RUN_TAIL_MOD_HASH
         )
       )
       ()
@@ -109,8 +106,8 @@
           treasury_parent
           treasury_amount
           (curry_hashes
-            treasury_mod_hash
-            (sha256 ONE treasury_mod_hash)
+            TREASURY_MOD_HASH
+            (sha256 ONE TREASURY_MOD_HASH)
             statutes_struct_hash
             (sha256 ONE treasury_launcher_id)
             (sha256 ONE treasury_ring_prev_launcher_id)
@@ -163,9 +160,6 @@
           conditions (list
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
@@ -188,7 +182,7 @@
               ; assert that keeper absorbed their collateral + left over mojos from melting
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
-                  offer_mod_hash
+                  OFFER_MOD_HASH
                   (sha256tree
                     (c
                       my_coin_id
@@ -212,7 +206,7 @@
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256 ONE byc_tail_hash)
-                    offer_mod_hash
+                    OFFER_MOD_HASH
                   )
                   ; nonce = my_coin_id, payments = (initiator puzzle hash, initiator incentive fee)
                   (sha256tree

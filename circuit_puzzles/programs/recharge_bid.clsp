@@ -1,5 +1,5 @@
 (mod (
-    CAT_MOD_HASH
+    CAT_MOD_HASH OFFER_MOD_HASH
     (MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
     (
@@ -7,7 +7,6 @@
       target_puzzle_hash
       current_timestamp
       minimum_byc_bid_amount
-      offer_mod_hash
       auction_timeout
       ttl
       my_coin_id
@@ -71,7 +70,6 @@
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_CRT_PRICE min_crt_price)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID minimum_byc_bid_amount)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
-        (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
         ; current_time minus one tx block time should already be in the past
@@ -116,7 +114,7 @@
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256 ONE BYC_TAIL_HASH)
-                    offer_mod_hash
+                    OFFER_MOD_HASH
                   )
                   (sha256tree
                     (c my_coin_id

@@ -1,6 +1,8 @@
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
-(mod (CAT_MOD_HASH MOD_HASH
+(mod (CAT_MOD_HASH
+      TREASURY_MOD_HASH 
+      MOD_HASH
       BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
@@ -8,7 +10,7 @@
       statutes_cumulative_interest_df current_timestamp current_interest_df price_info min_treasury_delta
       inner_solution
       .
-      (@ treasury_coin_info ((treasury_hash treasury_coin_parent_id treasury_coin_launcher_id
+      (@ treasury_coin_info ((treasury_coin_parent_id treasury_coin_launcher_id
                              treasury_coin_prev_launcher_id treasury_coin_amount
                              treasury_withdraw_amount ; amount of interest to be paid
                              ))
@@ -111,8 +113,8 @@
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
           (sha256 ONE BYC_TAIL_HASH)
-          (curry_hashes treasury_hash
-            (sha256 ONE treasury_hash)
+          (curry_hashes TREASURY_MOD_HASH
+            (sha256 ONE TREASURY_MOD_HASH)
             statutes_struct_hash
             (sha256 ONE treasury_coin_launcher_id)
             (sha256 ONE treasury_coin_prev_launcher_id)
@@ -123,7 +125,7 @@
       ()
     )
     new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_payment) 0)
-    pre_final_conditions (if lineage_proof
+    final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_balance, inner_puzzle_hash)
       (c
         (list ASSERT_MY_PUZZLE_HASH
@@ -179,14 +181,6 @@
           conditions
         )
       )
-    )
-    final_conditions (if treasury_coin_info
-      ; check treasury_hash was approved by statutes, this also verifies the cat tail hash
-      (c
-        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_hash)
-        pre_final_conditions
-      )
-      pre_final_conditions
     )
     inner_puzzle_hash (f create_coin_body)
     memos (r (r create_coin_body))

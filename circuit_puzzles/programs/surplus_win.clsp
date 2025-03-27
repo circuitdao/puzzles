@@ -2,7 +2,7 @@
 ; If last bid goes over TTL, it's a win.  Running this operation burns the CRT locked into this coin (surplus auction)
 ; and unlocks BYC in payout coin and sends them to the winning target puzzle hash.
 (mod
-  (
+  ( PAYOUT_MOD_HASH
     (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
     (
@@ -10,7 +10,6 @@
       current_timestamp
       crt_tail_puzzle
       payout_coin_parent_id
-      payout_mod_hash
       limitation_solution
     )
   )
@@ -29,9 +28,10 @@
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE BYC_TAIL_HASH)
-        (curry_hashes payout_mod_hash
-          (sha256 ONE payout_mod_hash)
+        (curry_hashes PAYOUT_MOD_HASH
+          (sha256 ONE PAYOUT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
+          (sha256 ONE MOD_HASH)
           (sha256 ONE LAUNCHER_ID)
         )
     )
@@ -41,7 +41,6 @@
         BYC_LOT_AMOUNT
     )
     (assert
-      (size_b32 payout_mod_hash)
       ; ensure correct tail reveal is passed
       (= crt_tail_hash CRT_TAIL_HASH)
       ; ttl for last bid should've expired
@@ -51,7 +50,6 @@
         ; not asserting my puzzle hash and my amount in present puzzle as crt tail does this on melt
         (list CREATE_COIN 0 -113 crt_tail_puzzle limitation_solution)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL ttl)
-        (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
@@ -78,6 +76,7 @@
             (f (r lineage_proof))
           )
         )
+        ; NOTE: we assert this puzzles puzzle hash in the crt tail that we run
         &rest
         announcements
       )

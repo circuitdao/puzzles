@@ -1,12 +1,10 @@
 (mod
-  (
+  ( PAYOUT_MOD_HASH TREASURY_MOD_HASH
     (MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
     statutes_inner_puzzle_hash lineage_proof announcements
     (
       payout_coin_parent_id
       lot_amount
-      payout_mod_hash
-      treasury_mod_hash
       start_time
       my_coin_id
       treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
@@ -87,9 +85,10 @@
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE BYC_TAIL_HASH)
-        (curry_hashes payout_mod_hash
-          (sha256 ONE payout_mod_hash)
+        (curry_hashes PAYOUT_MOD_HASH
+          (sha256 ONE PAYOUT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
+          (sha256 ONE MOD_HASH)
           (sha256 ONE my_coin_id)
         )
     )
@@ -99,7 +98,6 @@
         0 ; initial amount for the coin that holds our lot should be 0
     )
     (assert
-      (size_b32 payout_mod_hash)
       ; can't run if LAST_BID is set
       (= LAST_BID ())
       ; we can only run if launcher_id is not set
@@ -145,8 +143,6 @@
         (list ASSERT_MY_AMOUNT 0) ; enforece eve amount
         (list ASSERT_MY_COIN_ID my_coin_id)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)
         ; start_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- start_time MAX_TX_BLOCK_TIME))
         ; make sure that start_time hasn't happen yet, allow it to be in mempool for 5 tx blocks
@@ -166,7 +162,7 @@
         ) 
         &rest
         (assert-treasury-coins-withdrawal
-          treasury_mod_hash
+          TREASURY_MOD_HASH
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

@@ -1,4 +1,5 @@
 (mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL ATOM_ANNOUNCER_MOD_HASH
+      CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
       MOD_HASH
       STATUTES_STRUCT
       ANNOUNCER_REGISTRY CLAIM_ITERATION
@@ -41,6 +42,7 @@
   )
 
   (assign
+    crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (announcer_registry claim_interval_number operation_conditions) (if (= mint_or_register MINT_OPCODE)
       ; this is minting
       (assign
@@ -50,25 +52,21 @@
           crt_credits_per_interval
           claim_interval
           issuance_coin_info
-          cat_mod_hash
-          crt_tail_hash
           change_receiver_hash
-          offer_mod_hash
           my_coin_id
         ) args
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         current_iteration (/ statutes_price_updates claim_interval)
         announcers_count (list-length ANNOUNCER_REGISTRY 0)
         change_amount (r (divmod crt_credits_per_interval announcers_count))
-        run_tail_mod_hash (f (r issuance_coin_info))
         issuance_coin_id (calculate-coin-id
           (f issuance_coin_info)
-          (curry_hashes cat_mod_hash
-            (sha256 ONE cat_mod_hash)
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE crt_tail_hash)
-            run_tail_mod_hash
+            RUN_TAIL_MOD_HASH
           )
-          (f (r (r issuance_coin_info)))
+          (r issuance_coin_info)
         )
         (assert
           (> current_iteration CLAIM_ITERATION)
@@ -84,25 +82,21 @@
               (list SEND_MESSAGE 0x3f
                 (concat
                   PROTOCOL_PREFIX
-                  (sha256tree (c STATUTES_STRUCT (c offer_mod_hash crt_credits_per_interval)))
+                  (sha256tree (c STATUTES_STRUCT (c OFFER_MOD_HASH crt_credits_per_interval)))
                 )
                 issuance_coin_id
               )
               (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
-              (assert-statute statutes_puzzle_hash STATUTE_CAT_MOD_HASH cat_mod_hash)
-              (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash)
-              (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
               (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_PER_INTERVAL crt_credits_per_interval)
               (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_updates)
-              (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
               (list ASSERT_MY_COIN_ID my_coin_id)
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
-                  (curry_hashes cat_mod_hash
-                      (sha256 ONE cat_mod_hash)
+                  (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
                       (sha256 ONE crt_tail_hash)
-                      offer_mod_hash
+                      OFFER_MOD_HASH
                   )
                   (sha256tree
                     (c
@@ -136,8 +130,6 @@
           (announcer_inner_puzzle_hash announcer_curried_args_hash) args
           announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH announcer_curried_args_hash)
           (assert
-            (size_b32 announcer_curried_args_hash)
-            (size_b32 announcer_inner_puzzle_hash)
             (not (contains ANNOUNCER_REGISTRY announcer_inner_puzzle_hash))
             (list
               (c announcer_inner_puzzle_hash ANNOUNCER_REGISTRY)

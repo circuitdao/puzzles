@@ -1,6 +1,6 @@
 (mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH)
        MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-       CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
+       PRICE_UPDATE_COUNTER
        _ ; mutation_index
        (@ mutation_value (oracle_inner_puz_hash price last_updated current_timestamp))
        _ ; governance_curried_ars_hash
@@ -13,7 +13,6 @@
   (include utils.clib)
 
   (defun-inline price-delay-statute (statutes)
-    ;(f (f (r (r (r (r (r (r (r (r statutes))))))))))
     (f (f (r (r (r (r (r (r (r statutes)))))))))
   )
 
@@ -60,9 +59,6 @@
       (prev_price . prev_last_updated) PRICE_INFO
       (assert
         (> last_updated prev_last_updated)
-        (size_b32 oracle_inner_puz_hash)
-        (size_b32 oracle_launcher_id)
-        (size_uint32 price)
         ; confirm oracle price info to update statutes price info
         (list
           ; no need to check current_timestamp as this is already done by oracle

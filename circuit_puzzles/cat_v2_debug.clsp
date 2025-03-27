@@ -300,7 +300,7 @@
     )
     (if tail_reveal_and_solution
        (if (= (sha256tree (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
-        (assert (= (sha256tree (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
+        (if (= (sha256tree (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
           (merge_list
             (a  (f tail_reveal_and_solution)
               (list
@@ -314,6 +314,7 @@
             )
             inner_conditions
           )
+          (x "tail doesn't match")
         )
         (x "bad tail reveal")
       )

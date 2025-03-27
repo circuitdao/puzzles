@@ -1,7 +1,7 @@
 ;; Mint BYC to borrow and update the principal and other state variables accordingly
 (mod
   (
-    CAT_MOD_HASH BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH RUN_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -15,7 +15,6 @@
          byc_issuing_coin_info  ; -> (parent_id amount inner_puzzle_hash)
          statutes_cumulative_stability_fee_df
          current_stability_fee_df current_timestamp
-         run_tail_mod_hash
       )
     )
   )
@@ -53,7 +52,7 @@
       (list
         (f byc_issuing_coin_info)
         (r byc_issuing_coin_info)
-        run_tail_mod_hash
+        RUN_TAIL_MOD_HASH
       )
     )
     undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
@@ -77,7 +76,6 @@
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
-          (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
           (assert-price-info statutes_puzzle_hash price_info)
           ; validate current timestamp is within bounds
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))

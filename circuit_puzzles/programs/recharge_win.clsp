@@ -1,5 +1,7 @@
 (mod (
     CAT_MOD_HASH
+    RUN_TAIL_MOD_HASH
+    TREASURY_MOD_HASH
     (MOD_HASH
     BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
     statutes_puzzle_hash  lineage_proof announcements
@@ -7,7 +9,6 @@
       ttl
       current_timestamp
       treasury_coins
-      treasury_mod_hash
       funding_coin_info
       treasury_minimum
       target_puzzle_hash
@@ -32,7 +33,7 @@
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE crt_tail_hash)
-        run_tail_mod_hash
+        RUN_TAIL_MOD_HASH
       )
       (f (r (r funding_coin_info)))
     )
@@ -66,10 +67,7 @@
           ()
         )
         (list ASSERT_MY_AMOUNT winning_byc_bid_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
@@ -117,7 +115,7 @@
         )
         &rest
         (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
-          treasury_mod_hash
+          TREASURY_MOD_HASH
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

@@ -1,15 +1,7 @@
 (mod (
+      APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
       OPERATIONS
       MOD_HASH
-      ( ; TODO: move before MOD_HASH?
-        APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
-        TREASURY_MOD_HASH
-        OFFER_MOD_HASH
-        PAYOUT_MOD_HASH
-        RUN_TAIL_MOD_HASH
-      )
-      CAT_MOD_HASH ; TODO: move before MOD_HASH?
-      CRT_TAIL_HASH
       ; indicates whether previous spend was an announce (1) or not (()). Set to 2 in eve state
       PREV_ANNOUNCE 
       STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
@@ -55,26 +47,12 @@
   )
 
   (defun-inline create-coin-condition (MOD_HASH
-                                        APPROVAL_MOD_HASHES_HASH
-                                        TREASURY_MOD_HASH PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
-                                        CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         prev_announce statutes price_info
                                         cumulative_stability_fee_df cumulative_interest_df price_update_counter)
     (list
       CREATE_COIN
       (curry_hashes MOD_HASH
         (sha256 ONE MOD_HASH)
-        (sha256tree
-          (list
-            APPROVAL_MOD_HASHES_HASH
-            TREASURY_MOD_HASH
-            OFFER_MOD_HASH
-            PAYOUT_MOD_HASH
-            RUN_TAIL_MOD_HASH
-          )
-        )
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CRT_TAIL_HASH)
         (sha256 ONE prev_announce)
         (sha256tree statutes)
         (sha256tree price_info)
@@ -94,21 +72,21 @@
     (prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter operation_conditions)
       (if operation_mod_hash
         ; mutate statutes or update price info
-        (assert
+        (assert_debug
           (= PREV_ANNOUNCE ONE) ; previous spend must have been an announce
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
           (a
             operation_mod
             (list
               MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-              CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
+              PRICE_UPDATE_COUNTER
               mutation_index mutation_value
               governance_curried_args_hash
             )
           )
         )
         ; announce
-        (assert
+        (assert_debug
           (= governance_curried_args_hash ()) ; ensure unique solution when announcing to facilitate identical spend aggregation
           (list
             ; set PREV_ANNOUNCE to 1
@@ -130,13 +108,6 @@
     (li
       (create-coin-condition
         MOD_HASH
-        APPROVAL_MOD_HASHES_HASH
-        TREASURY_MOD_HASH
-        PAYOUT_MOD_HASH
-        RUN_TAIL_MOD_HASH
-        CAT_MOD_HASH
-        OFFER_MOD_HASH
-        CRT_TAIL_HASH
         prev_announce
         statutes
         price_info
@@ -146,25 +117,7 @@
       )
       (list REMARK PROTOCOL_PREFIX prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -10 CAT_MOD_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -9 CRT_TAIL_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -8 price_update_counter))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -7 RUN_TAIL_MOD_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -6 PAYOUT_MOD_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -5 OFFER_MOD_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -4 TREASURY_MOD_HASH))))
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -4 price_update_counter))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -3 APPROVAL_MOD_HASHES_HASH))))
