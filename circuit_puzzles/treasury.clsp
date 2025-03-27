@@ -305,8 +305,8 @@
                     approval_mod_hashes
                     _ ; new_amount extracted above
                   ) args
-                  approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (r approver_mod_curried_args_hash) ())
-                  approver_coin_id (assert
+                  approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
+                  approver_coin_id (assert_debug
                     (size_uint64 approver_amount)
                     ; check that this approver mod hash is allowed
                     (is-approval-mod approval_mod_hashes approver_mod_hash)
@@ -330,11 +330,14 @@
                           (curry_hashes CAT_MOD_HASH
                             (sha256 ONE CAT_MOD_HASH)
                             (sha256 ONE (f approver_mod_curried_args_hash))
-                            (tree_hash_of_apply approver_mod_hash (f (r approver_mod_curried_args_hash)))
+                            (tree_hash_of_apply approver_mod_hash (r approver_mod_curried_args_hash))
                           )
                         )
                         ; ELSE puzzle is not wrapped
-                        (tree_hash_of_apply approver_mod_hash approver_mod_curried_args_hash)
+                        (assert
+                          (= approver_mod_hash (f approval_mod_hashes)) ; collateral vault
+                          (tree_hash_of_apply approver_mod_hash approver_mod_curried_args_hash)
+                        )
                       )
                       approver_amount
                     )

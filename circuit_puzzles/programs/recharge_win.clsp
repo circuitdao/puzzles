@@ -27,7 +27,6 @@
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
-    run_tail_mod_hash (f (r funding_coin_info))
     funding_coin_id (calculate-coin-id
       (f funding_coin_info)
       (curry_hashes CAT_MOD_HASH
@@ -35,7 +34,7 @@
         (sha256 ONE crt_tail_hash)
         RUN_TAIL_MOD_HASH
       )
-      (f (r (r funding_coin_info)))
+      (r funding_coin_info)
     )
     (assert
       ; must have something to deposit

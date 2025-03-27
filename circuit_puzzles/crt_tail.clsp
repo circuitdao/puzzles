@@ -59,7 +59,7 @@
               (sha256tree last_bid)
             )
         )
-        (assert_debug
+        (assert
           ; can't melt a non-cat
           parent_is_cat
           ; must be a launched surplus auction
@@ -108,7 +108,7 @@
                 (tree_hash_of_apply mod_hash curried_mod_args)
               )
               ; OR announcer registry
-              (assert_debug
+              (assert
                 (= mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
                 (tree_hash_of_apply mod_hash curried_mod_args)
               )
@@ -124,7 +124,7 @@
             (sha256 ONE crt_tail_hash)
             target_puzzle_hash
           )
-          (assert_debug
+          (assert
             ; may not pass any conditions from inner puzzle to tail, but note that cat layer appends
             ; two default conditions (for purposes of CAT ring) to conditions from inner puzzle by default
             (not (r (r inner_conditions)))

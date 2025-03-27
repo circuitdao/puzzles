@@ -24,6 +24,6 @@
         (r op_args)
       )
     )
-    (x "not found")
+    (x)
   )
 )
