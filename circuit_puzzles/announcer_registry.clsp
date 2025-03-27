@@ -1,6 +1,5 @@
 (mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL ATOM_ANNOUNCER_MOD_HASH
       MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY REWARDS_CLAIMABLE_AT
-      ;CLAIM_ITERATION
       lineage_proof mint_or_register . args)
 
   (include *standard-cl-23.1*)
@@ -42,7 +41,7 @@
   (assign
     (
       announcer_registry
-      new_rewards_claimable_at ;claim_interval_number
+      new_rewards_claimable_at
       operation_conditions
     ) (if (= mint_or_register MINT_OPCODE)
       ; this is claiming rewards
@@ -60,7 +59,6 @@
           my_coin_id
         ) args
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-        ;current_iteration (/ statutes_price_updates claim_interval)
         announcers_count (list-length ANNOUNCER_REGISTRY 0)
         change_amount (r (divmod crt_credits_per_interval announcers_count))
         run_tail_mod_hash (f (r issuance_coin_info))
@@ -74,17 +72,15 @@
           (f (r (r issuance_coin_info)))
         )
         (assert
-          ;(> current_iteration CLAIM_ITERATION)
           (> statutes_price_updates REWARDS_CLAIMABLE_AT)
           (> claim_interval MIN_CLAIM_INTERVAL)
           (> announcers_count 0)
-          ;(> current_iteration ONE) ; rewards kick in only after initial interval
           (> statutes_price_updates claim_interval) ; rewards kick in only after initial interval 
           ; we can't mint more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
           (> MAX_MINT_AMOUNT crt_credits_per_interval)
           (list
             () ; clear the registry when minting
-            (+ statutes_price_updates claim_interval) ;current_iteration
+            (+ statutes_price_updates claim_interval)
             (list
               (list SEND_MESSAGE 0x3f
                 (concat
@@ -144,7 +140,7 @@
             (not (contains ANNOUNCER_REGISTRY announcer_inner_puzzle_hash))
             (list
               (c announcer_inner_puzzle_hash ANNOUNCER_REGISTRY)
-              REWARDS_CLAIMABLE_AT ;CLAIM_ITERATION
+              REWARDS_CLAIMABLE_AT
               (list
                 ; assert approval from announcer coin with correct puzzle hash
                 (list RECEIVE_MESSAGE 0x12
@@ -168,7 +164,7 @@
         (assert (size_b32 lineage_proof)
           (list
             ANNOUNCER_REGISTRY
-            0 ; rewards claimable at ;CLAIM_ITERATION
+            0 ; rewards claimable at
             (list
               (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
             )
@@ -199,7 +195,7 @@
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256tree ANNOUNCER_REGISTRY)
-              (sha256 ONE REWARDS_CLAIMABLE_AT) ;CLAIM_ITERATION)
+              (sha256 ONE REWARDS_CLAIMABLE_AT)
             )
           )
           (c
@@ -208,12 +204,12 @@
                 (sha256 ONE MOD_HASH)
                 (sha256tree STATUTES_STRUCT)
                 (sha256tree announcer_registry)
-                (sha256 ONE new_rewards_claimable_at) ;claim_interval_number)
+                (sha256 ONE new_rewards_claimable_at)
               )
               0 ; coin amount always zero since it only keeps the registry and mints new coins
             )
             (c
-              (list REMARK PROTOCOL_PREFIX announcer_registry new_rewards_claimable_at) ;claim_interval_number)
+              (list REMARK PROTOCOL_PREFIX announcer_registry new_rewards_claimable_at)
               operation_conditions
             )
           )
