@@ -1,10 +1,8 @@
 (mod (
     CAT_MOD_HASH
-    (MOD_HASH
-    BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
-    statutes_puzzle_hash  lineage_proof announcements
+    (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
+    statutes_puzzle_hash lineage_proof input_conditions
     (
-      ttl
       current_timestamp
       treasury_coins
       treasury_mod_hash
@@ -23,6 +21,7 @@
   (include recharge_auction.clib)
 
   (assign-lambda
+    bid_ttl (f (r (r AUCTION_PARAMS)))
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
@@ -42,8 +41,8 @@
       (> treasury_coins_count 0)
       (> winning_byc_bid_amount 0)
       (> winning_crt_bid_amount 0)
-      ; ttl should've expired
-      (> (- current_timestamp timestamp) ttl)
+      ; bid must have timed out
+      (> (- current_timestamp timestamp) bid_ttl)
       (li
         ; restart the auction
         (list
@@ -54,7 +53,7 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE 0)
+            (sha256 ONE ())
             (sha256 ONE ())
           )
           0
@@ -62,12 +61,11 @@
         (list REMARK
           PROTOCOL_PREFIX
           LAUNCHER_ID
-          0
+          ()
           ()
         )
         (list ASSERT_MY_AMOUNT winning_byc_bid_amount)
         (assert-statute statutes_puzzle_hash STATUTE_CRT_TAIL_HASH crt_tail_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
         (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
         (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
         ; current_time minus one tx block time should already be in the past
@@ -97,7 +95,7 @@
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE START_TIME)
+              (sha256tree AUCTION_PARAMS)
               (sha256tree LAST_BID)
             )
           )
@@ -127,7 +125,7 @@
           remainder
           (f treasury_coins)
           treasury_coins
-          announcements
+          input_conditions
           0 ; arg to sum up post-deposit treasury amounts
         )
       )

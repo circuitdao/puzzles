@@ -1,7 +1,7 @@
 (mod
   (
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-    statutes_inner_puzzle_hash lineage_proof announcements
+    statutes_inner_puzzle_hash lineage_proof input_conditions
     (
       payout_coin_parent_id
       lot_amount
@@ -27,7 +27,7 @@
         lot_amount ; amount to withdraw from treasury coins
         sum_amounts_withdrawn ; amount withdrawn from treasury coins. must be passed 0 when function is called
         new_treasury_coins_amount ; post-withdrawal amount of treasury coins. must be passed 0 when function is called
-        announcements
+        input_conditions
       )
     (if treasury_coins
       (assign
@@ -66,7 +66,7 @@
             lot_amount
             (+ sum_amounts_withdrawn withdraw_amount)
             (- (+ new_treasury_coins_amount current_amount) withdraw_amount)
-            announcements
+            input_conditions
           )
         )
       )
@@ -76,7 +76,7 @@
       (assert (= sum_amounts_withdrawn lot_amount) (> new_treasury_coins_amount treasury_maximum)
         (c
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MAXIMUM treasury_maximum) ; end of recursion
-          announcements
+          input_conditions
         )
       )
     )
@@ -170,7 +170,7 @@
           lot_amount ; amount of byc to withdraw
           0 ; sum amounts withdrawn
           0 ; post-withdrawal treasury coins amount
-          announcements
+          input_conditions
         )
       )
     )

@@ -7,7 +7,7 @@
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     statutes_inner_puzzle_hash
     lineage_proof ; -> (parent_parent_id parent_amount parent_cat_inner_puzzle_hash)
-    announcements
+    input_conditions
     (
       bid_crt_amount
       target_puzzle_hash
@@ -123,9 +123,9 @@
                 )
               )
             )
-            announcements
+            input_conditions
           )
-          announcements
+          input_conditions
         )
       )
     )
