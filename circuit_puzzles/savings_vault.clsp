@@ -217,9 +217,12 @@
                         )
                       )
                       (if treasury_coin_id
-                        (assert
+                        (assert_debug
                           ; treasury must not pay more than accrued interest
-                          (> accrued_interest (- interest_payment 1))
+                          (if (> accrued_interest (- interest_payment 1))
+                            1
+                            (x accrued_interest interest_payment)
+                          )
                           ; current treasury coin should have enough amount to cover withdraw amount
                           (> treasury_coin_amount (- interest_payment 1))
                           ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
