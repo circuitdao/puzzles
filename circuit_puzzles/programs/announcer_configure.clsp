@@ -6,7 +6,7 @@
 ;; - the atom value
 ;; - the min deposit
 ;; It also allows the owner to exit being approved announcer for circuit protocol. Exiting needs to wait for a cooldown period.
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       args
@@ -26,10 +26,10 @@
         current_timestamp
         statutes_inner_puzzle_hash
         input_toggle_activation
-        deactivation_cooldown_interval ; statute
-        min_deposit ; statute
+        deactivation_cooldown_interval
+        min_deposit
         new_delay
-        max_delay ; statute
+        max_delay
         new_value
         new_min_deposit
       ) args
@@ -81,7 +81,7 @@
           (if new_value new_value VALUE)
           new_min_deposit
           cooldown_start
-          LAST_PENALTY_INTERVAL
+          PENALIZABLE_AT
           (+ current_timestamp new_delay)
           input_conditions
         )

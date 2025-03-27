@@ -1,6 +1,6 @@
 ; owner operation
 ; updates atom value of the announcer. can optionally topup or reduce deposit
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp new_value)
@@ -43,7 +43,7 @@
               (sha256tree new_value)
               (sha256 ONE MIN_DEPOSIT)
               (sha256 ONE COOLDOWN_START)
-              (sha256 ONE LAST_PENALTY_INTERVAL)
+              (sha256 ONE PENALIZABLE_AT)
               (sha256 ONE (+ current_timestamp DELAY))
             )
             deposit
@@ -60,7 +60,7 @@
               new_value
               MIN_DEPOSIT
               COOLDOWN_START
-              LAST_PENALTY_INTERVAL
+              PENALIZABLE_AT
               (+ current_timestamp DELAY)
             )
             input_conditions

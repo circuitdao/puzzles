@@ -3,7 +3,7 @@
   (include prefixes.clib)
 
   (defun-inline recreate-myself-condition (MOD_HASH STATUTES_STRUCT LAUNCHER_ID inner_puzzle_hash approved
-                                           deposit delay value min_deposit cooldown_start last_penalty_interval
+                                           deposit delay value min_deposit cooldown_start penalizable_at
                                            timestamp_expires input_conditions)
     (c
       (list CREATE_COIN
@@ -18,7 +18,7 @@
           (sha256tree value)
           (sha256 ONE min_deposit)
           (sha256 ONE cooldown_start)
-          (sha256 ONE last_penalty_interval)
+          (sha256 ONE penalizable_at)
           (sha256 ONE timestamp_expires)
         )
         deposit
@@ -26,7 +26,7 @@
       )
       ; driver remark to reveal the puzzle hash
       (c
-        (list REMARK PROTOCOL_PREFIX LAUNCHER_ID inner_puzzle_hash deposit approved delay value min_deposit cooldown_start last_penalty_interval timestamp_expires)
+        (list REMARK PROTOCOL_PREFIX LAUNCHER_ID inner_puzzle_hash deposit approved delay value min_deposit cooldown_start penalizable_at timestamp_expires)
         input_conditions
       )
     )

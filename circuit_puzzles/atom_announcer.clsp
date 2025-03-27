@@ -1,4 +1,4 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
      (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
      inner_puzzle
      solution_or_conditions
@@ -83,36 +83,35 @@
             (= MIN_DEPOSIT 0)
             (= COOLDOWN_START 0)
             (= TIMESTAMP_EXPIRES 0)
-            (= LAST_PENALTY_INTERVAL 0)
+            (= PENALIZABLE_AT 0)
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
           )
         )
         (c
-          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct ; LATER: needed? operations should enforce this
-          (c
-            (list ASSERT_MY_PUZZLE_HASH
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256 ONE LAUNCHER_ID)
-                (sha256 ONE INNER_PUZZLE_HASH)
-                (sha256 ONE APPROVED)
-                (sha256 ONE DEPOSIT)
-                (sha256 ONE DELAY)
-                (sha256tree VALUE)
-                (sha256 ONE MIN_DEPOSIT)
-                (sha256 ONE COOLDOWN_START)
-                (sha256 ONE LAST_PENALTY_INTERVAL)
-                (sha256 ONE TIMESTAMP_EXPIRES)
-              )
+          (list ASSERT_MY_PUZZLE_HASH
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE INNER_PUZZLE_HASH)
+              (sha256 ONE APPROVED)
+              (sha256 ONE DEPOSIT)
+              (sha256 ONE DELAY)
+              (sha256tree VALUE)
+              (sha256 ONE MIN_DEPOSIT)
+              (sha256 ONE COOLDOWN_START)
+              (sha256 ONE PENALIZABLE_AT)
+              (sha256 ONE TIMESTAMP_EXPIRES)
             )
-            (a
-              operation
-              (list
-                (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
-                inner_puzzle_hash new_puzzle_hash deposit input_conditions
-                args
+          )
+          (a
+            operation
+            (list
+              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
+                DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
               )
+              inner_puzzle_hash new_puzzle_hash deposit input_conditions
+              args
             )
           )
         )
