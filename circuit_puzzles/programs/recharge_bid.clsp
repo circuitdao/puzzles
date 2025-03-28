@@ -1,17 +1,12 @@
 (mod (
     CAT_MOD_HASH OFFER_MOD_HASH
-    (MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
-    statutes_puzzle_hash  lineage_proof announcements
+    (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
+    statutes_puzzle_hash lineage_proof input_conditions
     (
       (byc_bid_amount . crt_bid_amount) ; new bid
       target_puzzle_hash
       current_timestamp
-      minimum_byc_bid_amount
-      auction_timeout
-      ttl
       my_coin_id
-      min_crt_price
-      min_bid_increase_bps
     )
   )
 
@@ -23,7 +18,15 @@
   (include recharge_auction.clib)
 
   (assign
-    ((last_byc_bid_amount  . last_crt_bid_amount) last_target_puzzle_hash last_bid_timestamp) (
+    (
+      start_time
+      auction_ttl
+      bid_ttl
+      min_crt_price
+      min_byc_bid_amount
+      min_bid_increase_bps
+    ) AUCTION_PARAMS
+    ((last_byc_bid_amount . last_crt_bid_amount) last_target_puzzle_hash last_bid_timestamp) (
       if LAST_BID
         LAST_BID
         (list (c 0 0) () 0)
@@ -39,12 +42,11 @@
         (> crt_price (/ (* last_crt_price (+ PRECISION_BPS min_bid_increase_bps)) PRECISION_BPS))
       )
       ; bids can't be smaller than this
-      (> byc_bid_amount minimum_byc_bid_amount)
-      ; auction hasn't expired yet
-      (> auction_timeout (- current_timestamp START_TIME))
-      ; TTL for bid hasn't expired yet
-      (any (= last_bid_timestamp 0) (> ttl (- current_timestamp last_bid_timestamp)))
-      ; can't bid more than max_crt_amount
+      (> byc_bid_amount min_byc_bid_amount)
+      ; auction hasn't timed out yet
+      (> auction_ttl (- current_timestamp start_time))
+      ; bid hasn't timed out yet
+      (any (= last_bid_timestamp 0) (> bid_ttl (- current_timestamp last_bid_timestamp)))
       (li
         ; update LAST_BID
         (list
@@ -55,7 +57,7 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE START_TIME)
+            (sha256tree AUCTION_PARAMS)
             (sha256tree (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp))
           )
           byc_bid_amount
@@ -63,15 +65,10 @@
         (list REMARK
           PROTOCOL_PREFIX
           LAUNCHER_ID
-          START_TIME
+          AUCTION_PARAMS
           (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp)
         )
         (list ASSERT_MY_AMOUNT last_byc_bid_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_CRT_PRICE min_crt_price)
-        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID minimum_byc_bid_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_TTL auction_timeout)
-        (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL ttl)
-        (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
@@ -86,7 +83,7 @@
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE START_TIME)
+              (sha256tree AUCTION_PARAMS)
               (sha256tree LAST_BID)
             )
           )
@@ -122,10 +119,10 @@
                       (list last_target_puzzle_hash last_byc_bid_amount (list last_target_puzzle_hash)))))
                 )
               )
-              announcements
+              input_conditions
             )
           )
-          announcements
+          input_conditions
         )
       )
     )

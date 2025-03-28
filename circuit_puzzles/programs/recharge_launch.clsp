@@ -1,8 +1,9 @@
 (mod (
-    (MOD_HASH BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
+    (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID
+    )
     statutes_puzzle_hash
     lineage_proof
-    announcements
+    input_conditions
     (my_coin_id)
   )
 
@@ -15,10 +16,9 @@
 
   (assert
     ; enforce eve state
-    (= LAST_BID ()) 
     (= LAUNCHER_ID 0)
-    (= START_TIME 0)
-    (size_b32 statutes_puzzle_hash)
+    (= AUCTION_PARAMS ())
+    (= LAST_BID ()) 
     (c
       (list
         CREATE_COIN
@@ -27,8 +27,8 @@
           (sha256 ONE MOD_HASH)
           (sha256tree STATUTES_STRUCT)
           (sha256 ONE BYC_TAIL_HASH)
-          (sha256 ONE my_coin_id)
-          (sha256 ONE 0)
+          (sha256 ONE my_coin_id) ; launcher ID
+          (sha256 ONE ())
           (sha256 ONE ())
         )
         0
@@ -37,7 +37,7 @@
         (list REMARK
           PROTOCOL_PREFIX
           my_coin_id
-          0
+          () ; no params
           () ; no bids
         )
         (c
@@ -50,7 +50,7 @@
                 (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX (sha256tree '*'))
                 statutes_puzzle_hash
               )
-              announcements
+              input_conditions
             )
           )
         )

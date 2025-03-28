@@ -33,11 +33,13 @@
         CAT_MOD_HASH (cat_mod_hash_truth Truths)
         CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
         (
-          _
-          crt_tail_hash
-          byc_tail_hash
+          _  ; melt prefix
           surplus_mod_hash
+          byc_tail_hash
+          crt_tail_hash
           launcher_id
+          bid_ttl
+          min_bid_increase_bps
           byc_lot_amount
           last_bid
           statutes_inner_puzzle_hash
@@ -55,6 +57,8 @@
               (sha256 ONE byc_tail_hash)
               (sha256 ONE crt_tail_hash)
               (sha256 ONE launcher_id)
+              (sha256 ONE bid_ttl)
+              (sha256 ONE min_bid_increase_bps)
               (sha256 ONE byc_lot_amount)
               (sha256tree last_bid)
             )
@@ -62,12 +66,6 @@
         (assert
           ; can't melt a non-cat
           parent_is_cat
-          ; must be a launched surplus auction
-          launcher_id
-          ; must have a lot to exchange for melting itself
-          (> byc_lot_amount 0)
-          ; should have a winning bid, last_bid -> (bid_amount . crt_bid_amount)
-          (> (r last_bid) 0)
           ; surplus mod hash is the second in approval mod hashes list
           (= surplus_mod_hash (f (r approval_mod_hashes)))
           (list
@@ -156,7 +154,7 @@
             )
           )
         )
-        (x solution delta) ; invalid solution
+        (x) ; invalid solution
       )
     )
     (assert (= delta 0)
