@@ -13,7 +13,6 @@
   (include utils.clib)
 
   (defun-inline price-delay-statute (statutes)
-    ;(f (f (r (r (r (r (r (r (r (r statutes))))))))))
     (f (f (r (r (r (r (r (r (r statutes)))))))))
   )
 

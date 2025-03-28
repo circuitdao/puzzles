@@ -1,5 +1,5 @@
 ; penalize announcer for not updating the price
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES)
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit announcer_max_delay current_timestamp)
@@ -13,7 +13,6 @@
   (include announcer.clib)
 
   (assign
-    current_penalty_interval (/ (/ current_timestamp 60) penalty_interval_in_minutes)
     penalized_deposit
       ; if not expired, we penalize per full deposit
       (/
@@ -25,8 +24,8 @@
       )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (assert
-      ; penalize once per interval
-      (> current_penalty_interval LAST_PENALTY_INTERVAL)
+      ; must be past penalty timestamp to penalize
+      (> current_timestamp PENALIZABLE_AT)
       (any
         ; penalize if expired
         (> current_timestamp TIMESTAMP_EXPIRES)
@@ -60,7 +59,7 @@
           VALUE
           MIN_DEPOSIT
           COOLDOWN_START
-          current_penalty_interval
+          (+ current_timestamp (* 60 penalty_interval_in_minutes))
           TIMESTAMP_EXPIRES
           input_conditions
         )

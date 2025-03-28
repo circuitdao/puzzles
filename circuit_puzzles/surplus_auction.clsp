@@ -4,6 +4,8 @@
       BYC_TAIL_HASH ; hash of BYC tail puzzle that we're giving out
       CRT_TAIL_HASH ; hash of CRT tail puzzle that we're giving out
       LAUNCHER_ID ; to assert uniqueness of launcher_id
+      BID_TTL
+      MIN_BID_INCREASE_BPS
       BYC_LOT_AMOUNT ; amount of BYC in a lot to win
       LAST_BID ; holds bid data -> (target_puzzle_hash . timestamp). amount of CRT bid is surplus auction coin amount
       statutes_inner_puzzle_hash
@@ -11,19 +13,23 @@
       operation . op_args)
 
   (include *standard-cl-23.1*)
-  (include condition_codes.clib)
+  (include prefixes.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
+  (include condition_codes.clib)
+  (include condition_filtering.clib)
 
-  (if (contains OPERATIONS (sha256tree operation))
-    (a
-      operation
-      (list
-        (list MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH CRT_TAIL_HASH LAST_BID LAUNCHER_ID BYC_LOT_AMOUNT STATUTES_STRUCT)
-        statutes_inner_puzzle_hash lineage_proof (filter-conditions (f op_args) ())
-        (r op_args)
+  (assign-inline
+    input_conditions (f op_args)
+    (assert
+      (contains OPERATIONS (sha256tree operation))
+      (fail-on-protocol-condition input_conditions)
+      (a
+        operation
+        (list
+          (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+          statutes_inner_puzzle_hash lineage_proof input_conditions (r op_args)
+        )
       )
     )
-    (x)
   )
 )
