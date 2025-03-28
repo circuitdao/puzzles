@@ -306,7 +306,7 @@
                     _ ; new_amount extracted above
                   ) args
                   approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
-                  approver_coin_id (assert_debug
+                  approver_coin_id (assert
                     (size_uint64 approver_amount)
                     ; check that this approver mod hash is allowed
                     (is-approval-mod approval_mod_hashes approver_mod_hash)

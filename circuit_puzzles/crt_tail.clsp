@@ -26,7 +26,7 @@
     )
   )
 
-  (if (all solution (> 0 delta))
+  (if (all solution)
     (if (= "x" (f solution))
       ; if melt prefix is set we must melt, ie delta must be positive
       (assign
@@ -86,7 +86,7 @@
           crt_tail_hash (cat_tail_program_hash_truth Truths)
           (
             _
-            mod_hash
+            approval_mod_hash
             parent_id
             curried_mod_args
             byc_tail_hash
@@ -100,17 +100,17 @@
           approver_coin_id (calculate-coin-id
             parent_id
             ; approval_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
-            (if (all byc_tail_hash (= mod_hash (f (r (r approval_mod_hashes)))))
+            (if (all byc_tail_hash (= approval_mod_hash (f (r (r approval_mod_hashes)))))
               ; either a CAT puzzle with recharge auction as inner puzzle
               (curry_hashes CAT_MOD_HASH
                 CAT_MOD_HASH_HASH
                 (sha256 ONE byc_tail_hash)
-                (tree_hash_of_apply mod_hash curried_mod_args)
+                (tree_hash_of_apply approval_mod_hash curried_mod_args)
               )
               ; OR announcer registry
               (assert
-                (= mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
-                (tree_hash_of_apply mod_hash curried_mod_args)
+                (= approval_mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
+                (tree_hash_of_apply approval_mod_hash curried_mod_args)
               )
               ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hashing it
               ; to generate the puzzle hash. This avoids a lot of costs since we don't need to pass them into
@@ -159,9 +159,11 @@
         (x solution delta) ; invalid solution
       )
     )
-    (list ; issuance at launch of protocol
-      ; receive approval from statutes launcher
-      (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
+    (assert (= delta 0)
+      (list ; issuance at launch of protocol
+        ; receive approval from statutes launcher
+        (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
+      )
     )
   )
 )

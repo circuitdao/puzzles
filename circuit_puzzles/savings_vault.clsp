@@ -217,7 +217,7 @@
                         )
                       )
                       (if treasury_coin_id
-                        (assert_debug
+                        (assert
                           ; treasury must not pay more than accrued interest
                           (if (> accrued_interest (- interest_payment 1))
                             1

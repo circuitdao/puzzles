@@ -72,7 +72,7 @@
     (prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter operation_conditions)
       (if operation_mod_hash
         ; mutate statutes or update price info
-        (assert_debug
+        (assert
           (= PREV_ANNOUNCE ONE) ; previous spend must have been an announce
           (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
           (a
@@ -86,7 +86,7 @@
           )
         )
         ; announce
-        (assert_debug
+        (assert
           (= governance_curried_args_hash ()) ; ensure unique solution when announcing to facilitate identical spend aggregation
           (list
             ; set PREV_ANNOUNCE to 1
