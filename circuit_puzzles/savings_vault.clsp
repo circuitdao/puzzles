@@ -1,9 +1,7 @@
 ;;; Savings vault for BYC, this is a inner BYC CAT puzzle
 ;       collateral vaults and new treasury coin puzzle
-(mod (CAT_MOD_HASH
-      TREASURY_MOD_HASH 
-      MOD_HASH
-      BYC_TAIL_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
+(mod (CAT_MOD_HASH BYC_TAIL_MOD_HASH TREASURY_MOD_HASH
+      MOD_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
@@ -73,6 +71,7 @@
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_interest_df (calculate-cumulative-discount-factor
       statutes_cumulative_interest_df
       current_interest_df
@@ -112,7 +111,7 @@
         treasury_coin_parent_id
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE BYC_TAIL_HASH)
+          (sha256 ONE byc_tail_hash)
           (curry_hashes TREASURY_MOD_HASH
             (sha256 ONE TREASURY_MOD_HASH)
             statutes_struct_hash
@@ -131,10 +130,9 @@
         (list ASSERT_MY_PUZZLE_HASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE BYC_TAIL_HASH)
+            (sha256 ONE byc_tail_hash)
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
-              (sha256 ONE BYC_TAIL_HASH)
               statutes_struct_hash
               (sha256 ONE DISCOUNTED_BALANCE)
               (sha256tree INNER_PUZZLE)
@@ -147,10 +145,9 @@
               (f lineage_proof)
               (curry_hashes CAT_MOD_HASH
                 (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE BYC_TAIL_HASH)
+                (sha256 ONE byc_tail_hash)
                 (curry_hashes MOD_HASH
                   (sha256 ONE MOD_HASH)
-                  (sha256 ONE BYC_TAIL_HASH)
                   statutes_struct_hash
                   (sha256 ONE (f (r (r lineage_proof)))) ; discounted balance
                   (f (r (r (r lineage_proof)))) ; inner puzzle hash
@@ -167,10 +164,9 @@
         (list ASSERT_MY_PUZZLE_HASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE BYC_TAIL_HASH)
+            (sha256 ONE byc_tail_hash)
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
-              (sha256 ONE BYC_TAIL_HASH)
               statutes_struct_hash
               (sha256 ONE 0)
               (sha256tree INNER_PUZZLE)
@@ -206,7 +202,6 @@
                         (c
                           (curry_hashes MOD_HASH ; puzzle hash
                             (sha256 ONE MOD_HASH)
-                            (sha256 ONE BYC_TAIL_HASH)
                             statutes_struct_hash
                             (sha256 ONE new_discounted_balance)
                             inner_puzzle_hash
@@ -219,10 +214,7 @@
                       (if treasury_coin_id
                         (assert
                           ; treasury must not pay more than accrued interest
-                          (if (> accrued_interest (- interest_payment 1))
-                            1
-                            (x accrued_interest interest_payment)
-                          )
+                          (> accrued_interest (- interest_payment 1))
                           ; current treasury coin should have enough amount to cover withdraw amount
                           (> treasury_coin_amount (- interest_payment 1))
                           ; we limit the amount of interest to the treasury coin amount to avoid dusting the treasury coins
