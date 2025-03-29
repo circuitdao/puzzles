@@ -54,8 +54,6 @@
           (list
             "x"
             MOD_HASH
-            BYC_TAIL_HASH
-            CRT_TAIL_HASH
             LAUNCHER_ID
             BID_TTL
             MIN_BID_INCREASE_BPS

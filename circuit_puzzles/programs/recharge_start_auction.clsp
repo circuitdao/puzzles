@@ -48,7 +48,6 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree auction_params)
             (sha256 ONE ())
@@ -81,7 +80,6 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
               (sha256tree AUCTION_PARAMS)
               (sha256 ONE LAST_BID)

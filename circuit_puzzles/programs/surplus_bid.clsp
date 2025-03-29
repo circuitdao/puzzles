@@ -45,8 +45,6 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE BYC_TAIL_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE BID_TTL)
               (sha256 ONE MIN_BID_INCREASE_BPS)
@@ -62,8 +60,6 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE BYC_TAIL_HASH)
-            (sha256 ONE CRT_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256 ONE BID_TTL)
             (sha256 ONE MIN_BID_INCREASE_BPS)

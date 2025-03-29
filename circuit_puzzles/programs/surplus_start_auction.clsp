@@ -108,8 +108,6 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE BYC_TAIL_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
               (sha256 ONE ()); LAUNCHER_ID
               (sha256 ONE 0) ; BID_TTL
               (sha256 ONE 0) ; MIN_BID_INCREASE_BPS
@@ -125,8 +123,6 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE BYC_TAIL_HASH)
-            (sha256 ONE CRT_TAIL_HASH)
             (sha256 ONE my_coin_id) ; launcher ID
             (sha256 ONE bid_ttl)
             (sha256 ONE min_bid_increase_bps)

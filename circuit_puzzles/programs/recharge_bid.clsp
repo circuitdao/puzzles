@@ -55,7 +55,6 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree AUCTION_PARAMS)
             (sha256tree (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp))
@@ -81,7 +80,6 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
               (sha256tree AUCTION_PARAMS)
               (sha256tree LAST_BID)

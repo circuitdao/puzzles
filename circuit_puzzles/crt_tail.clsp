@@ -32,11 +32,10 @@
       (assign
         CAT_MOD_HASH (cat_mod_hash_truth Truths)
         CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
+        crt_tail_hash (cat_tail_program_hash_truth Truths)
         (
           _  ; melt prefix
           surplus_mod_hash
-          byc_tail_hash
-          crt_tail_hash
           launcher_id
           bid_ttl
           min_bid_increase_bps
@@ -54,8 +53,6 @@
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
               statutes_struct_hash
-              (sha256 ONE byc_tail_hash)
-              (sha256 ONE crt_tail_hash)
               (sha256 ONE launcher_id)
               (sha256 ONE bid_ttl)
               (sha256 ONE min_bid_increase_bps)

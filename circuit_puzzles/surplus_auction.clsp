@@ -1,8 +1,6 @@
-(mod (OPERATIONS CAT_MOD_HASH
+(mod (OPERATIONS CAT_MOD_HASH BYC_TAIL_MOD_HASH CRT_TAIL_MOD_HASH
       MOD_HASH
       STATUTES_STRUCT ; to assert statutes
-      BYC_TAIL_HASH ; hash of BYC tail puzzle that we're giving out
-      CRT_TAIL_HASH ; hash of CRT tail puzzle that we're giving out
       LAUNCHER_ID ; to assert uniqueness of launcher_id
       BID_TTL
       MIN_BID_INCREASE_BPS
@@ -17,16 +15,30 @@
   (include utils.clib)
   (include condition_codes.clib)
   (include condition_filtering.clib)
+  (include curry.clib)
 
+  (defun-inline is-valid-operation (operation_hash OPERATIONS)
+    (if
+      (any
+        (= (f OPERATIONS) operation_hash)
+        (= (f (r OPERATIONS)) operation_hash)
+        (= (f (r (r OPERATIONS))) operation_hash)
+      )
+      1
+      (x)
+    )
+  )
   (assign-inline
     input_conditions (f op_args)
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (assert
-      (contains OPERATIONS (sha256tree operation))
+      (is-valid-operation (sha256tree operation) OPERATIONS)
       (fail-on-protocol-condition input_conditions)
       (a
         operation
         (list
-          (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+          (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
           statutes_inner_puzzle_hash lineage_proof input_conditions (r op_args)
         )
       )
