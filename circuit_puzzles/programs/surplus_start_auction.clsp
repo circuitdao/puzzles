@@ -1,12 +1,10 @@
 (mod
-  (
+  (PAYOUT_MOD_HASH TREASURY_MOD_HASH
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     statutes_inner_puzzle_hash lineage_proof input_conditions
     (
       payout_coin_parent_id
       lot_amount
-      payout_mod_hash
-      treasury_mod_hash
       my_coin_id
       bid_ttl
       min_bid_increase_bps
@@ -88,9 +86,10 @@
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE BYC_TAIL_HASH)
-        (curry_hashes payout_mod_hash
-          (sha256 ONE payout_mod_hash)
+        (curry_hashes PAYOUT_MOD_HASH
+          (sha256 ONE PAYOUT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
+          (sha256 ONE MOD_HASH)
           (sha256 ONE my_coin_id)
         )
     )
@@ -109,8 +108,6 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE BYC_TAIL_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
               (sha256 ONE ()); LAUNCHER_ID
               (sha256 ONE 0) ; BID_TTL
               (sha256 ONE 0) ; MIN_BID_INCREASE_BPS
@@ -126,8 +123,6 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE BYC_TAIL_HASH)
-            (sha256 ONE CRT_TAIL_HASH)
             (sha256 ONE my_coin_id) ; launcher ID
             (sha256 ONE bid_ttl)
             (sha256 ONE min_bid_increase_bps)
@@ -141,8 +136,6 @@
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL bid_ttl)
         (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
         (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-        (assert-statute statutes_puzzle_hash STATUTE_PAYOUT_MOD_HASH payout_mod_hash)
         ; assert payout coin received the lot amount
         (list RECEIVE_MESSAGE 0x3f
           (concat PROTOCOL_PREFIX (sha256tree lot_amount))
@@ -160,7 +153,7 @@
         ) 
         &rest
         (assert-treasury-coins-withdrawal
-          treasury_mod_hash
+          TREASURY_MOD_HASH
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT

@@ -2,8 +2,8 @@
 ; CRT token is used for governance voting and can be used to bid in surplus auctions.
 ; CRT tokens are minted by the announcer registry and recharge auction(s).
 ; CRT tokens can be melted in surplus auctions.
-(mod (
-      GENESIS_ID STATUTES_STRUCT
+(mod (RUN_TAIL_MOD_HASH
+      STATUTES_STRUCT
       Truths parent_is_cat
       lineage_proof
       delta
@@ -26,18 +26,16 @@
     )
   )
 
-  (if (= "x" (f solution))
-    ; if melt prefix is set we must melt, ie delta must be positive
-    (assert
-      (> 0 delta) 
+  (if solution
+    (if (= "x" (f solution))
+      ; if melt prefix is set we must melt, ie delta must be positive
       (assign
         CAT_MOD_HASH (cat_mod_hash_truth Truths)
         CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
+        crt_tail_hash (cat_tail_program_hash_truth Truths)
         (
           _  ; melt prefix
           surplus_mod_hash
-          byc_tail_hash
-          crt_tail_hash
           launcher_id
           bid_ttl
           min_bid_increase_bps
@@ -55,8 +53,6 @@
             (curry_hashes surplus_mod_hash
               (sha256 ONE surplus_mod_hash)
               statutes_struct_hash
-              (sha256 ONE byc_tail_hash)
-              (sha256 ONE crt_tail_hash)
               (sha256 ONE launcher_id)
               (sha256 ONE bid_ttl)
               (sha256 ONE min_bid_increase_bps)
@@ -78,22 +74,14 @@
           )
         )
       )
-    )
-    (assert
-      ; if not melting, issuance prefix must be set
-      (= "i" (f solution))
-      (if (= (my_parent_cat_truth Truths) GENESIS_ID)
-        (assert
-          (= 0 delta) ; delta must be zero at TGE
-          () ; issuance at launch of protocol
-        )
-        (assign ; issuing by recharge auction or announcer registry
+      (if (= 'i' (f solution))
+        (assign  ; issuing by recharge auction or announcer registry
           CAT_MOD_HASH (cat_mod_hash_truth Truths)
           CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
           crt_tail_hash (cat_tail_program_hash_truth Truths)
           (
             _
-            mod_hash
+            approval_mod_hash
             parent_id
             curried_mod_args
             byc_tail_hash
@@ -102,23 +90,22 @@
             approval_mod_hashes
             statutes_inner_puzzle_hash
             target_puzzle_hash  ; where this coin is going to
-            run_tail_mod_hash
           ) solution
           (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
           approver_coin_id (calculate-coin-id
             parent_id
             ; approval_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
-            (if (all byc_tail_hash (= mod_hash (f (r (r approval_mod_hashes)))))
+            (if (all byc_tail_hash (= approval_mod_hash (f (r (r approval_mod_hashes)))))
               ; either a CAT puzzle with recharge auction as inner puzzle
               (curry_hashes CAT_MOD_HASH
                 CAT_MOD_HASH_HASH
                 (sha256 ONE byc_tail_hash)
-                (tree_hash_of_apply mod_hash curried_mod_args)
+                (tree_hash_of_apply approval_mod_hash curried_mod_args)
               )
               ; OR announcer registry
               (assert
-                (= mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
-                (tree_hash_of_apply mod_hash curried_mod_args)
+                (= approval_mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
+                (tree_hash_of_apply approval_mod_hash curried_mod_args)
               )
               ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hashing it
               ; to generate the puzzle hash. This avoids a lot of costs since we don't need to pass them into
@@ -156,15 +143,21 @@
                 (curry_hashes CAT_MOD_HASH
                   CAT_MOD_HASH_HASH
                   (sha256tree crt_tail_hash)
-                  run_tail_mod_hash
+                  RUN_TAIL_MOD_HASH
                 )
               )
               (list ASSERT_MY_AMOUNT issuance_amount)
               (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
-              (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
             )
           )
         )
+        (x) ; invalid solution
+      )
+    )
+    (assert (= delta 0)
+      (list ; issuance at launch of protocol
+        ; receive approval from statutes launcher
+        (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
       )
     )
   )

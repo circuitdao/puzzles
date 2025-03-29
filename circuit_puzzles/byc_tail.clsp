@@ -1,4 +1,5 @@
-(mod (STATUTES_STRUCT
+(mod (RUN_TAIL_MOD_HASH ; fixed
+      STATUTES_STRUCT
       Truths
       parent_is_cat
       lineage_proof
@@ -12,7 +13,6 @@
           vault_amount
           statutes_inner_puzzle_hash
           approval_mod_hashes
-          run_tail_mod_hash
           current_coin_amount
           new_byc_coin_amount ; new amount of BYC coin being issued or melted from
         )
@@ -42,7 +42,6 @@
       (assert
         ; check for cheeky conditions
         (check-tail-conditions inner_conditions)
-        (size_b32 vault_curried_args_hash)
         (= vault_mod_hash (f approval_mod_hashes))
         (any
           ; when melting, parent must be a cat, and delta must match negative new_byc_coin_amount
@@ -57,7 +56,7 @@
             (curry_hashes CAT_MOD_HASH
               CAT_MOD_HASH_HASH
               (sha256tree byc_tail_hash)
-              run_tail_mod_hash
+              RUN_TAIL_MOD_HASH
             )
           )
           (list RECEIVE_MESSAGE 0x3f
@@ -74,7 +73,6 @@
             vault_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
-          (assert-statute statutes_puzzle_hash STATUTE_RUN_TAIL_MOD_HASH run_tail_mod_hash)
         )
       )
     )

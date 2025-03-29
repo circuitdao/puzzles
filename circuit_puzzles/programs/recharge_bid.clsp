@@ -1,12 +1,11 @@
 (mod (
-    CAT_MOD_HASH
+    CAT_MOD_HASH OFFER_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     statutes_puzzle_hash lineage_proof input_conditions
     (
       (byc_bid_amount . crt_bid_amount) ; new bid
       target_puzzle_hash
       current_timestamp
-      offer_mod_hash
       my_coin_id
     )
   )
@@ -56,7 +55,6 @@
             MOD_HASH
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
-            (sha256 ONE BYC_TAIL_HASH)
             (sha256 ONE LAUNCHER_ID)
             (sha256tree AUCTION_PARAMS)
             (sha256tree (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp))
@@ -70,7 +68,6 @@
           (list (c byc_bid_amount crt_bid_amount) target_puzzle_hash current_timestamp)
         )
         (list ASSERT_MY_AMOUNT last_byc_bid_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
@@ -83,7 +80,6 @@
               MOD_HASH
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
-              (sha256 ONE BYC_TAIL_HASH)
               (sha256 ONE LAUNCHER_ID)
               (sha256tree AUCTION_PARAMS)
               (sha256tree LAST_BID)
@@ -113,7 +109,7 @@
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256 ONE BYC_TAIL_HASH)
-                    offer_mod_hash
+                    OFFER_MOD_HASH
                   )
                   (sha256tree
                     (c my_coin_id
