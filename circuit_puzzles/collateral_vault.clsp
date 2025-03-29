@@ -73,24 +73,6 @@
     (f (r operation))
   )
 
-  (defun-inline is-keeper-operation (KEEPER_OPERATIONS operation_mod_hash)
-    (any
-      (= (f KEEPER_OPERATIONS) operation_mod_hash)
-      (= (f (r KEEPER_OPERATIONS)) operation_mod_hash)
-      (= (f (r (r KEEPER_OPERATIONS))) operation_mod_hash)
-      (= (f (r (r (r KEEPER_OPERATIONS)))) operation_mod_hash)
-    )
-  )
-
-  (defun-inline is-owner-operation (OWNER_OPERATIONS operation_mod_hash)
-    (any
-      (= (f OWNER_OPERATIONS) operation_mod_hash)
-      (= (f (r OWNER_OPERATIONS)) operation_mod_hash)
-      (= (f (r (r OWNER_OPERATIONS))) operation_mod_hash)
-      (= (f (r (r (r OWNER_OPERATIONS)))) operation_mod_hash)
-      (= (f (r (r (r (r OWNER_OPERATIONS))))) operation_mod_hash)
-    )
-  )
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     raw_conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
@@ -103,13 +85,13 @@
         (assert
           (not AUCTION_STATE)
           (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
-          (is-owner-operation OWNER_OPERATIONS operation_mod_hash)
+          (contains OWNER_OPERATIONS operation_mod_hash)
           (list conditions_pre vault_operation_condition_pre)
         )
         ; keeper mode
         (assert
           keeper_operation_info
-          (is-keeper-operation KEEPER_OPERATIONS operation_mod_hash)
+          (contains KEEPER_OPERATIONS operation_mod_hash)
           (list conditions_pre vault_operation_condition_pre)
         )
       )
