@@ -81,10 +81,7 @@
   )
 
   (defun-inline calculate-coin-id (parent puzzle_hash amount)
-    ; TODO: change for new operator `coinid`
-    (assert (size_b32 parent) (size_b32 puzzle_hash) (> amount MINUS_ONE)
-      (sha256 parent puzzle_hash amount)
-    )
+    (coinid parent puzzle_hash amount)
   )
 
   (defun-inline is-approval-mod (approval_mod_hashes approval_mod)

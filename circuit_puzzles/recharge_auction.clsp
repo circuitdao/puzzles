@@ -10,7 +10,7 @@
   (include curry.clib)
   (include statutes_utils.clib)
 
-  (assign
+  (assign-inline
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     input_conditions (f op_args)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
