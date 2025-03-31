@@ -2,10 +2,6 @@
 # outside of that area and only update that section using the original site
 # that generated it.  Links provided below.
 
-# don't commit chialisp binaries
-circuit_puzzles/*.hex
-circuit_puzzles/programs/*.hex
-
 tmp/
 
 # C extensions
