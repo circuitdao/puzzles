@@ -86,7 +86,6 @@
     
       ; updating statutes
       (assert
-        (size_b32 governance_curried_args_hash)
         (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
         (> STATUTES_MAX_IDX mutation_index)
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)

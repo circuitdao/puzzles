@@ -182,7 +182,6 @@
     memos (r (r create_coin_body))
     (assert
       (> interest_payment MINUS_ONE)
-      (size_b32 inner_puzzle_hash)
       (c
         (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount inner_puzzle_hash memos)
         (c

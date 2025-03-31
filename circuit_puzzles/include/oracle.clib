@@ -83,11 +83,7 @@
         announcer (f price_announcers)
         ; price_announcers -> ((launcher_id args_hash price))
         (launcher_id args_hash price) announcer
-        announcer_puzzle_hash (assert
-          (size_b32 launcher_id)
-          (size_b32 args_hash)
-          (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
-        )
+        announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
         ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT

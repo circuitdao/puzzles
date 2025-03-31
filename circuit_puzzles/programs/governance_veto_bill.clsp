@@ -33,8 +33,6 @@
     (assert
       ; can only veto if in proposal mode (BILL is not empty)
       BILL
-      (size_b32 veto_inner_puzzle_hash)
-      (size_b32 veto_bill_hash)
       (> veto_amount amount)
       (> veto_seconds 0)
 

@@ -9,18 +9,6 @@
       (sha256 ONE TREE)
     )
   )
-  (defconstant b32 32)
-
-  (defun-inline size_b32 (var)
-    (= (strlen var) b32)
-  )
-
-  (defun-inline calculate-coin-id (parent puzzle_hash amount)
-    (if (all (size_b32 parent) (size_b32 puzzle_hash) (> amount -1))
-      (sha256 parent puzzle_hash amount)
-      (x)
-    )
-  )
 
   (list
     (list CREATE_COIN
@@ -39,7 +27,7 @@
     ; within a boundary of last_block > current_timestamp - 1 block < next block
     (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
     (list ASSERT_MY_PARENT_ID
-      (calculate-coin-id
+      (coinid
         my_parents_parent_id
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
@@ -54,7 +42,7 @@
     (list RECEIVE_MESSAGE
       0x3f
       '*'
-      (calculate-coin-id
+      (coinid
         my_parents_parent_id
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)

@@ -64,14 +64,11 @@
       (c
         ; ensuring that parent was indeed spent with our puzzle and pubkey
         (if lineage
-          (assert
-            (size_b32 prev_puzzle_args_hash)
-            (list ASSERT_MY_PARENT_ID
-              (calculate-coin-id
-                parent_id
-                (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
-                prev_deposit
-              )
+          (list ASSERT_MY_PARENT_ID
+            (calculate-coin-id
+              parent_id
+              (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
+              prev_deposit
             )
           )
           ; launch
