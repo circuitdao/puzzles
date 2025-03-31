@@ -26,7 +26,7 @@
     )
   )
 
-  (if (all solution)
+  (if solution
     (if (= "x" (f solution))
       ; if melt prefix is set we must melt, ie delta must be positive
       (assign
