@@ -16,7 +16,6 @@
         starting_price_factor
         initiator_puzzle_hash ; LATER: can provide new initiator_puzzle_hash on restart. desirable or not?
         auction_timeout
-        minimum_debt_amount
       )
     )
   )
@@ -73,13 +72,13 @@
         initiator_incentive_balance
       )
       auction_timeout
-      minimum_debt_amount
+      ; TODO: we don't need this, use principal instead
       (if AUCTION_STATE
-        (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_treasury_balance
+        (f (r (r (r (r (r (r (r AUCTION_STATE)))))))) ; byc_to_treasury_balance
         (- total_fees initiator_incentive_balance)
       )
       (if AUCTION_STATE
-        (f (r (r (r (r (r (r (r (r (r AUCTION_STATE)))))))))) ; byc_to_melt_balance
+        (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_melt_balance
         PRINCIPAL
       )
     )
@@ -91,7 +90,6 @@
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_timeout)
-      (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
     )
     (list
       (list
@@ -106,18 +104,15 @@
         (assert
           ; we must be below min collateral ratio to start an auction
           (> min_collateral_amount COLLATERAL)
-          (c (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
-            (c (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
-              (c (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
-                (c (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_BPS initiator_incentive_relative_fee_bps)
-                  (c (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_FLAT initiator_incentive_flat_fee)
-                    (c (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_bps)
-                      conditions
-                    )
-                  )
-                )
-              )
-            )
+          (li
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
+            (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
+            (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_BPS initiator_incentive_relative_fee_bps)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_INITIATOR_INCENTIVE_FLAT initiator_incentive_flat_fee)
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_PENALTY_BPS liquidation_penalty_bps)
+            &rest
+            conditions
           )
         )
         ; restart auction

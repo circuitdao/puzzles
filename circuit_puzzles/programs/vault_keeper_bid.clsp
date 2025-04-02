@@ -14,6 +14,7 @@
         byc_melting_coin_info
         byc_treasury_coin_info
         min_treasury_delta
+        minimum_bid_amount
         target_puzzle_hash
         my_coin_id
       )
@@ -39,7 +40,6 @@
       initiator_puzzle_hash
       initiator_incentive_balance
       auction_timeout
-      minimum_debt_amount
       byc_to_treasury_balance
       byc_to_melt_balance
     ) AUCTION_STATE
@@ -81,6 +81,7 @@
     ) ; amount of collateral (in mojos)
     bid_xch_collateral_amount (
       if (> bid_xch_collateral_amount_pre COLLATERAL)
+        ; if the amount of collateral is more than the vault has, use all of it, don't raise error
         COLLATERAL
         bid_xch_collateral_amount_pre
     )
@@ -130,13 +131,15 @@
           initiator_puzzle_hash
           (- initiator_incentive_balance initiator_incentive)
           auction_timeout
-          minimum_debt_amount
-          (- byc_to_treasury_balance byc_to_treasury)
-          (- byc_to_melt_balance byc_to_melt)
+          (- byc_to_treasury_balance byc_to_treasury) ; byc to treasury balance
+          (- byc_to_melt_balance byc_to_melt)  ; byc to melt balance
         )
     )
-    (assert
-      (> byc_bid_amount 0)
+    (assert_debug
+      (any  ; either bid amount is higher than min amount or is equal to the amount of debt
+        (> byc_bid_amount minimum_bid_amount)
+        (> minimum_bid_amount debt)
+      )
       (> current_timestamp auction_start_time)
       ; check that we haven't passed liquidation timeout
       ; is previous auction still running by checking if auction_start_time hasn't timed out
@@ -146,8 +149,10 @@
       ; check that there is collateral to bid for
       (> COLLATERAL 0)
       (> leftover_collateral -1)
-      (any (> leftover_debt minimum_debt_amount) (= leftover_debt 0))
-      (any (> byc_to_treasury min_treasury_delta) (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0))
+      (any
+        (> byc_to_treasury min_treasury_delta)
+        (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0)
+      )
       (list 
         (list
           leftover_collateral
@@ -160,6 +165,7 @@
           conditions (list
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MIN_BID_AMOUNT minimum_bid_amount)
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
