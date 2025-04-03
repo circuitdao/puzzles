@@ -135,7 +135,9 @@
           (- byc_to_melt_balance byc_to_melt)  ; byc to melt balance
         )
     )
-    (assert_debug
+    (assert
+      (> leftover_debt -1)
+      (> byc_bid_amount 0)
       (any  ; either bid amount is higher than min amount or is equal to the amount of debt
         (> byc_bid_amount minimum_bid_amount)
         (> minimum_bid_amount debt)

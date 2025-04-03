@@ -272,7 +272,7 @@
                   )
                 )
               )
-              (if (= current_amount new_amount)
+              (if (any (not (l args)) (not lineage_proof))
                 ; change ring ordering, require approval from statutes custom condition
                 (li
                   (list RECEIVE_MESSAGE 0x12

@@ -75,6 +75,7 @@
       (= COLLATERAL 0)
       ; must recover debt fully or partially, but amount must be at least min treasury delta
       (> leftover_byc_to_melt_balance -1)
+      (> reconcile_amount 0)
       (any (> reconcile_amount min_treasury_delta) (= reconcile_amount byc_to_melt_balance))
       (list
         (list
