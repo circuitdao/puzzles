@@ -29,6 +29,14 @@
   (include condition_filtering.clib)
   (include statutes_utils.clib)
 
+  (defun-inline is-treasury-approval-mod (approval_mod_hashes approval_mod)
+    (any
+      (= (f approval_mod_hashes) approval_mod) ; collateral vault
+      (= (f (r approval_mod_hashes)) approval_mod) ; surplus auction
+      (= (f (r (r approval_mod_hashes))) approval_mod) ; recharge auction
+      (= (f (r (r (r approval_mod_hashes)))) approval_mod) ; savings vault
+    )
+  )
   ; anything that isn't a create coin or protocol condition is allowed
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) RUN_TAIL_MOD_HASH filtered_conditions)
     (if conditions
@@ -272,26 +280,8 @@
                   )
                 )
               )
-              (if (any (not (l args)) (not lineage_proof))
-                ; change ring ordering, require approval from statutes custom condition
-                (li
-                  (list RECEIVE_MESSAGE 0x12
-                    (concat
-                      PROTOCOL_PREFIX
-                      CUSTOM_CONDITION_PREFIX
-                      (sha256tree
-                        (c LAUNCHER_ID
-                          args ; new ring_prev_launcher_id
-                        )
-                      )
-                    )
-                    statutes_puzzle_hash
-                  )
-                  (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID args) ; for driver code
-                  &rest
-                  conditions
-                )
-                ; ELSE we're spending/announcing, require approval mods
+              (if (all (l args) lineage_proof)
+                ; we're spending/announcing, require approval mods
                 (assign
                   (
                     approver_parent_id
@@ -305,7 +295,7 @@
                   approver_coin_id (assert
                     (size_uint64 approver_amount)
                     ; check that this approver mod hash is allowed
-                    (is-approval-mod approval_mod_hashes approver_mod_hash)
+                    (is-treasury-approval-mod approval_mod_hashes approver_mod_hash)
                     (calculate-coin-id
                       approver_parent_id
                       ; we want to ensure that the approver puzzle is using the correct mod
@@ -360,6 +350,24 @@
                     &rest
                     conditions
                   )
+                )
+                ; change ring ordering, require approval from statutes custom condition
+                (li
+                  (list RECEIVE_MESSAGE 0x12
+                    (concat
+                      PROTOCOL_PREFIX
+                      CUSTOM_CONDITION_PREFIX
+                      (sha256tree
+                        (c LAUNCHER_ID
+                          args ; new ring_prev_launcher_id
+                        )
+                      )
+                    )
+                    statutes_puzzle_hash
+                  )
+                  (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID args) ; for driver code
+                  &rest
+                  conditions
                 )
               )
             )

@@ -35,7 +35,6 @@
       BILL
       (> veto_amount amount)
       (> veto_seconds 0)
-
       (list
         ()
         (list
