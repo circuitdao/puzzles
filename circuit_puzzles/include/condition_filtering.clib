@@ -47,27 +47,27 @@
     )
   )
 
-  ; LATER: check throughout protocol what cost saving is of checking conditions
-  ;  as below instead of returning filtered conditions
-  (defun check-tail-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
+
+  ; fails if protocol condition encountered, o/w returns 1
+  (defun fail-on-protocol-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
     (if conditions
       (if (= condition_code REMARK)
         (assert
           (is-valid-rmk-cond condition_body)
-          (check-tail-conditions rest_of_conditions)
+          (fail-on-protocol-condition rest_of_conditions)
         )
         (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
           (assert
             (is-valid-msg-cond condition_body)
-            (check-tail-conditions rest_of_conditions)
+            (fail-on-protocol-condition rest_of_conditions)
           )
           (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
             (assert
               (is-valid-ann-cond condition_body)
-              (check-tail-conditions rest_of_conditions)
+              (fail-on-protocol-condition rest_of_conditions)
             )
             ; all other conditions allowed
-            (check-tail-conditions rest_of_conditions)
+            (fail-on-protocol-condition rest_of_conditions)
           )
         )
       )
@@ -75,33 +75,81 @@
     )
   )
 
-  ; fail if create coin or protocol condition encountered
-  (defun fail-on-protocol-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
+  ; fails if create coin or protocol condition encountered, o/w returns 1
+  (defun fail-on-protocol-condition-or-create-coin ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
     (if conditions
       (if (= condition_code CREATE_COIN)
         (x) ; no create coin allowed
         (if (= condition_code REMARK)
           (assert
             (is-valid-rmk-cond condition_body)
-            (fail-on-protocol-condition rest_of_conditions)
+            (fail-on-protocol-condition-or-create-coin rest_of_conditions)
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
             (assert
               (is-valid-msg-cond condition_body)
-              (fail-on-protocol-condition rest_of_conditions)
+              (fail-on-protocol-condition-or-create-coin rest_of_conditions)
             )
             (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
               (assert
                 (is-valid-ann-cond condition_body)
-                (fail-on-protocol-condition rest_of_conditions)
+                (fail-on-protocol-condition-or-create-coin rest_of_conditions)
               )
-              ; other conditions are always fine
-              (fail-on-protocol-condition rest_of_conditions)
+              ; other conditions allowed
+              (fail-on-protocol-condition-or-create-coin rest_of_conditions)
             )
           )
         )
       )
       ONE
+    )
+  )
+
+
+  ; fails if protocol condition encountered
+  ; fails if not exactly one create coin encountered
+  ; returns body of create coin condition and all other conditions
+  (defun filter-and-extract-unique-create-coin (
+        (@ conditions ((condition_code . condition_body) . rest_of_conditions))
+        found_create_coin
+        filtered_conditions
+      )
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (if found_create_coin
+          (x) ; only one create coin condition allowed
+          ; this is the first create coin encountered. extract condition body
+          (filter-and-extract-unique-create-coin
+            rest_of_conditions
+            condition_body ; extract create coin condition body
+            filtered_conditions ; don't prepend to conditions list
+          )
+        )
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body)
+            (filter-and-extract-unique-create-coin rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-and-extract-unique-create-coin rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-and-extract-unique-create-coin rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+              )
+              ; all other conditions allowed
+              (filter-and-extract-unique-create-coin rest_of_conditions found_create_coin (c (f conditions) filtered_conditions))
+            )
+          )
+        )
+      )
+      (assert
+        found_create_coin ; must have found a create coin
+        (list found_create_coin filtered_conditions)
+      )
     )
   )
 

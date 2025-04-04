@@ -34,7 +34,7 @@
     crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (assert
       (is-valid-operation (sha256tree operation) OPERATIONS)
-      (fail-on-protocol-condition input_conditions)
+      (fail-on-protocol-condition-or-create-coin input_conditions)
       (a
         operation
         (list

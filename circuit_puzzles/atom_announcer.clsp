@@ -11,42 +11,6 @@
   (include curry.clib)
   (include statutes_utils.clib)
 
-  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
-                              found_create_coin final_conditions)
-    ; RETURNS (conditions create_coin_condition_body)
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (if found_create_coin
-          (x) ; at most one CREATE_COIN allowed
-          (restrict-conditions rest_of_conditions condition_body final_conditions)
-        )
-        (if (= condition_code REMARK)
-          (assert
-            (is-valid-rmk-cond condition_body)
-            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-          )
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (assert
-              (is-valid-msg-cond condition_body)
-              (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-            )
-            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-              (assert
-                (is-valid-ann-cond condition_body)
-                (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-              )
-              ; all other conditions allowed
-              (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-            )
-          )
-        )
-      )
-      (list
-        final_conditions
-        (assert found_create_coin found_create_coin) ; must have encountered a CREATE_COIN
-      )
-    )
-  )
 
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
@@ -57,7 +21,7 @@
       ; otherwise, solution_or_conditions is conditions
       solution_or_conditions
     )
-    (input_conditions (new_puzzle_hash deposit (operation . args))) (restrict-conditions raw_conditions () ())
+    ((new_puzzle_hash deposit (operation . args)) input_conditions) (filter-and-extract-unique-create-coin raw_conditions () ())
     (assert
       (any inner_puzzle_hash (all (not inner_puzzle_hash) (= new_puzzle_hash INNER_PUZZLE_HASH)))
       (contains OPERATIONS (sha256tree operation))

@@ -16,7 +16,7 @@
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (assert
       (contains OPERATIONS (sha256tree operation))
-      (fail-on-protocol-condition input_conditions)
+      (fail-on-protocol-condition-or-create-coin input_conditions)
       (a
         operation
         (list

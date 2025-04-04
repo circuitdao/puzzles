@@ -18,53 +18,6 @@
 
   (defconst CUSTOM_CONDITIONS_MUTATION_INDEX -1)
 
-  ; filter custom conditions
-  ; fails on CREATE_COIN and protocol conditions
-  ; all other conditions are allowed
-  (defun filter-custom-conditions (
-    (@ conditions
-      (
-        (@ condition
-          (condition_code . condition_body)
-        )
-        . rest
-      )
-    ) filtered_conditions)
-
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (x) ; not allowed
-        (if (= condition_code REMARK)
-          (assert
-            (is-valid-rmk-cond condition_body)
-            (filter-custom-conditions rest (c condition filtered_conditions))
-          )
-          (if (= condition_code SEND_MESSAGE)
-            (assert
-              (is-valid-msg-cond condition_body)
-              (filter-custom-conditions rest (c condition filtered_conditions))
-            )
-            (if (any (= condition_code RECEIVE_MESSAGE))
-              (assert
-                (is-valid-msg-cond condition_body)
-                (filter-custom-conditions rest (c condition filtered_conditions))
-              )
-              (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-                (assert
-                  (is-valid-ann-cond condition_body)
-                  (filter-custom-conditions rest (c condition filtered_conditions))
-                )
-                ; all other conditions allowed
-                (filter-custom-conditions rest (c condition filtered_conditions))
-              )
-            )
-          )
-        )
-      )
-      filtered_conditions
-    )
-  )
-
   (assign
     governance_puzzle_hash (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
     (list
@@ -89,8 +42,8 @@
         (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
         (> STATUTES_MAX_IDX mutation_index)
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-          ; vote for announcements only, so this should just be a list
-          (l mutation_value)
+          ; voting for custom conditions. only need to check first element of mutation_value
+          (fail-on-protocol-condition-or-create-coin (f mutation_value))
           ; should be  a list with 5 elements if mutating statutes
           (not (r (r (r (r (r mutation_value))))))
         )
@@ -107,8 +60,8 @@
 
           &rest
           (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-            ; filter custom conditions, otherwise ignore  
-            (filter-custom-conditions (f mutation_value) ())
+            ; return custom conditions
+            (f mutation_value)
             ()
           )
         )

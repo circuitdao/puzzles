@@ -167,23 +167,17 @@
   )
 
    ; veto operation on a proposal coin is a third-party operation, which must not change inner puzzle hash
-  (defun validate-veto-conditions (inner_puzzle_hash (@ veto_conditions ((condition_code . condition_body) . rest_of_conditions)) validated_conditions)
+  (defun validate-veto-conditions (inner_puzzle_hash (@ veto_conditions ((condition_code . condition_body) . rest_of_conditions)))
     (if veto_conditions
       (if (= condition_code CREATE_COIN)
-        ; must keep inner puzzle hash unchanged
-        (if (= (f condition_body) inner_puzzle_hash)
-          (validate-veto-conditions
-            inner_puzzle_hash
-            rest_of_conditions
-            (c (f veto_conditions)
-              validated_conditions
-            )
-          )
-          (x)
+        (assert
+          ; must keep inner puzzle hash unchanged
+          (= (f condition_body) inner_puzzle_hash)
+          (validate-veto-conditions inner_puzzle_hash rest_of_conditions)
         )
-        (validate-veto-conditions inner_puzzle_hash rest_of_conditions (c (f veto_conditions) validated_conditions))
+        (validate-veto-conditions inner_puzzle_hash rest_of_conditions)
       )
-      validated_conditions
+      ONE
     )
   )
 
@@ -218,7 +212,11 @@
       (a (assert (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH) inner_puzzle) inner_solution)
       ; someone is trying to veto
       ; there should be specific create_coin in the conditions with same puzzle hash as curried in, announcements are allowed too
-      (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions ())
+      (assert
+        (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions)
+        veto_conditions
+      ;(validate-veto-conditions INNER_PUZZLE_HASH veto_conditions ())
+      )
     )
     ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () MINUS_ONE)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)

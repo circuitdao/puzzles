@@ -25,47 +25,6 @@
   (include condition_filtering.clib)
   (include statutes_utils.clib)
 
-  (defun filter-conditions ((@ conditions ( (condition_code . condition_body) . rest_of_conditions))
-                            found_first_create_coin
-                            filtered_conditions)
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (if found_first_create_coin
-          (x) ; only one create coin condition allowed
-          ; this is the first create coin encountered. extract condition body
-          (filter-conditions
-            rest_of_conditions
-            condition_body ; extract create coin condition body
-            filtered_conditions ; don't prepend to conditions list
-          )
-        )
-        (if (= condition_code REMARK)
-          (assert
-            (is-valid-rmk-cond condition_body)
-            (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
-          )
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (assert
-              (is-valid-msg-cond condition_body)
-              (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
-            )
-            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-              (assert
-                (is-valid-ann-cond condition_body)
-                (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
-              )
-              ; all other conditions allowed
-              (filter-conditions rest_of_conditions found_first_create_coin (c (f conditions) filtered_conditions))
-            )
-          )
-        )
-      )
-      (assert
-        found_first_create_coin ; must create a child coin
-        (list found_first_create_coin filtered_conditions)
-      )
-    )
-  )
 
   (defun-inline calculate-interest (discounted_balance principal cumulative_interest_df)
     (- (/ (* discounted_balance cumulative_interest_df) PRECISION) principal)
@@ -81,7 +40,7 @@
       current_timestamp
       (r price_info)
     )
-    (create_coin_body conditions) (filter-conditions
+    (create_coin_body conditions) (filter-and-extract-unique-create-coin
       (a INNER_PUZZLE inner_solution)
       0 ; found first create coin set to false
       ()

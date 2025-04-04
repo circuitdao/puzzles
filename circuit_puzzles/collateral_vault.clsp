@@ -75,24 +75,24 @@
 
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    conditions_pre (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
-    vault_operation_condition_pre (restrict-conditions conditions_pre 0)
+    conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
+    vault_operation_condition_pre (restrict-conditions conditions 0)
     operation_mod (operation-program vault_operation_condition_pre)
     operation_mod_hash (sha256tree operation_mod)
-    (conditions vault_operation_condition)
+    vault_operation_condition
       (if keeper_operation_info
         ; keeper mode
         (assert
           keeper_operation_info
           (contains KEEPER_OPERATIONS operation_mod_hash)
-          (list conditions_pre vault_operation_condition_pre)
+          vault_operation_condition_pre
         )
         ; owner mode must have empty AUCTION_STATE, ie vault is not in liquidation or bad debt
         (assert
           (not AUCTION_STATE)
           (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
           (contains OWNER_OPERATIONS operation_mod_hash)
-          (list conditions_pre vault_operation_condition_pre)
+          vault_operation_condition_pre
         )
       )
     (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
@@ -111,7 +111,7 @@
         final_inner_puzzle_hash
         final_discounted_principal
       )
-      vault_conditions
+      operation_conditions
     ) (a
       vault_operation
       (list
@@ -120,7 +120,7 @@
         args
       )
     )
-    inner_conditions (merge-lists conditions vault_conditions)
+    inner_conditions (merge-lists conditions operation_conditions)
     ;### MAIN EXPRESSION ###
     (c
       (c

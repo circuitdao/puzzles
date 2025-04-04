@@ -37,6 +37,7 @@
       (= (f (r (r (r approval_mod_hashes)))) approval_mod) ; savings vault
     )
   )
+
   ; anything that isn't a create coin or protocol condition is allowed
   (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) RUN_TAIL_MOD_HASH filtered_conditions)
     (if conditions
