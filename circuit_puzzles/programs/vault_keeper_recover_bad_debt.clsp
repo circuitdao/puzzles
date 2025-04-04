@@ -68,6 +68,7 @@
         0 ; auction_timeout
         0 ; byc_to_treasury_balance. fees paid to treasury cancel out
         leftover_byc_to_melt_balance
+        0
       )
     )
     (assert

@@ -14,7 +14,6 @@
         byc_melting_coin_info
         byc_treasury_coin_info
         min_treasury_delta
-        minimum_bid_amount
         target_puzzle_hash
         my_coin_id
       )
@@ -42,6 +41,7 @@
       auction_timeout
       byc_to_treasury_balance
       byc_to_melt_balance
+      minimum_bid_amount
     ) AUCTION_STATE
     ; first pay initiator
     initiator_incentive (if (> byc_bid_amount initiator_incentive_balance)
@@ -133,14 +133,19 @@
           auction_timeout
           (- byc_to_treasury_balance byc_to_treasury) ; byc to treasury balance
           (- byc_to_melt_balance byc_to_melt)  ; byc to melt balance
+          minimum_bid_amount
         )
     )
     (assert
       (> leftover_debt -1)
       (> byc_bid_amount 0)
-      (any  ; either bid amount is higher than min amount or is equal to the amount of debt
+      (any  ; either bid amount is higher than min amount or is equal to the debt or there is no collateral is left
         (> byc_bid_amount minimum_bid_amount)
-        (> minimum_bid_amount debt)
+        (all
+          (> minimum_bid_amount (- debt ONE))
+          (= byc_bid_amount debt)
+        )
+        (= leftover_collateral 0)
       )
       (> current_timestamp auction_start_time)
       ; check that we haven't passed liquidation timeout
@@ -153,7 +158,9 @@
       (> leftover_collateral -1)
       (any
         (> byc_to_treasury min_treasury_delta)
-        (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0)
+        (= byc_to_treasury byc_to_treasury_balance)
+        (= byc_to_treasury 0)
+        (= leftover_collateral 0)
       )
       (list 
         (list
@@ -167,7 +174,6 @@
           conditions (list
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-            (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MIN_BID_AMOUNT minimum_bid_amount)
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
