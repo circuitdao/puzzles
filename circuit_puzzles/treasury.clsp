@@ -75,7 +75,6 @@
 
 
   (assign
-    ;abc (if input_conditions (x input_conditions) ())
     filtered_conditions (filter-conditions input_conditions run_tail_mod_hash ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
