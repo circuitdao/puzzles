@@ -294,16 +294,11 @@
                     _ ; new_amount extracted above
                   ) args
                   approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
-                  approver_coin_id (assert
-                    (size_uint64 approver_amount)
-                    ; check that this approver mod hash is allowed
-                    (is-treasury-approval-mod approval_mod_hashes approver_mod_hash)
-                    (calculate-coin-id
-                      approver_parent_id
-                      ; we want to ensure that the approver puzzle is using the correct mod
-                      (if approver_cat_tail_hash
-                        ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
-                        (assert
+                  approver_coin_id (calculate-coin-id
+                    approver_parent_id
+                    ; we want to ensure that the approver puzzle is using the correct mod
+                    (if (all
+                          approver_cat_tail_hash
                           (any ; verify tail
                             ; surplus auction
                             (all (= (f (r approval_mod_hashes)) approver_mod_hash) (= approver_cat_tail_hash crt_tail_hash))
@@ -315,20 +310,20 @@
                               (= approver_cat_tail_hash byc_tail_hash) ; byc tail hash
                             )
                           )
-                          (curry_hashes CAT_MOD_HASH
-                            (sha256 ONE CAT_MOD_HASH)
-                            (sha256 ONE (f approver_mod_curried_args_hash))
-                            (tree_hash_of_apply approver_mod_hash (r approver_mod_curried_args_hash))
-                          )
                         )
-                        ; ELSE puzzle is not wrapped
-                        (assert
-                          (= approver_mod_hash (f approval_mod_hashes)) ; collateral vault
-                          (tree_hash_of_apply approver_mod_hash approver_mod_curried_args_hash)
-                        )
+                      ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
+                      (curry_hashes CAT_MOD_HASH
+                        (sha256 ONE CAT_MOD_HASH)
+                        (sha256 ONE (f approver_mod_curried_args_hash))
+                        (tree_hash_of_apply approver_mod_hash (r approver_mod_curried_args_hash))
                       )
-                      approver_amount
+                      ; ELSE puzzle is not wrapped
+                      (assert
+                        (= approver_mod_hash (f approval_mod_hashes)) ; collateral vault
+                        (tree_hash_of_apply approver_mod_hash approver_mod_curried_args_hash)
+                      )
                     )
+                    approver_amount
                   )
                   (li
                     ; assert approver coin message is valid
