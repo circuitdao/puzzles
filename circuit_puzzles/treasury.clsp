@@ -2,11 +2,11 @@
       CAT_MOD_HASH BYC_TAIL_MOD_HASH CRT_TAIL_MOD_HASH ; fixed hashes
       MOD_HASH
       STATUTES_STRUCT LAUNCHER_ID RING_PREV_LAUNCHER_ID
+      run_tail_mod_hash
       ; lineage proof is:
       ; -> () at launch (enforced to be a change ring ordering spend)
       ; -> (parent_parent_id parent_ring_prev_launcher_id) if ring ordering changed after launch
       ; -> (parent_parent_id . parent_amount) if balance changed
-      run_tail_mod_hash
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
@@ -313,7 +313,7 @@
                       ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
                       (curry_hashes CAT_MOD_HASH
                         (sha256 ONE CAT_MOD_HASH)
-                        (sha256 ONE (f approver_mod_curried_args_hash))
+                        (sha256 ONE approver_cat_tail_hash)
                         (tree_hash_of_apply approver_mod_hash (r approver_mod_curried_args_hash))
                       )
                       ; ELSE puzzle is not wrapped

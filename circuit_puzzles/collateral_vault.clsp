@@ -83,7 +83,6 @@
       (if keeper_operation_info
         ; keeper mode
         (assert
-          keeper_operation_info
           (contains KEEPER_OPERATIONS operation_mod_hash)
           vault_operation_condition_pre
         )
