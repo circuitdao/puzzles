@@ -1,12 +1,13 @@
 (mod (
-      CAT_MOD_HASH BYC_TAIL_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH ; fixed hashes
+      CAT_MOD_HASH BYC_TAIL_MOD_HASH CRT_TAIL_MOD_HASH ; fixed hashes
       MOD_HASH
       STATUTES_STRUCT LAUNCHER_ID RING_PREV_LAUNCHER_ID
       ; lineage proof is:
       ; -> () at launch (enforced to be a change ring ordering spend)
       ; -> (parent_parent_id parent_ring_prev_launcher_id) if ring ordering changed after launch
       ; -> (parent_parent_id . parent_amount) if balance changed
-      lineage_proof 
+      run_tail_mod_hash
+      lineage_proof
       statutes_inner_puzzle_hash
       current_amount
       input_conditions
@@ -43,7 +44,7 @@
     (if conditions
       (if (= condition_code CREATE_COIN)
         ; create coin only allowed for run tail, it implies they will be running BYC tail, since it's a child coin
-        (if (= (f condition_body) RUN_TAIL_MOD_HASH)
+        (if (all RUN_TAIL_MOD_HASH (= (f condition_body) RUN_TAIL_MOD_HASH))
           (filter-conditions rest_of_conditions RUN_TAIL_MOD_HASH (c (f conditions) filtered_conditions))
           (x)
         )
@@ -74,7 +75,8 @@
 
 
   (assign
-    filtered_conditions (filter-conditions input_conditions RUN_TAIL_MOD_HASH ())
+    ;abc (if input_conditions (x input_conditions) ())
+    filtered_conditions (filter-conditions input_conditions run_tail_mod_hash ())
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
@@ -138,7 +140,6 @@
           (- current_amount new_amount)
         0
     )
-
     (assert
       ; can't go into negative
       (> new_amount MINUS_ONE) (> withdraw_amount MINUS_ONE)
@@ -330,11 +331,11 @@
                     )
                   )
                   (li
-                    ; assert approver coin announcement is valid
+                    ; assert approver coin message is valid
                     (list RECEIVE_MESSAGE 0x3f
                       (concat
                         PROTOCOL_PREFIX
-                        (sha256tree (c STATUTES_STRUCT (c (- new_amount current_amount) new_amount)))
+                        (sha256tree (c STATUTES_STRUCT (c (- new_amount current_amount) (concat new_amount run_tail_mod_hash))))
                       )
                       approver_coin_id
                     )
