@@ -68,7 +68,7 @@
           (list
             ; if this is a surplus auction and it called for melting, melt
             (list ASSERT_MY_PUZZLE_HASH puzzle_hash)
-            ; we should be melting the whole coin value
+            ; we should be melting the whole coin value and delta should be negative
             (list ASSERT_MY_AMOUNT (* -1 delta))
             (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
           )
@@ -132,7 +132,7 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c STATUTES_STRUCT ; statutes_struct_hash
+                    (c STATUTES_STRUCT ; this binds us to the same protocol or statutes struct singleton
                       (c target_puzzle_hash issuance_amount) ; get approval for target puzzle hash and amount from approver
                     )
                   )

@@ -215,13 +215,11 @@
       (assert
         (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions)
         veto_conditions
-      ;(validate-veto-conditions INNER_PUZZLE_HASH veto_conditions ())
       )
     )
+    ; find the bill operation in the conditions using REMARK condition and potentially updated coin amount
     ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () MINUS_ONE)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    ; find the bill operation lambda and execute it, with new coin amount prepended
-    ; so can be used in bill operation while we later assert it's correct
     operation_mod_hash (if bill_operation (sha256tree bill_operation) ())
     operation (if operation_mod_hash
       (if inner_solution
@@ -244,9 +242,11 @@
           (c new_coin_amount args)
         )
       )
-      ; no bill operation, just return the conditions as we're transferring
-      ; but transfer only possible when BILL not set
-      (assert inner_solution (not BILL) (list () ()))
+      ; no bill operation, this is a transfer
+      (assert
+        inner_solution ; must be in owner mode
+        (not BILL) ; can only transfer when not in proposal mode
+        (list () ()))
     )
     ; iterate over all conditions and filter out the ones we don't need (REMARK)
     ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
@@ -284,7 +284,7 @@
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256 ONE CRT_TAIL_HASH)
                     (curry_hashes MOD_HASH
-                      (sha256 ONE MOD_HASH)
+                      (sha256 ONE MOD_HASH) ; ensure parent is currying the same mod hash
                       (sha256 ONE CRT_TAIL_HASH)
                       (sha256tree STATUTES_STRUCT)
                       (sha256 ONE INNER_PUZZLE_HASH)

@@ -17,9 +17,9 @@
 
 
   (if (and
-      oracle_program_args
-      (= (sha256tree (f oracle_program_args)) MUTATION_PROGRAM_HASH)
-    )
+        oracle_program_args
+        (= (sha256tree (f oracle_program_args)) MUTATION_PROGRAM_HASH)
+      )
     (a
       (f oracle_program_args)
       (list

@@ -36,14 +36,13 @@
       PAST_CUMULATIVE_INTEREST_DF
       ; price update counter stays the same
       PRICE_UPDATE_COUNTER
-    
       ; updating statutes
       (assert
         (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
         (> STATUTES_MAX_IDX mutation_index)
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
           ; voting for custom conditions. only need to check first element of mutation_value
-          (fail-on-protocol-condition-or-create-coin (f mutation_value))
+          (fail-on-invalid-custom-statutes-conditions (f mutation_value))
           ; should be  a list with 5 elements if mutating statutes
           (not (r (r (r (r (r mutation_value))))))
         )

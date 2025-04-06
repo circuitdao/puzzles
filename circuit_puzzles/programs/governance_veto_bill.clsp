@@ -36,7 +36,7 @@
       (> veto_amount amount)
       (> veto_seconds 0)
       (list
-        ()
+        () ; set BILL to empty on successful veto
         (list
           (if (> veto_seconds ONE)
             (list ASSERT_BEFORE_SECONDS_RELATIVE veto_seconds)
