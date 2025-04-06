@@ -1,8 +1,9 @@
 (mod (
     CAT_MOD_HASH TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    statutes_puzzle_hash lineage_proof input_conditions
+    lineage_proof input_conditions
     (
+      statutes_inner_puzzle_hash
       current_time
       auction_ttl
       bid_ttl
@@ -22,6 +23,7 @@
   (include recharge_auction.clib)
 
   (assign
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     auction_params (list
       current_time
       auction_ttl
@@ -108,7 +110,6 @@
           BYC_TAIL_HASH
           STATUTES_STRUCT
           treasury_minimum
-          statutes_puzzle_hash
           0 ; deposit per coin
           0 ; deposit remainder
           (f treasury_coins)
