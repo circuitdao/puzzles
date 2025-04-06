@@ -2,14 +2,14 @@
 ; If last bid goes over TTL, it's a win.  Running this operation burns the CRT locked into this coin (surplus auction)
 ; and unlocks BYC in payout coin and sends them to the winning target puzzle hash.
 (mod
-  ( PAYOUT_MOD_HASH
+  ( PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     statutes_inner_puzzle_hash lineage_proof input_conditions
     (
       current_timestamp
-      crt_tail_puzzle
       payout_coin_parent_id
-      approval_mod_hashes
+      my_amount
+      my_coin_id
     )
   )
 
@@ -22,7 +22,6 @@
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (target_puzzle_hash . timestamp) LAST_BID
-    crt_tail_hash (sha256tree crt_tail_puzzle)
     payout_puzzle_hash (
       curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
@@ -39,34 +38,62 @@
         payout_puzzle_hash
         BYC_LOT_AMOUNT
     )
+    melt_coin_id (calculate-coin-id
+      my_coin_id
+      (curry_hashes CAT_MOD_HASH
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE CRT_TAIL_HASH)
+        RUN_TAIL_MOD_HASH
+      )
+      my_amount
+    )
     (assert
-      ; ensure correct tail reveal is passed
-      (= crt_tail_hash CRT_TAIL_HASH)
       ; must have a bid
       LAST_BID
       ; ttl for last bid should've expired
       (> (- current_timestamp timestamp) BID_TTL)
       (li
-        ; no recreate here, we create melting condition
-        ; not asserting my puzzle hash and my amount in present puzzle as crt tail does this on melt
-        (list CREATE_COIN 0 -113 crt_tail_puzzle
-          ; construct limitation solution
-          (list
-            "x"
-            MOD_HASH
-            LAUNCHER_ID
-            BID_TTL
-            MIN_BID_INCREASE_BPS
-            BYC_LOT_AMOUNT
-            LAST_BID
-            statutes_inner_puzzle_hash
-            approval_mod_hashes
+        (list ASSERT_MY_AMOUNT my_amount)
+        (list ASSERT_MY_COIN_ID my_coin_id)
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (curry_hashes
+              MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE BID_TTL)
+              (sha256 ONE MIN_BID_INCREASE_BPS)
+              (sha256 ONE BYC_LOT_AMOUNT)
+              (sha256tree LAST_BID)
+            )
           )
         )
+        ; no recreate here, we create melting condition
+        ; not asserting my puzzle hash and my amount in present puzzle as crt tail does this on melt
+        (list CREATE_COIN RUN_TAIL_MOD_HASH my_amount)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        (list SEND_MESSAGE 0x3f
+          (concat
+            PROTOCOL_PREFIX
+            (sha256tree
+              (c
+                STATUTES_STRUCT
+                (c
+                  ()
+                  ; negative amount to signal melt
+                  (* -1 my_amount)
+                )
+              )
+            )
+          )
+          melt_coin_id
+        )
         ; assert payout coin transferred the lot amount to the winner (target_puzzle_hash)
         (list SEND_MESSAGE 0x3f
           (concat
