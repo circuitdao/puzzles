@@ -14,7 +14,7 @@
         step_price_decrease_factor
         price_info
         starting_price_factor
-        initiator_puzzle_hash ; LATER: can provide new initiator_puzzle_hash on restart. desirable or not?
+        initiator_puzzle_hash
         auction_ttl
         minimum_bid_amount
       )
@@ -73,12 +73,10 @@
         initiator_incentive_balance
       )
       auction_ttl
-      ; TODO: we don't need this, use discounted principal instead?
       (if AUCTION_STATE
         (f (r (r (r (r (r (r (r AUCTION_STATE)))))))) ; byc_to_treasury_balance
         (- total_fees initiator_incentive_balance)
       )
-      ; TODO: we don't need this, use principal instead
       (if AUCTION_STATE
         (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_melt_balance
         PRINCIPAL

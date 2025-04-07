@@ -1,7 +1,7 @@
 ; Circuit CAT token (CRT) TAIL program
 ; CRT token is used for governance voting and can be used to bid in surplus auctions.
-; CRT tokens are minted by the announcer registry and recharge auction(s).
-; CRT tokens can be melted in surplus auctions.
+; CRT tokens are minted at protocol launch, by announcer registry and recharge auctions.
+; CRT tokens are melted in surplus auctions.
 (mod (RUN_TAIL_MOD_HASH
       STATUTES_STRUCT
       Truths
@@ -82,17 +82,13 @@
             )
             ; OR announcer registry
             (assert
-              (= approval_mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
+              (= approval_mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod hash position in approved hashes
               ; because we don't provide create coins as input conditions
               ; delta will always be in melting mode but delta_amount will be positive
               (= 0 (+ delta_amount delta))
               (tree_hash_of_apply approval_mod_hash approver_curried_mod_args)
             )
           )
-          ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hashing it
-          ; to generate the puzzle hash. This avoids a lot of costs since we don't need to pass them into
-          ; the solution. We don't really care what the values are since these puzzles can only be launched
-          ; by governance so they're trusted. We just need to make sure they have the correct mod_hash.
         )
         approver_amount
       )

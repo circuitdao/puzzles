@@ -1,3 +1,7 @@
+; This program is used to settle the winning recharge auction bid.
+; Settlement is possible once the auction has ended, i.e. when the last bid has not been outbid after bid_ttl seconds.
+; Running this operation deposits the BYC locked into this coin (recharge auction) into the treasury
+; and issues CRT to the target puzzle hash of the winning bid.
 (mod (
     CAT_MOD_HASH
     RUN_TAIL_MOD_HASH
@@ -107,7 +111,8 @@
           )
         )
         &rest
-        (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+        ; evenly distribute the BYC amount locked in this coin (recharge auction) across all treasury coins
+        (deposit-to-treasury
           TREASURY_MOD_HASH
           CAT_MOD_HASH
           BYC_TAIL_HASH

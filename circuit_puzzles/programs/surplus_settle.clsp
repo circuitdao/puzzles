@@ -1,6 +1,7 @@
-; This program is used to claim the surplus auction win
-; If last bid goes over TTL, it's a win.  Running this operation burns the CRT locked into this coin (surplus auction)
-; and unlocks BYC in payout coin and sends them to the winning target puzzle hash.
+; This program is used to settle the winning surplus auction bid.
+; Settlement is possible once the auction has ended, i.e. when the last bid has not been outbid after BID_TTL seconds.
+; Running this operation burns the CRT locked into this coin (surplus auction)
+; and unlocks the BYC in payout coin, which gets sent to the target puzzle hash of the winning bid.
 (mod
   (PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
@@ -72,12 +73,10 @@
             )
           )
         )
-        ; no recreate here, we create melting condition
-        ; not asserting my puzzle hash and my amount in present puzzle as crt tail does this on melt
         (list CREATE_COIN RUN_TAIL_MOD_HASH my_amount)
         ; current_time minus one tx block time should already be in the past
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-        ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
+        ; make sure that current_timestamp hasn't happened yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         (list SEND_MESSAGE 0x3f
           (concat
@@ -103,7 +102,6 @@
           )
           payout_coin_id
         )
-        ; ensure lineage so nobody can fake the winning bid, ie nobody can fake this state transition (CREATE_COIN conditions are not allowed, so siblings are not possible)
         (list ASSERT_MY_PARENT_ID
           (calculate-coin-id
             (f lineage_proof)
@@ -117,7 +115,6 @@
             (f (r lineage_proof))
           )
         )
-        ; NOTE: we assert this puzzles puzzle hash in the crt tail that we run
         &rest
         input_conditions
       )
