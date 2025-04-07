@@ -1,7 +1,7 @@
 (mod (
     CAT_MOD_HASH OFFER_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    statutes_puzzle_hash lineage_proof input_conditions
+    lineage_proof input_conditions
     (
       (byc_bid_amount . crt_bid_amount) ; new bid
       target_puzzle_hash
@@ -11,11 +11,10 @@
   )
 
   (include *standard-cl-23.1*)
+  (include prefixes.clib)
   (include curry.clib)
   (include condition_codes.clib)
-  (include statutes_utils.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
 
   (assign
     (
@@ -34,7 +33,6 @@
     crt_price (/ (* byc_bid_amount PRECISION) crt_bid_amount)
     last_crt_price (if last_byc_bid_amount (/ (* last_byc_bid_amount PRECISION) last_crt_bid_amount) 0)
     (assert
-      (size_b32 target_puzzle_hash)
       LAUNCHER_ID ; can't bid if auction hasn't started yet
       (> crt_price min_crt_price)
       (any

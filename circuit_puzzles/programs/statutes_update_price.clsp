@@ -52,26 +52,28 @@
     )
     ; increase the price updates counter to be used by announcers to claim rewards
     (+ PRICE_UPDATE_COUNTER 1)
-    (assign
-      ; first item is price oracle info on statues
-      oracle_launcher_id (f (f STATUTES))
-      ; we need prev price to assert that latest one is fresher
-      (prev_price . prev_last_updated) PRICE_INFO
-      (assert
-        (> last_updated prev_last_updated)
-        ; confirm oracle price info to update statutes price info
-        (list
-          ; no need to check current_timestamp as this is already done by oracle
-          (list ASSERT_PUZZLE_ANNOUNCEMENT
-            (sha256
-              ; generate oracle singleton puzzle hash
-              (curry_hashes
-                SINGLETON_MOD_HASH
-                (sha256tree (c SINGLETON_MOD_HASH (c oracle_launcher_id SINGLETON_LAUNCHER_HASH)))
-                oracle_inner_puz_hash
+    (assert
+      ; new price should be fresher than current one
+      (> last_updated (r PRICE_INFO))
+      ; confirm oracle price info to update statutes price info
+      (list
+        ; no need to check current_timestamp as this is already done by oracle
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            ; generate oracle singleton puzzle hash
+            (curry_hashes
+              SINGLETON_MOD_HASH
+              (sha256tree
+                (c SINGLETON_MOD_HASH
+                  (c
+                    (f (f STATUTES)) ; -> oracle_launcher_id
+                    SINGLETON_LAUNCHER_HASH
+                  )
+                )
               )
-              (sha256tree (c price (c last_updated (c current_timestamp (price-delay-statute STATUTES)))))
+              oracle_inner_puz_hash
             )
+            (sha256tree (c price (c last_updated (c current_timestamp (price-delay-statute STATUTES)))))
           )
         )
       )

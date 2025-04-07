@@ -1,6 +1,6 @@
 (mod (OPERATIONS BYC_TAIL_MOD_HASH
       MOD_HASH STATUTES_STRUCT LAUNCHER_ID AUCTION_PARAMS LAST_BID
-      statutes_inner_puzzle_hash lineage_proof operation . op_args)
+      lineage_proof operation input_conditions . op_args)
 
   (include *standard-cl-23.1*)
   (include prefixes.clib)
@@ -11,17 +11,15 @@
   (include statutes_utils.clib)
 
   (assign-inline
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    input_conditions (f op_args)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (assert
       (contains OPERATIONS (sha256tree operation))
-      (fail-on-protocol-condition input_conditions)
+      (fail-on-protocol-condition-or-create-coin input_conditions)
       (a
         operation
         (list
           (list MOD_HASH STATUTES_STRUCT byc_tail_hash LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-          statutes_puzzle_hash lineage_proof input_conditions (r op_args)
+          lineage_proof input_conditions op_args
         )
       )
     )

@@ -1,14 +1,17 @@
+; This program is used to settle the winning recharge auction bid.
+; Settlement is possible once the auction has ended, i.e. when the last bid has not been outbid after bid_ttl seconds.
+; Running this operation deposits the BYC locked into this coin (recharge auction) into the treasury
+; and issues CRT to the target puzzle hash of the winning bid.
 (mod (
     CAT_MOD_HASH
     RUN_TAIL_MOD_HASH
     TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    statutes_puzzle_hash lineage_proof input_conditions
+    lineage_proof input_conditions
     (
       current_timestamp
       treasury_coins
       funding_coin_info
-      treasury_minimum
       target_puzzle_hash
       crt_tail_hash
     )
@@ -17,7 +20,6 @@
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include condition_codes.clib)
-  (include statutes_utils.clib)
   (include utils.clib)
   (include recharge_auction.clib)
 
@@ -109,13 +111,13 @@
           )
         )
         &rest
-        (deposit-to-treasury ; we will evenly distribute the lot amount to treasury coins
+        ; evenly distribute the BYC amount locked in this coin (recharge auction) across all treasury coins
+        (deposit-to-treasury
           TREASURY_MOD_HASH
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT
-          treasury_minimum
-          statutes_puzzle_hash
+          0 ; treasury minimum, pass 0 as unused
           treasury_deposit_per_coin
           remainder
           (f treasury_coins)

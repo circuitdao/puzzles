@@ -37,6 +37,7 @@
     ; we add latest price to the end of the list
     (matured_price_info . cut_price_infos) (cut-price-infos PRICES (- current_timestamp price_delay) ())
     price_to_apply (c median_price current_timestamp)
+    ; push new price to the end of the queue, we have a FILO queue
     new_price_infos (merge-lists
         cut_price_infos
         (list price_to_apply)

@@ -41,7 +41,7 @@
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
         ; check for cheeky conditions
-        (check-tail-conditions inner_conditions)
+        (fail-on-protocol-condition inner_conditions)
         (= vault_mod_hash (f approval_mod_hashes))
         (any
           ; when melting, parent must be a cat, and delta must match negative new_byc_coin_amount
