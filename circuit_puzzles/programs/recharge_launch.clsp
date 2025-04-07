@@ -1,10 +1,11 @@
 (mod (
-    (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID
-    )
-    statutes_puzzle_hash
+    (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     lineage_proof
     input_conditions
-    (my_coin_id)
+    (
+      statutes_inner_puzzle_hash
+      my_coin_id
+    )
   )
 
   (include *standard-cl-23.1*)
@@ -12,7 +13,6 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
 
   (assert
     ; enforce eve state
@@ -47,7 +47,7 @@
               ; get approval from statutes
               (list RECEIVE_MESSAGE 0x12
                 (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX (sha256tree '*'))
-                statutes_puzzle_hash
+                (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
               )
               input_conditions
             )
