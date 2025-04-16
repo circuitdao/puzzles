@@ -8,6 +8,7 @@
       veto_amount
       veto_inner_puzzle_hash
       veto_bill_hash
+      current_timestamp
     )
   )
 
@@ -22,7 +23,7 @@
 
   (assign
     (
-      (veto_seconds . enact_seconds)
+      (veto_period_expiry implemenation_delay_expiry . implementation_interval_expiry)
       new_statute_index
       new_statute_value
       new_threshold_amount_to_propose
@@ -34,19 +35,16 @@
       ; can only veto if in proposal mode (BILL is not empty)
       BILL
       (> veto_amount amount)
-      (> veto_seconds 0)
+      (> veto_period_expiry current_timestamp)
       (list
         () ; set BILL to empty on successful veto
         (list
-          (if (> veto_seconds ONE)
-            (list ASSERT_BEFORE_SECONDS_RELATIVE veto_seconds)
-            ; noop
-            (list ASSERT_SECONDS_RELATIVE veto_seconds)
-          )
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
           (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_VETOED)))
           ; assert announcement from another CRT coin with higher amount than this one
           (list RECEIVE_MESSAGE 0x3f
-            (concat PROTOCOL_PREFIX (sha256tree (sha256tree BILL)))
+            (concat PROTOCOL_PREFIX (sha256tree BILL))
             (calculate-coin-id
               parent_veto_id
               (calculate-full-gov-puzzle-hash

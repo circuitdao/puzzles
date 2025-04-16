@@ -8,7 +8,7 @@
       CRT_TAIL_HASH
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
-      BILL ; -> (proposal_periods statute_index statute)
+      BILL ; -> (bill_expiries statute_index statute) where bill_expiries -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
       lineage_proof
       inner_puzzle ; if provided, we're in owner mode
       inner_solution
