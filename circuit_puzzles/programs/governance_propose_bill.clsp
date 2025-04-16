@@ -15,8 +15,8 @@
       (@ current_statute (
         statute_value
         threshold_amount_to_propose
-        veto_interval ; veto_seconds
-        implementation_delay ; delay_seconds
+        veto_interval
+        implementation_delay
         max_delta
       ))
       current_timestamp
@@ -25,7 +25,6 @@
   )
 
   (include *standard-cl-23.1*)
-  (include curry.clib)
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
@@ -35,8 +34,8 @@
   (assert
     (> amount threshold_amount_to_propose)
     (> new_threshold_amount_to_propose 0)
-    (> new_veto_interval 0) ; (> new_veto_seconds 0)
-    (> new_implementation_delay 0) ; (> new_delay_seconds 0)
+    (> new_veto_interval 0)
+    (> new_implementation_delay 0)
     ; if we have a max_delta, make sure new value doesn't exceed it
     (if (= max_delta 0)
       ONE
@@ -48,13 +47,10 @@
     )
     (list
       (c
-        ;; we want coins that are in the proposal process to be able to veto too
-        ;; this means we need to update time required to pass proposal when spending
-        ;; this is the parameter that holds those values and will be updated on veto
-        ;(c veto_seconds (+ veto_seconds delay_seconds))
-        (c (+ current_timestamp veto_interval)
-          (c (+ current_timestamp veto_interval implementation_delay)
-            (+ current_timestamp veto_interval implementation_delay implementation_interval)
+        ; set proposal times
+        (c (+ current_timestamp veto_interval) ; veto_interval_expiry
+          (c (+ current_timestamp veto_interval implementation_delay) ; implementation_delay_expiry
+            (+ current_timestamp veto_interval implementation_delay implementation_interval) ; implementation_interval_expiry
           )
         )
         new_bill
@@ -63,7 +59,7 @@
         ; to avoid spamming the network with proposals, we require a fee to be paid
         (list RESERVE_FEE new_bill_proposal_fee_mojos)
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
-        ; assert that passed statute index correlates to correct statute
+        ; assert that passed statute index corresponds to correct statute
         ; and that passed statute values are correct
         (assert-full-statute
           statutes_puzzle_hash

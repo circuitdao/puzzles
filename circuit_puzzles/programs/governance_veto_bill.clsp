@@ -13,10 +13,9 @@
   )
 
   (include *standard-cl-23.1*)
-  (include crt_utils.clib)
   (include curry.clib)
   (include condition_codes.clib)
-  (include statutes_utils.clib)
+  (include prefixes.clib)
   (include utils.clib)
 
   (defconst ANN_VETOED 'x')
@@ -47,13 +46,17 @@
             (concat PROTOCOL_PREFIX (sha256tree BILL))
             (calculate-coin-id
               parent_veto_id
-              (calculate-full-gov-puzzle-hash
-                MOD_HASH
-                CAT_MOD_HASH
-                CRT_TAIL_HASH
-                STATUTES_STRUCT
-                veto_inner_puzzle_hash
-                veto_bill_hash
+              ; governance coin puzzle hash
+              (curry_hashes CAT_MOD_HASH
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CRT_TAIL_HASH)
+                (curry_hashes MOD_HASH
+                  (sha256 ONE MOD_HASH)
+                  (sha256 ONE CRT_TAIL_HASH)
+                  (sha256tree STATUTES_STRUCT)
+                  (sha256 ONE veto_inner_puzzle_hash)
+                  veto_bill_hash
+                )
               )
               veto_amount
             )
