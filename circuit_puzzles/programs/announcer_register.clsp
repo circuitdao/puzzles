@@ -1,9 +1,12 @@
 ; register the announcer with announcer registry coin
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+      )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (registry_mod_hash registry_args_hash
-       statutes_inner_puzzle_hash min_deposit)
+      (registry_mod_hash registry_args_hash registry_claim_counter
+        target_puzzle_hash statutes_inner_puzzle_hash min_deposit
+      )
      )
 
   (include *standard-cl-23.1*)
@@ -19,6 +22,7 @@
     (assert
       inner_puzzle_hash ; must be owner
       APPROVED
+      (> registry_claim_counter CLAIM_COUNTER)
       (> deposit (- MIN_DEPOSIT 1)) ; must not be penalizable for deposit
       (> MIN_DEPOSIT (- min_deposit 1)) ; must not be penalizable for min deposit
       (c
@@ -27,8 +31,10 @@
             PROTOCOL_PREFIX
             (sha256tree
               (c STATUTES_STRUCT
-                (c INNER_PUZZLE_HASH
-                  APPROVED
+                (c target_puzzle_hash
+                  (c APPROVED
+                     registry_claim_counter
+                  )
                 )
               )
             )
@@ -49,6 +55,7 @@
               DELAY
               VALUE
               MIN_DEPOSIT
+              registry_claim_counter
               COOLDOWN_START
               PENALIZABLE_AT
               TIMESTAMP_EXPIRES

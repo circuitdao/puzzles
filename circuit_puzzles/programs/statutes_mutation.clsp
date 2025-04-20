@@ -8,7 +8,6 @@
     )
 
   (include *standard-cl-23.1*)
-  (include crt_utils.clib)
   (include curry.clib)
   (include condition_codes.clib)
   (include utils.clib)

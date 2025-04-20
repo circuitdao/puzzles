@@ -1,7 +1,8 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
-     (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
-     inner_puzzle
-     solution_or_conditions
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+       CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+       (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
+       inner_puzzle
+       solution_or_conditions
      )
 
   (include *standard-cl-23.1*)
@@ -42,9 +43,10 @@
             (= DELAY 0)
             (= VALUE 0)
             (= MIN_DEPOSIT 0)
+            (= CLAIM_COUNTER 0)
             (= COOLDOWN_START 0)
-            (= TIMESTAMP_EXPIRES 0)
             (= PENALIZABLE_AT 0)
+            (= TIMESTAMP_EXPIRES 0)
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
           )
         )
@@ -60,6 +62,7 @@
               (sha256 ONE DELAY)
               (sha256tree VALUE)
               (sha256 ONE MIN_DEPOSIT)
+              (sha256 ONE CLAIM_COUNTER)
               (sha256 ONE COOLDOWN_START)
               (sha256 ONE PENALIZABLE_AT)
               (sha256 ONE TIMESTAMP_EXPIRES)
@@ -69,7 +72,7 @@
             operation
             (list
               (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
-                DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+                DEPOSIT DELAY VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
               )
               inner_puzzle_hash new_puzzle_hash deposit input_conditions
               args

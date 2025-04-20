@@ -1,4 +1,6 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+      )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       _
@@ -43,6 +45,7 @@
             (sha256 ONE DELAY)
             (sha256tree VALUE)
             (sha256 ONE MIN_DEPOSIT)
+            (sha256 ONE CLAIM_COUNTER)
             (sha256 ONE COOLDOWN_START)
             (sha256 ONE PENALIZABLE_AT)
             (sha256 ONE TIMESTAMP_EXPIRES)
@@ -61,6 +64,7 @@
             DELAY
             VALUE
             MIN_DEPOSIT
+            CLAIM_COUNTER
             COOLDOWN_START
             PENALIZABLE_AT
             TIMESTAMP_EXPIRES
