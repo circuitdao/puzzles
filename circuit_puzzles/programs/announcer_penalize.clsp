@@ -43,6 +43,7 @@
       (> DEPOSIT penalized_deposit)
       (> penalized_deposit MINUS_ONE)
       (li
+        (list RESERVE_FEE (- DEPOSIT penalized_deposit))
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval_in_minutes)

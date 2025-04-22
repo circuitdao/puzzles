@@ -74,13 +74,13 @@
       )
     )
     (li
-      (list RECEIVE_MESSAGE 0x10
-        (concat
+      (list ASSERT_PUZZLE_ANNOUNCEMENT
+        (sha256
+          statutes_puzzle_hash
           PROTOCOL_PREFIX
           CUSTOM_CONDITION_PREFIX
           (sha256tree (c LAUNCHER_ID toggle_activation))
         )
-        statutes_puzzle_hash
       )
       &rest
       operation_conditions
