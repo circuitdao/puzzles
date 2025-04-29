@@ -14,7 +14,6 @@
           statutes_inner_puzzle_hash
           approval_mod_hashes
           current_coin_amount
-          new_byc_coin_amount ; new amount of BYC coin being issued or melted from
         )
       )
      )
@@ -42,14 +41,18 @@
       (assert
         ; check for cheeky conditions
         (fail-on-protocol-condition inner_conditions)
+        ; we only support collateral vault as approval mod (they are the only ones that can issue BYC)
         (= vault_mod_hash (f approval_mod_hashes))
         (any
-          ; when melting, parent must be a cat, and delta must match negative new_byc_coin_amount
-          (all parent_is_cat (= new_byc_coin_amount (+ current_coin_amount delta)))
+          ; when melting, parent must be a cat, and delta must be negative (indicates melt)
+          ; we're melting the whole coin amount so should match
+          (all parent_is_cat (> 0 delta) (= 0 (+ delta current_coin_amount)))
           ; when issuing, parent must not be a cat, and delta must be 0
+          ; this means we need to rely on the coin amount to limit the issuance
           (all (not parent_is_cat) (= 0 delta))
         )
         (list
+          ; we use current_coin_amount when issuing to limit the issuance to whatever vault approved
           (list ASSERT_MY_AMOUNT current_coin_amount)
           ; this tail can only be called in run tail puzzle to avoid misuse
           (list ASSERT_MY_PUZZLE_HASH
@@ -63,9 +66,11 @@
             (concat
               PROTOCOL_PREFIX
               (sha256tree
-                (c STATUTES_STRUCT ; need to tie it to statutes struct
-                  (c (if (> 0 delta) "x" "i")
-                    (if (> 0 delta) delta new_byc_coin_amount)
+                (c
+                  STATUTES_STRUCT ; need to tie it to statutes struct
+                  (c
+                    (if (> 0 delta) "x" "i")
+                    (if (> 0 delta) delta current_coin_amount)
                   )
                 )
               )

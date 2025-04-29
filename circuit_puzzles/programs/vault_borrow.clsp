@@ -50,8 +50,8 @@
       CAT_MOD_HASH
       byc_tail_hash
       (list
-        (f byc_issuing_coin_info)
-        (r byc_issuing_coin_info)
+        (f byc_issuing_coin_info)  ; parent_id
+        (r byc_issuing_coin_info)  ; amount
         RUN_TAIL_MOD_HASH
       )
     )
@@ -59,6 +59,8 @@
     (assert
       (> (+ undiscounted_principal borrow_amount) minimum_debt_amount)
       (> borrow_amount 0)
+      ; ensure the coin we're using to issue has correct amount so user can't mint arbitrary amount
+      (= (r byc_issuing_coin_info)  borrow_amount)
       ; check if requested amount of BYC to mint takes us over the collateralization ratio
       (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) borrow_amount)
       (list

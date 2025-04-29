@@ -45,8 +45,8 @@
       CAT_MOD_HASH
       byc_tail_hash
       (list
-        (f byc_issuing_coin_info)
-        (r byc_issuing_coin_info)
+        (f byc_issuing_coin_info) ; parent_id
+        (r byc_issuing_coin_info) ; amount
         RUN_TAIL_MOD_HASH
       )
     )
@@ -72,6 +72,8 @@
       (> fees_to_treasury min_treasury_delta)
       ; only if vault is not in liquidation or bad debt
       (not AUCTION_STATE)
+      ; issuing coin must have the same as amount we're transferring
+      (= (r byc_issuing_coin_info) fees_to_treasury)
       (list
         (list
           COLLATERAL
