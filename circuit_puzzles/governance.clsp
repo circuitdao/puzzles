@@ -26,7 +26,7 @@
 
   ; used to filter raw_inner_conditions
   (defun filter-conditions (EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-                            STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash
+                            STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
                             final_bill bill_operation
                             (@ conditions ((condition_code . condition_body) . rest_of_conditions))
                             found_create_coin filtered_conditions)
@@ -34,7 +34,7 @@
       (if (= condition_code CREATE_COIN)
         (filter-conditions
           EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-          INNER_PUZZLE_HASH statutes_puzzle_hash
+          INNER_PUZZLE_HASH BILL statutes_puzzle_hash
           final_bill bill_operation
           rest_of_conditions
           1 ; we found a create coin condition
@@ -50,9 +50,12 @@
                 bill_operation
                 final_bill
                 (if (size_b32 (f condition_body))
-                  (f condition_body)
-                  () ; signal exit to driver
-                ) ; inner puzzle hash
+                  (f condition_body) ; inner puzzle hash
+                  (assert
+                    (not BILL) ; exit only possible if no bill
+                    () ; signal exit to driver
+                  )
+                )
               )
               (c
                 (c
@@ -66,13 +69,13 @@
                         (sha256 ONE (f condition_body))
                         (sha256tree final_bill)
                       )
-                      ; disable governance and use existing inner puzzle if passed inner puzzle hash is 0
+                      ; disable governance and use existing inner puzzle if first of condition body is not a 32-byte hash
                       (curry_hashes EXIT_MOD_HASH
                         (sha256 ONE INNER_PUZZLE_HASH)
-                        (sha256 ONE (f (r condition_body)))
+                        (sha256 ONE (f (r condition_body))) ; amount
                       )
                     )
-                    (r condition_body)
+                    (r condition_body) ; amount + memos (if any)
                   )
                 )
                 (if (size_b32 (f condition_body))
@@ -109,7 +112,7 @@
           (if (is-valid-rmk-cond condition_body)
             (filter-conditions
               EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-              STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash
+              STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
               final_bill bill_operation
               rest_of_conditions
               found_create_coin
@@ -118,7 +121,7 @@
             ; discard protocol REMARK conditions
             (filter-conditions
               EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-              STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash
+              STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
               final_bill bill_operation
               rest_of_conditions
               found_create_coin
@@ -130,7 +133,7 @@
               (is-valid-msg-cond condition_body)
               (filter-conditions
                 EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-                STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash
+                STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
                 final_bill bill_operation
                 rest_of_conditions
                 found_create_coin
@@ -142,7 +145,7 @@
                 (is-valid-ann-cond condition_body)
                 (filter-conditions
                   EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-                  STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash
+                  STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
                   final_bill bill_operation
                   rest_of_conditions
                   found_create_coin
@@ -152,7 +155,7 @@
               ; all other conditions allowed
               (filter-conditions
                 EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-                STATUTES_STRUCT INNER_PUZZLE_HASH statutes_puzzle_hash
+                STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
                 final_bill bill_operation
                 rest_of_conditions
                 found_create_coin
@@ -182,9 +185,18 @@
   )
 
   ; from conditions, extract and return:
-  ;   bill operation (from first protocol REMARK encountered)
-  ;   new (governance or plain) CRT coin amount (from first CREATE_COIN encountered)
-  ; all other conditions are dropped
+  ;   (statutes_inner_puzzle_hash bill_operation . args) from first protocol REMARK encountered
+  ;   new (governance or plain) CRT coin amount from first CREATE_COIN encountered
+  ; all other conditions are dropped.
+  ; when transferring:
+  ;   must set bill_operation to nil
+  ;   statutes_inner_puzzle_hash and args are ignored (set to nil)
+  ;   first of CREATE_COIN condition body must provide target inner puzzle hash
+  ; when exiting:
+  ;   must set bill_operation to nil
+  ;   must provide statutes_inner_puzzle_hash
+  ;   args are ignored (set to nil)
+  ;   first of CREATE_COIN condition body must match GOVERNANCE_COOLDOWN_INTERVAL
   (defun find-bill-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) bill_operation create_coin_amount)
     (if conditions
       (if (= condition_code REMARK)
@@ -242,10 +254,10 @@
           (c new_coin_amount args)
         )
       )
-      ; no bill operation, this is a transfer
+      ; no bill operation, this is a transfer or exit
       (assert
         inner_solution ; must be in owner mode
-        (not BILL) ; can only transfer when not in proposal mode
+        (not BILL) ; can only transfer or exit when not in proposal mode
         (list () ()))
     )
     ; iterate over all conditions and filter out the ones we don't need (REMARK)
@@ -253,7 +265,7 @@
     ; add a REMARK for driver assistance
     (filter-conditions
       EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-      INNER_PUZZLE_HASH statutes_puzzle_hash
+      INNER_PUZZLE_HASH BILL statutes_puzzle_hash
       final_bill bill_operation
       raw_inner_conditions 0
       (c
