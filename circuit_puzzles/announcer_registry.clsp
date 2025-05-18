@@ -159,15 +159,19 @@
             )
           )
           ; ### launch ###
-          (assert
-            (size_b32 lineage_proof)
-            (list
-              ANNOUNCER_REGISTRY
-              1 ; claim counter
-              claim_interval ; rewards claimable at
+          (list
+            ANNOUNCER_REGISTRY
+            1 ; claim counter
+            claim_interval ; rewards claimable at
+            (assert
+              (= MOD_HASH (f (r (r (r (r (f (r (r args)))))))))
+              ; check that lineage_proof is parent of launcher
+              (= (f (r STATUTES_STRUCT)) (calculate-coin-id lineage_proof (f (r (r (r args)))) 1))
               (list
                 (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
                 (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
+                (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree (f (r (r args)))))
+                (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
               )
             )
           )
@@ -188,8 +192,8 @@
             )
           )
           ; this is a launch
-          ; this coin can only be started when statutes launch, we assert launcher coin of statutes here
-          (list ASSERT_COIN_ANNOUNCEMENT (sha256 (f (r STATUTES_STRUCT)) lineage_proof)) ; TODO: make this a MESSAGE so nobody can sneak a second registry into launch block
+          ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
+          (list RECEIVE_MESSAGE 0x04 lineage_proof)
         )
         (c
           (list ASSERT_MY_PUZZLE_HASH
