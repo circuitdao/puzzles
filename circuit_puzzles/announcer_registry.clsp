@@ -164,13 +164,11 @@
             1 ; claim counter
             claim_interval ; rewards claimable at
             (assert
-              (= MOD_HASH (f (r (r (r (r (f (r (r args)))))))))
               ; check that lineage_proof is parent of launcher
-              (= (f (r STATUTES_STRUCT)) (calculate-coin-id lineage_proof (f (r (r (r args)))) 1))
+              (= (f (r STATUTES_STRUCT)) (calculate-coin-id lineage_proof (f (r (r args))) 1))
               (list
                 (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
                 (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
-                (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree (f (r (r args)))))
                 (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
               )
             )
