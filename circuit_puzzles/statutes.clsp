@@ -1,14 +1,7 @@
 (mod (
+      APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
       OPERATIONS
       MOD_HASH
-      ( ; TODO: move before MOD_HASH?
-        APPROVAL_MOD_HASHES_HASH ; hash of list of approval mod hashes
-        TREASURY_MOD_HASH
-        OFFER_MOD_HASH
-        PAYOUT_MOD_HASH
-      )
-      CAT_MOD_HASH ; TODO: move before MOD_HASH?
-      CRT_TAIL_HASH
       ; indicates whether previous spend was an announce (1) or not (()). Set to 2 in eve state
       PREV_ANNOUNCE 
       STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
@@ -54,25 +47,12 @@
   )
 
   (defun-inline create-coin-condition (MOD_HASH
-                                        APPROVAL_MOD_HASHES_HASH
-                                        TREASURY_MOD_HASH PAYOUT_MOD_HASH
-                                        CAT_MOD_HASH OFFER_MOD_HASH CRT_TAIL_HASH
                                         prev_announce statutes price_info
                                         cumulative_stability_fee_df cumulative_interest_df price_update_counter)
     (list
       CREATE_COIN
       (curry_hashes MOD_HASH
         (sha256 ONE MOD_HASH)
-        (sha256tree
-          (list
-            APPROVAL_MOD_HASHES_HASH
-            TREASURY_MOD_HASH
-            OFFER_MOD_HASH
-            PAYOUT_MOD_HASH
-          )
-        )
-        (sha256 ONE CAT_MOD_HASH)
-        (sha256 ONE CRT_TAIL_HASH)
         (sha256 ONE prev_announce)
         (sha256tree statutes)
         (sha256tree price_info)
@@ -99,7 +79,7 @@
             operation_mod
             (list
               MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
-              CAT_MOD_HASH CRT_TAIL_HASH PRICE_UPDATE_COUNTER
+              PRICE_UPDATE_COUNTER
               mutation_index mutation_value
               governance_curried_args_hash
             )
@@ -114,7 +94,7 @@
             ; keep remaining mutable state unchanged
             STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF PRICE_UPDATE_COUNTER
             ; operation conditions
-            (if (> PREV_ANNOUNCE 1)
+            (if (> PREV_ANNOUNCE ONE)
               ; eve spend
               ()
               ; non-eve spend
@@ -128,12 +108,6 @@
     (li
       (create-coin-condition
         MOD_HASH
-        APPROVAL_MOD_HASHES_HASH
-        TREASURY_MOD_HASH
-        PAYOUT_MOD_HASH
-        CAT_MOD_HASH
-        OFFER_MOD_HASH
-        CRT_TAIL_HASH
         prev_announce
         statutes
         price_info
@@ -143,16 +117,7 @@
       )
       (list REMARK PROTOCOL_PREFIX prev_announce statutes price_info cumulative_stability_fee_df cumulative_interest_df price_update_counter)
       (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -7 price_update_counter))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -6 PAYOUT_MOD_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -5 OFFER_MOD_HASH))))
-      )
-      (list CREATE_PUZZLE_ANNOUNCEMENT
-        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -4 TREASURY_MOD_HASH))))
+        (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -4 price_update_counter))))
       )
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX (sha256tree (c STATUTE_PREFIX (c -3 APPROVAL_MOD_HASHES_HASH))))

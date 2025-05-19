@@ -277,11 +277,14 @@
       parent_id
       lineage_proof
     )
-    (= parent_id
+    (if (= parent_id
       (calculate_coin_id (f lineage_proof)
         (cat_puzzle_hash cat_mod_struct (f (r lineage_proof)))
         (f (r (r lineage_proof)))
       )
+    )
+      1
+      (x "parent" parent_id lineage_proof)
     )
   )
 
@@ -297,7 +300,7 @@
     )
     (if tail_reveal_and_solution
        (if (= (sha256tree (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
-        (assert (= (sha256tree (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
+        (if (= (sha256tree (f tail_reveal_and_solution)) (cat_tail_program_hash_truth Truths))
           (merge_list
             (a  (f tail_reveal_and_solution)
               (list
@@ -311,6 +314,7 @@
             )
             inner_conditions
           )
+          (x "tail doesn't match")
         )
         (x "bad tail reveal")
       )

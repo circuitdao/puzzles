@@ -1,49 +1,17 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES
-     (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
-     inner_puzzle
-     solution_or_conditions
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+       CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+       (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
+       inner_puzzle
+       solution_or_conditions
      )
 
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
+  (include utils.clib)
   (include condition_filtering.clib)
   (include curry.clib)
-  (include utils.clib)
   (include statutes_utils.clib)
 
-  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions))
-                              found_create_coin final_conditions)
-    ; RETURNS (conditions create_coin_condition_body)
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (if found_create_coin
-          (x) ; at most one CREATE_COIN allowed
-          (restrict-conditions rest_of_conditions condition_body final_conditions)
-        )
-        (if (= condition_code REMARK)
-          (assert
-            (is-valid-rmk-cond condition_body)
-            (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-          )
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (assert
-              (is-valid-msg-cond condition_body)
-              (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-            )
-            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-              (assert
-                (is-valid-ann-cond condition_body)
-                (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-              )
-              ; all other conditions allowed
-              (restrict-conditions rest_of_conditions found_create_coin (c (f conditions) final_conditions))
-            )
-          )
-        )
-      )
-      (list final_conditions found_create_coin)
-    )
-  )
 
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
@@ -54,45 +22,58 @@
       ; otherwise, solution_or_conditions is conditions
       solution_or_conditions
     )
-    (input_conditions (new_puzzle_hash deposit (operation . args)))
-      (if raw_conditions
-        (restrict-conditions raw_conditions () ())
-        (list () (list INNER_PUZZLE_HASH DEPOSIT (list 0 0)))
-      )
+    ((new_puzzle_hash deposit (operation . args)) input_conditions) (filter-and-extract-unique-create-coin raw_conditions () ())
     (assert
       (any inner_puzzle_hash (all (not inner_puzzle_hash) (= new_puzzle_hash INNER_PUZZLE_HASH)))
       (contains OPERATIONS (sha256tree operation))
       (c
         ; ensuring that parent was indeed spent with our puzzle and pubkey
         (if lineage
-          (assert
-            (size_b32 prev_puzzle_args_hash)
-            (list ASSERT_MY_PARENT_ID
-              (calculate-coin-id
-                parent_id
-                (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
-                prev_deposit
-              )
+          (list ASSERT_MY_PARENT_ID
+            (calculate-coin-id
+              parent_id
+              (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
+              prev_deposit
             )
           )
           ; launch
           (assert
+            (= APPROVED 0)
             (= DEPOSIT 0)
             (= DELAY 0)
+            (= VALUE 0)
+            (= MIN_DEPOSIT 0)
+            (= CLAIM_COUNTER 0)
             (= COOLDOWN_START 0)
-            (= APPROVED 0)
-            (= ATOM_VALUE 0)
+            (= PENALIZABLE_AT 0)
             (= TIMESTAMP_EXPIRES 0)
-            (= LAST_PENALTY_INTERVAL 0)
             (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
           )
         )
         (c
-          (list ASSERT_MY_AMOUNT DEPOSIT) ; always check that DEPOSIT is correct
+          (list ASSERT_MY_PUZZLE_HASH
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE INNER_PUZZLE_HASH)
+              (sha256 ONE APPROVED)
+              (sha256 ONE DEPOSIT)
+              (sha256 ONE DELAY)
+              (sha256tree VALUE)
+              (sha256 ONE MIN_DEPOSIT)
+              (sha256 ONE CLAIM_COUNTER)
+              (sha256 ONE COOLDOWN_START)
+              (sha256 ONE PENALIZABLE_AT)
+              (sha256 ONE TIMESTAMP_EXPIRES)
+            )
+          )
           (a
             operation
             (list
-              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
+                DEPOSIT DELAY VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+              )
               inner_puzzle_hash new_puzzle_hash deposit input_conditions
               args
             )
@@ -101,4 +82,5 @@
       )
     )
   )
+
 )

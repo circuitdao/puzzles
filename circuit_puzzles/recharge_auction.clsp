@@ -1,28 +1,25 @@
-(mod (OPERATIONS MOD_HASH
-      ;CAT_MOD_HASH
-      BYC_TAIL_HASH
-      LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID
-      statutes_inner_puzzle_hash lineage_proof operation . op_args)
+(mod (OPERATIONS BYC_TAIL_MOD_HASH
+      MOD_HASH STATUTES_STRUCT LAUNCHER_ID AUCTION_PARAMS LAST_BID
+      lineage_proof operation input_conditions . op_args)
 
   (include *standard-cl-23.1*)
-  (include curry.clib)
-  (include condition_codes.clib)
-  (include statutes_utils.clib)
+  (include prefixes.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
+  (include condition_codes.clib)
+  (include condition_filtering.clib)
+  (include curry.clib)
+  (include statutes_utils.clib)
 
   (assign-inline
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    announcements (filter-conditions (f op_args) ())
-    (assert (contains OPERATIONS (sha256tree operation))
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    (assert
+      (contains OPERATIONS (sha256tree operation))
+      (fail-on-protocol-condition-or-create-coin input_conditions)
       (a
         operation
         (list
-          (list MOD_HASH
-                ;CAT_MOD_HASH
-                BYC_TAIL_HASH LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
-          statutes_puzzle_hash lineage_proof announcements
-          (r op_args)
+          (list MOD_HASH STATUTES_STRUCT byc_tail_hash LAUNCHER_ID AUCTION_PARAMS LAST_BID)
+          lineage_proof input_conditions op_args
         )
       )
     )

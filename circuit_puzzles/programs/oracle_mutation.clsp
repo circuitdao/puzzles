@@ -2,22 +2,15 @@
       MOD_HASH
       STATUTES_STRUCT
       PRICES
-      TEMP_BAN_LIST ; (expiry_timestamp . list of banned launcher_id announcers)
-      OUTLIER_INFO
       (@ oracle_mutation
         (
-          oracle_mutation_program
           statutes_inner_puzzle_hash
           m_of_n
           price_updatable_after_seconds
-          price_updatable_threshold_percent
-          auto_approve_price_threshold_bps
-          outlier_approval_interval
-          temp_ban_interval
+          price_updatable_threshold_bps
           price_delay
           current_timestamp
-          ; price_announcers -> ((inner_puzzle_hash args_hash price))
-          price_announcers_unfiltered
+          price_announcers ; -> ((launcher_id args_hash price))
         )
       )
       input_announcement_asserts
@@ -30,27 +23,12 @@
   (include utils.clib)
   (include oracle.clib)
 
-  (defun filter-banned (price_announcers banned)
-    (if price_announcers
-      (if (not-contains-flat-silent banned (f (f price_announcers)))
-        (c (f price_announcers) (filter-banned (r price_announcers) banned))
-        (filter-banned (r price_announcers) banned)
-      )
-      ()
-    )
-  )
-
   (assign
-    expired_ban_list (if TEMP_BAN_LIST (> (- current_timestamp (f TEMP_BAN_LIST)) temp_ban_interval) 0)
-    price_announcers (if (all TEMP_BAN_LIST (not expired_ban_list))
-      (filter-banned price_announcers_unfiltered (r TEMP_BAN_LIST))
-      price_announcers_unfiltered
-    )
     price_announcers_length (list-length price_announcers 0)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     sorted_prices (mergesort price_announcers)
     ; get median price, divide length by 2 and add 1 to get the middle when length is even
-    mean_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
+    median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     announcer_conditions (generate-ann-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
@@ -58,39 +36,14 @@
     )
     ; we add latest price to the end of the list
     (matured_price_info . cut_price_infos) (cut-price-infos PRICES (- current_timestamp price_delay) ())
-    (price_to_apply temp_ban_list_to_apply outlier_info) (if OUTLIER_INFO
-      ; outlier is set, block all price mutations, only price resolver can be used
-      (x)
-      (if (or (not cut_price_infos) (above-threshold cut_price_infos mean_price auto_approve_price_threshold_bps))
-        ; we have a price outlier, set the outlier info
-        (list 0 () (c () (c mean_price current_timestamp)))
-        ; price is within threshold, no change, no outlier info
-        (list (c mean_price current_timestamp) () ())
-      )
-    )
-    new_price_infos (if price_to_apply
-      (merge-lists
+    price_to_apply (c median_price current_timestamp)
+    ; push new price to the end of the queue, we have a FILO queue
+    new_price_infos (merge-lists
         cut_price_infos
         (list price_to_apply)
-      )
-      cut_price_infos
     )
     (next_price . next_price_updated) (if matured_price_info matured_price_info (c () ()))
     (last_price . last_price_updated) (last-item PRICES)
-    temp_ban_list (if temp_ban_list_to_apply
-      ; outlier is resolved, set temp ban list to what outlier resolution has
-      (sha256tree temp_ban_list_to_apply)
-      (if TEMP_BAN_LIST
-        (if expired_ban_list
-          ; ban has expired, reset it
-          ()
-          ; ban is still active
-          TEMP_BAN_LIST
-        )
-        ()
-      )
-    )
-    ;  new coin will have updated price, increase the counter of updates
     ;###  main expression
     ; check that we haven't updated the price recently OR new price is much higher than previous
     (assert
@@ -101,7 +54,7 @@
       (any
         (> (- current_timestamp last_price_updated) price_updatable_after_seconds)
         (if (> last_price 0)
-          (> (abs (/ (* (- last_price mean_price) PERCENT_PRECISION) last_price) ) price_updatable_threshold_percent)
+          (> (abs (/ (* (- last_price median_price) PRECISION_BPS) last_price) ) price_updatable_threshold_bps)
           ; no prices in buffer, update now
           ONE
         )
@@ -115,16 +68,13 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_percent)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_bps)
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_TEMP_BAN_INTERVAL temp_ban_interval)
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_OUTLIER_APPROVAL_INTERVAL outlier_approval_interval)
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_AUTO_APPROVE_PRICE_THRESHOLD_BPS auto_approve_price_threshold_bps)
         (if next_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
             (sha256tree (c next_price (c next_price_updated (c current_timestamp price_delay))))
           )
-          (list REMARK )
+          (list REMARK)
         )
         (list
           CREATE_COIN
@@ -132,13 +82,11 @@
             (sha256 ONE MOD_HASH)
             (sha256tree STATUTES_STRUCT)
             (sha256tree new_price_infos)
-            (sha256tree temp_ban_list)
-            (sha256tree outlier_info)
           )
           ; min singleton amount, force it to be ONE
           ONE
         )
-        (list REMARK new_price_infos next_price temp_ban_list outlier_info)
+        (list REMARK new_price_infos next_price)
         &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
       )
     )

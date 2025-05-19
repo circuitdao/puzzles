@@ -3,10 +3,10 @@
   (include prefixes.clib)
 
   (defun cut-price-infos (price_info_list expiration_timestamp last_matured_price_info)
-    ;; returns (last_matured_price_info (c last_matured_price_info non-matured-price-infos))
-    ;; if there is a matured price_info, or (() non-matured-price-infos) otherwise, where
+    ;; returns (last_matured_price_info (c last_matured_price_info non_matured_price_infos))
+    ;; if there is a matured price_info, or (() non_matured_price_infos) otherwise, where
     ;; last_matured_price_info is the matured price_info with greatest (i.e. most recent) timestamp
-    ;; and non-matured-price-infos is the list of non-matured price_infos.
+    ;; and non_matured_price_infos is the list of non-matured price_infos.
     (if price_info_list
       (if (> expiration_timestamp  (r (f price_info_list)))
         (cut-price-infos (r price_info_list) expiration_timestamp (f price_info_list))
@@ -18,6 +18,19 @@
         )
       )
       (c last_matured_price_info (list last_matured_price_info))
+    )
+  )
+
+  (defun filter-banned (price_announcers banned)
+    (if banned
+      (if price_announcers
+        (if (not-contains-flat-silent banned (f (f price_announcers)))
+          (c (f price_announcers) (filter-banned (r price_announcers) banned))
+          (filter-banned (r price_announcers) banned)
+        )
+        ()
+      )
+      price_announcers
     )
   )
 
@@ -70,11 +83,7 @@
         announcer (f price_announcers)
         ; price_announcers -> ((launcher_id args_hash price))
         (launcher_id args_hash price) announcer
-        announcer_puzzle_hash (assert
-          (size_b32 launcher_id)
-          (size_b32 args_hash)
-          (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
-        )
+        announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
         ; we don't need to check before_timestamp since it's already checked in atom_announcer puzzle
         (c
           (list ASSERT_PUZZLE_ANNOUNCEMENT

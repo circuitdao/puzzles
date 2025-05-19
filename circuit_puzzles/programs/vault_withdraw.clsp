@@ -13,8 +13,8 @@
         price_info
         liquidation_ratio
         current_timestamp
-        statutes_cumulative_stability_df
-        current_stability_df
+        statutes_cumulative_stability_fee_df
+        current_stability_fee_df
       )
     )
   )
@@ -26,15 +26,15 @@
   (include condition_codes.clib)
 
   (assign
-    new_deposited_amount (- COLLATERAL withdraw_amount)
-    cumulative_stability_df (calculate-cumulative-discount-factor
-      statutes_cumulative_stability_df
-      current_stability_df
+    collateral (- COLLATERAL withdraw_amount)
+    cumulative_stability_fee_df (calculate-cumulative-discount-factor
+      statutes_cumulative_stability_fee_df
+      current_stability_fee_df
       ; don't allow anyone to exploit some time to get tx into mempool and borrow from the future
       (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
-    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_df) PRECISION)
+    undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
     min_collateral_amount (
       get-min-collateral-amount
         undiscounted_principal
@@ -42,19 +42,22 @@
         (f price_info)
     )
     (assert
-      (> new_deposited_amount -1)
-      (> COLLATERAL new_deposited_amount)
-      (> new_deposited_amount (- min_collateral_amount 1))
+      (> collateral -1)
+      (> COLLATERAL collateral)
+      (> collateral (- min_collateral_amount 1))
       (list
-        (list new_deposited_amount PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
+        (list collateral PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
         (list
+          ; validate current timestamp is within bounds
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           ; assert liquidation ratio
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           ; assert collateral price
           (assert-price-info statutes_puzzle_hash price_info)
-          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_df)
+          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
           ; assert cumulative stability fee rate
-          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_df)
+          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
         )
       )
     )

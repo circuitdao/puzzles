@@ -1,41 +1,11 @@
 (
 
-  (include condition_filtering.clib)
   (include prefixes.clib)  
 
-  (defun filter-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) filtered_conditions)
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (x) ; no create coin allowed
-        (if (= condition_code REMARK)
-          (assert
-            (is-valid-rmk-cond condition_body)
-            (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-          )
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (assert
-              (is-valid-msg-cond condition_body)
-              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-            )
-            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-              (assert
-                (is-valid-ann-cond condition_body)
-                (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-              )
-              ; other conditions are always fine
-              (filter-conditions rest_of_conditions (c (f conditions) filtered_conditions))
-            )
-          )
-        )
-      )
-      filtered_conditions
-    )
-  )
-
-  ; asserts post-deposit treasury ring amounts,  ensuring intended amount has been deposited to treasury
+  ; asserts post-deposit treasury ring amounts, ensuring intended amount has been deposited to treasury
   ; total deposited to treasury = no. treasury coins * deposit_amount_per_coin + remainder
   (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
-                              treasury_minimum statutes_puzzle_hash
+                              treasury_minimum
                               deposit_amount_per_coin ; amount being deposited into each treasury coin
                               remainder ; amount being deposited in addition to deposit_amount_per_coin into first of treasury_coins
                               first_treasury_coin
@@ -91,7 +61,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c delta new_amount))
+              (sha256tree (c STATUTES_STRUCT (c delta new_amount)))
             )
             treasury_coin_id
           )
@@ -103,8 +73,10 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c new_prev_amount
-                      next_ring_prev_launcher_id ; ensure treasury coin links to prev treasury coin
+                    (c STATUTES_STRUCT
+                      (c new_prev_amount
+                        next_ring_prev_launcher_id ; ensure treasury coin links to prev treasury coin
+                      )
                     )
                   )
                 )
@@ -113,7 +85,6 @@
             (deposit-to-treasury
               TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
               treasury_minimum
-              statutes_puzzle_hash
               deposit_amount_per_coin
               remainder
               first_treasury_coin

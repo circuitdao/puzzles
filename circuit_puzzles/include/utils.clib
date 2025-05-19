@@ -1,11 +1,11 @@
 (
-
   (defconst ONE 1)
   (defconst MINUS_ONE -1)
   (defconst TWO 2)
   (defconst MOJOS 1000000000000)
-  (defconst PERCENT_PRECISION 10000) ; LATER: delete once using PRECISION_BPS everywhere
+  (defconst PRECISION_PCT 100)
   (defconst PRECISION_BPS 10000)
+  (defconst PRICE_PRECISION 100)
   (defconst MAX_TX_BLOCK_TIME 120)
   (defconst PRECISION 10000000000)
   (defconst ONE_MINUTE 60)
@@ -39,7 +39,7 @@
       )
     )
 
-  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) 1))
+  (defmac and CLAUSES (if CLAUSES (and_ CLAUSES) ONE))
 
   (defun or_ (CLAUSES)
     (if (r CLAUSES) ;; There are more.
@@ -76,16 +76,24 @@
         )
         (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
       )
-      1
+      ONE
     )
   )
 
   (defun-inline calculate-coin-id (parent puzzle_hash amount)
-    ; TODO: change for new operator `coinid`
-    (assert (size_b32 parent) (size_b32 puzzle_hash) (> amount -1)
-      (sha256 parent puzzle_hash amount)
+    (coinid parent puzzle_hash amount)
+  )
+
+  (defun-inline is-approval-mod (approval_mod_hashes approval_mod)
+    (any
+      (= (f approval_mod_hashes) approval_mod)
+      (= (f (r approval_mod_hashes)) approval_mod)
+      (= (f (r (r approval_mod_hashes))) approval_mod)
+      (= (f (r (r (r approval_mod_hashes)))) approval_mod)
+      (= (f (r (r (r (r approval_mod_hashes))))) approval_mod)
     )
   )
+
 
   (defun contains (lst item)
     (if lst

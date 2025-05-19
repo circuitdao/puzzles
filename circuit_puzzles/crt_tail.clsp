@@ -1,10 +1,13 @@
 ; Circuit CAT token (CRT) TAIL program
 ; CRT token is used for governance voting and can be used to bid in surplus auctions.
-; CRT tokens are minted by the announcer registry and recharge auction(s).
-; CRT tokens can be melted in surplus auctions.
-(mod (
-      GENESIS_ID STATUTES_STRUCT
-      Truths parent_is_cat lineage_proof delta
+; CRT tokens are minted at protocol launch, by announcer registry and recharge auctions.
+; CRT tokens are melted in surplus auctions.
+(mod (RUN_TAIL_MOD_HASH
+      STATUTES_STRUCT
+      Truths
+      parent_is_cat
+      lineage_proof
+      delta
       inner_conditions
       solution
      )
@@ -15,6 +18,7 @@
   (include curry.clib)
   (include utils.clib)
   (include statutes_utils.clib)
+  (include condition_filtering.clib)
 
   (defun-inline get-statutes-puzzle-hash (statutes_struct statutes_inner_puzzle_hash)
     (c
@@ -23,162 +27,112 @@
     )
   )
 
-  (defun validate-target-coin ((@ conditions ((condition_code . condition_rest) . rest_of_conditions)) found_create_coin)
-    ; find all CREATE_COIN conditions, check that there's only one and return that,
-    ; fail if there's more CREATE_COIN conditions. other conditions are fine and get skipped
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (if found_create_coin
-          (x)
-          (validate-target-coin rest_of_conditions condition_rest)
-        )
-        (validate-target-coin rest_of_conditions found_create_coin)
-      )
-      (if found_create_coin
-        found_create_coin
-        (x)
-      )
-    )
+  (defun-inline abs (number)
+    (if (> number MINUS_ONE) number (* number MINUS_ONE))
   )
 
-  (if delta
-    (if (> 0 delta)
-      ; melting only by surplus auction, positive delta means melting
-      (assign
-        CAT_MOD_HASH (cat_mod_hash_truth Truths)
-        CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
-        (
-          crt_tail_hash
-          byc_tail_hash
-          surplus_mod_hash
-          launcher_id
-          byc_lot_amount
-          last_bid
-          statutes_inner_puzzle_hash
-          approval_mod_hashes
-        ) solution
-        (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-        puzzle_hash (
-          ; this is a surplus auction puzzle hash
-          curry_hashes CAT_MOD_HASH
-            CAT_MOD_HASH_HASH
-            (sha256 ONE crt_tail_hash)
-            (curry_hashes surplus_mod_hash
-              (sha256 ONE surplus_mod_hash)
-              ;CAT_MOD_HASH_HASH
-              statutes_struct_hash
-              (sha256 ONE launcher_id)
-              (sha256 ONE byc_lot_amount)
-              (sha256 ONE byc_tail_hash)
-              (sha256 ONE crt_tail_hash)
-              (sha256tree last_bid)
-            )
-        )
-        (assert
-          (size_b32 crt_tail_hash)
-          (size_b32 launcher_id)
-          (size_b32 byc_tail_hash)
-          (size_uint64 byc_lot_amount)
-          (size_b32 surplus_mod_hash)
-          ; can't melt a non-cat
-          parent_is_cat
-          ; must be a launched surplus auction
-          launcher_id
-          ; must have a lot to exchange for melting itself
-          (> byc_lot_amount 0)
-          ; should have a winning bid, last_bid -> (bid_amount . crt_bid_amount)
-          (> (r last_bid) 0)
-          ; surplus mod hash is the second in approval mod hashes list
-          (= surplus_mod_hash (f (r approval_mod_hashes)))
-          (list
-            ; if this is a surplus auction and it called for melting, melt
-            (list ASSERT_MY_PUZZLE_HASH puzzle_hash)
-            ; we should be melting the whole coin value
-            (list ASSERT_MY_AMOUNT (* -1 delta))
-            (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
-          )
-        )
+  (if (all
+        solution
+        (> 0 delta)
+        (fail-on-protocol-condition inner_conditions)
       )
-      ; no minting (increasing coin amount of existing coin)
-      (x)
-    )
-    (if (= (my_parent_cat_truth Truths) GENESIS_ID)
-      () ; issuance at launch of protocol
-      (assign ; issuing by recharge auction or announcer registry
-        CAT_MOD_HASH (cat_mod_hash_truth Truths)
-        CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
-        crt_tail_hash (cat_tail_program_hash_truth Truths)
-        (
-          mod_hash
-          parent_id
-          curried_mod_args
-          byc_tail_hash
-          amount
-          issuance_amount
-          approval_mod_hashes
-          statutes_inner_puzzle_hash
-          target_puzzle_hash  ; where this coin is going to
-        ) solution
-        (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-        approver_coin_id (calculate-coin-id
-          parent_id
-          ; approval_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
-          (if (all byc_tail_hash (= mod_hash (f (r (r approval_mod_hashes)))))
-            ; either a CAT puzzle with recharge auction as inner puzzle
+    (assign  ; issuing by recharge auction, announcer registry or melting by surplus
+      CAT_MOD_HASH (cat_mod_hash_truth Truths)
+      CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
+      crt_tail_hash (cat_tail_program_hash_truth Truths)
+      (
+        approval_mod_hash
+        approver_parent_id
+        approver_curried_mod_args
+        byc_tail_hash
+        approver_amount
+        delta_amount
+        approval_mod_hashes
+        statutes_inner_puzzle_hash
+        target_puzzle_hash  ; where this coin is going to, if issuance
+      ) solution
+      (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+      approver_coin_id (calculate-coin-id
+        approver_parent_id
+        ; approval_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
+        (if byc_tail_hash
+          (assert
+            (= approval_mod_hash (f (r (r approval_mod_hashes))))
+            ; because we don't provide create coins as input conditions
+            ; delta will always be in melting mode but delta_amount will be positive
+            (= 0 (+ delta_amount delta))
+            ; a CAT puzzle with recharge auction as inner puzzle
             (curry_hashes CAT_MOD_HASH
               CAT_MOD_HASH_HASH
               (sha256 ONE byc_tail_hash)
-              (tree_hash_of_apply mod_hash curried_mod_args)
+              (tree_hash_of_apply approval_mod_hash approver_curried_mod_args)
+            )
+          )
+          (if (= approval_mod_hash (f (r approval_mod_hashes)))
+            ; OR surplus puzzle for melting
+            (assert
+              ; we're now actually melting, delta_amount will be negative
+              (= 0 (- delta_amount delta))
+              parent_is_cat  ; must be a cat
+              (curry_hashes CAT_MOD_HASH
+                CAT_MOD_HASH_HASH
+                (sha256 ONE crt_tail_hash)
+                (tree_hash_of_apply approval_mod_hash approver_curried_mod_args)
+              )
             )
             ; OR announcer registry
             (assert
-              (= mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod has position in approved hashes
-              (tree_hash_of_apply mod_hash curried_mod_args)
+              (= approval_mod_hash (f (r (r (r (r approval_mod_hashes)))))) ; announcer registry mod hash position in approved hashes
+              ; because we don't provide create coins as input conditions
+              ; delta will always be in melting mode but delta_amount will be positive
+              (= 0 (+ delta_amount delta))
+              (tree_hash_of_apply approval_mod_hash approver_curried_mod_args)
             )
-            ; NOTE: we're using tree_hash_of_apply to avoid including all arguments and then hashing it
-            ; to generate the puzzle hash. This avoids a lot of costs since we don't need to pass them into
-            ; the solution. We don't really care what the values are since these puzzles can only be launched
-            ; by governance so they're trusted. We just need to make sure they have the correct mod_hash.
           )
-          amount
         )
-        (found_target_puzzle_hash found_target_amount . rest) (validate-target-coin inner_conditions 0)
-        curried_target_puzzle_hash (curry_hashes CAT_MOD_HASH
+        approver_amount
+      )
+      ; only if we're minting
+      curried_target_puzzle_hash (if target_puzzle_hash
+        (curry_hashes CAT_MOD_HASH
           CAT_MOD_HASH_HASH
           (sha256 ONE crt_tail_hash)
           target_puzzle_hash
         )
-        (assert
-          ; recharge auction mod is the third in approval mod hashes list
-          ; can also be announcer registry
-          (any (size_b32 byc_tail_hash) (not byc_tail_hash))
-          (size_uint64 amount)
-          (size_uint64 issuance_amount)
-          (size_b32 curried_mod_args)
-          (size_b32 approver_coin_id)
-          ; newly minted CRTs must be approved by approver (recharge auction or announcer registry)
-          ; to avoid someone stealing the issuance amount
-          (= found_target_puzzle_hash curried_target_puzzle_hash)
-          (= found_target_amount issuance_amount)
-          (= delta 0)
-          (list
-            (list RECEIVE_MESSAGE 0x3f
-              (concat
-                PROTOCOL_PREFIX
-                (sha256tree
-                  (c STATUTES_STRUCT ; statutes_struct_hash
-                    (c target_puzzle_hash ; get approval for target puzzle hash from approver
-                      issuance_amount
-                    )
-                  )
-                )
+        ()
+      )
+      (list
+        (list CREATE_COIN_ANNOUNCEMENT "$") ; for protocol external coins to assert issuance
+        (if curried_target_puzzle_hash
+          (list CREATE_COIN curried_target_puzzle_hash delta_amount (list target_puzzle_hash))
+          (list REMARK)
+        )
+        (list RECEIVE_MESSAGE 0x3f
+          (concat
+            PROTOCOL_PREFIX
+            (sha256tree
+              (c STATUTES_STRUCT ; this binds us to the same protocol or statutes struct singleton
+                (c target_puzzle_hash delta_amount) ; get approval for target puzzle hash and amount from approver
               )
-              approver_coin_id
             )
-            (list ASSERT_MY_AMOUNT issuance_amount)
-            (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+          )
+          approver_coin_id
+        )
+        (list ASSERT_MY_PUZZLE_HASH
+          (curry_hashes CAT_MOD_HASH
+            CAT_MOD_HASH_HASH
+            (sha256tree crt_tail_hash)
+            RUN_TAIL_MOD_HASH
           )
         )
+        (list ASSERT_MY_AMOUNT (abs delta_amount))
+        (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+      )
+    )
+    (assert (= delta 0)
+      (list ; issuance at launch of protocol
+        ; receive approval from statutes launcher
+        (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
       )
     )
   )

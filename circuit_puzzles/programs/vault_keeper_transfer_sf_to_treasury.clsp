@@ -1,6 +1,6 @@
 (mod
   (
-    CAT_MOD_HASH BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH RUN_TAIL_MOD_HASH TREASURY_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL
@@ -13,7 +13,6 @@
         byc_issuing_coin_info  ; -> (parent_id amount inner_puzzle_hash)
         statutes_cumulative_stability_fee_df
         treasury_coin_info
-        treasury_mod_hash
         min_treasury_delta
         current_timestamp
         current_stability_fee_df
@@ -35,17 +34,21 @@
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
-      (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
+      current_timestamp
       (r price_info)
     )
-    undiscounted_principal (* MINUS_ONE (/ (* MINUS_ONE DISCOUNTED_PRINCIPAL cumulative_stability_fee_df) PRECISION))
+    undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
     new_treasury_amount (+ fees_to_treasury treasury_amount)
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
-      byc_issuing_coin_info
+      (list
+        (f byc_issuing_coin_info) ; parent_id
+        (r byc_issuing_coin_info) ; amount
+        RUN_TAIL_MOD_HASH
+      )
     )
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
@@ -54,8 +57,8 @@
         treasury_parent
         treasury_amount
         (curry_hashes
-          treasury_mod_hash
-          (sha256 ONE treasury_mod_hash)
+          TREASURY_MOD_HASH
+          (sha256 ONE TREASURY_MOD_HASH)
           (sha256tree STATUTES_STRUCT)
           (sha256 ONE treasury_launcher_id)
           (sha256 ONE treasury_prev_launcher_id)
@@ -67,10 +70,10 @@
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins
       (> fees_to_treasury min_treasury_delta)
-      ; only if it hasn't entered liquidation yet
+      ; only if vault is not in liquidation or bad debt
       (not AUCTION_STATE)
-      ; only if there are outstanding loans
-      (> PRINCIPAL 0)
+      ; issuing coin must have the same as amount we're transferring
+      (= (r byc_issuing_coin_info) fees_to_treasury)
       (list
         (list
           COLLATERAL
@@ -82,20 +85,19 @@
         (list
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
-            (concat PROTOCOL_PREFIX (sha256tree (c "i" (c fees_to_treasury STATUTES_STRUCT))))
+            (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT (c "i" fees_to_treasury))))
             byc_issuing_coin_id
           )
           ; approve treasury coin to receive a deposit
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c fees_to_treasury new_treasury_amount))
+              (sha256tree (c STATUTES_STRUCT (c fees_to_treasury new_treasury_amount)))
             )
             treasury_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
-          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta) ;minimum_sf_transfer_amount)
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
           (assert-price-info statutes_puzzle_hash price_info)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))

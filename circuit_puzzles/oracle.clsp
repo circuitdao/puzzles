@@ -1,9 +1,7 @@
 (mod (
-      (MUTATION_PROGRAM_HASH . OUTLIER_RESOLUTION_PROGRAM_HASH) MOD_HASH
+      MUTATION_PROGRAM_HASH MOD_HASH
       STATUTES_STRUCT
       PRICE_INFOS
-      TEMP_BAN_LIST
-      OUTLIER_INFO
       ; solution
       oracle_program_args
       input_announcement_asserts
@@ -18,26 +16,18 @@
   (include oracle.clib)
 
 
-  (if oracle_program_args
-    (assign
-      oracle_program_hash (sha256tree (f oracle_program_args))
-      (assert
-        (any
-          (= oracle_program_hash MUTATION_PROGRAM_HASH)
-          (= oracle_program_hash OUTLIER_RESOLUTION_PROGRAM_HASH)
-        )
-        (a
-          (f oracle_program_args)
-          (list
-            MOD_HASH
-            STATUTES_STRUCT
-            PRICE_INFOS
-            TEMP_BAN_LIST
-            OUTLIER_INFO
-            oracle_program_args
-            input_announcement_asserts
-          )
-        )
+  (if (and
+        oracle_program_args
+        (= (sha256tree (f oracle_program_args)) MUTATION_PROGRAM_HASH)
+      )
+    (a
+      (f oracle_program_args)
+      (list
+        MOD_HASH
+        STATUTES_STRUCT
+        PRICE_INFOS
+        (r oracle_program_args)
+        input_announcement_asserts
       )
     )
     ; no updates, just assert and announce
@@ -46,8 +36,8 @@
       input_announcement_asserts
       (assign
         (current_timestamp price_delay) announce_args
-        delayed_timestamp (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
-        (last_matured_price_info . _) (cut-price-infos PRICE_INFOS delayed_timestamp ())
+        cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
+        (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
         (oldest_price . oldest_updated) (if last_matured_price_info last_matured_price_info (c () ()))
         (list
           (list CREATE_COIN
@@ -55,9 +45,6 @@
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256tree PRICE_INFOS)
-              (sha256tree TEMP_BAN_LIST)
-              ; oracle can't announce if outlier is not resolved
-              (assert (not OUTLIER_INFO) (sha256 ONE ()))
             )
             ; min singleton amount, force it to be this
             ONE

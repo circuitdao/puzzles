@@ -1,6 +1,6 @@
 (mod
   (
-    CAT_MOD_HASH BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH TREASURY_MOD_HASH RUN_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -13,7 +13,6 @@
         current_timestamp
         treasury_coin_info
         min_treasury_delta
-        treasury_mod_hash
       )
     )
   )
@@ -36,8 +35,8 @@
         treasury_parent
         treasury_amount
         (curry_hashes
-          treasury_mod_hash
-          (sha256 ONE treasury_mod_hash)
+          TREASURY_MOD_HASH
+          (sha256 ONE TREASURY_MOD_HASH)
           (sha256tree STATUTES_STRUCT)
           (sha256 ONE treasury_launcher_id)
           (sha256 ONE treasury_prev_launcher_id)
@@ -51,13 +50,13 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      auction_timeout
-      minimum_debt_amount
+      auction_ttl
       byc_to_treasury_balance
       byc_to_melt_balance
     ) (assert AUCTION_STATE AUCTION_STATE)
     leftover_byc_to_melt_balance (- byc_to_melt_balance reconcile_amount)
-    auction_state (if (= byc_to_melt_balance reconcile_amount)
+    auction_state (if (= leftover_byc_to_melt_balance 0)
+      ; paid off all debt, reset auction state
       ()
       (list
         0 ; auction_start_time
@@ -66,20 +65,18 @@
         0 ; step_time_interval
         0 ; initiator_puzzle_hash
         0 ; initiator_incentive_balance. initiator is no longer getting paid
-        0 ; auction_timeout
-        minimum_debt_amount
+        0 ; auction_ttl
         0 ; byc_to_treasury_balance. fees paid to treasury cancel out
         leftover_byc_to_melt_balance
+        0
       )
     )
     (assert
       ; check that there is no collateral left
       (= COLLATERAL 0)
-      ; must recover debt fully or leave more than min debt amount
-      (if (> byc_to_melt_balance reconcile_amount)
-        (> (- byc_to_melt_balance reconcile_amount) minimum_debt_amount)
-        (= byc_to_melt_balance reconcile_amount)
-      )
+      ; must recover debt fully or partially, but amount must be at least min treasury delta
+      (> leftover_byc_to_melt_balance -1)
+      (> reconcile_amount 0)
       (any (> reconcile_amount min_treasury_delta) (= reconcile_amount byc_to_melt_balance))
       (list
         (list
@@ -89,45 +86,41 @@
           INNER_PUZZLE_HASH
           0 ; discounted principal
         )
-        (assign
-          conditions (list
-            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-          )
-          (if (> reconcile_amount 0)
-            (c
-              (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
-              (c
-                ; signal to tail that it can melt BYC with certain amount
-                (list SEND_MESSAGE 0x3f
-                  (concat
-                    PROTOCOL_PREFIX
-                    (sha256tree
-                      (c "x"
-                        (c (* -1 reconcile_amount)
-                          STATUTES_STRUCT ; LATER: not needed as already used in calculation of treasury_coin_id?
-                        )
-                      )
-                    )
-                  )
-                  treasury_coin_id
-                )
-                (c
-                  ; approve treasury coin to allow a withdrawal
-                  (list SEND_MESSAGE 0x3f
-                    (concat
-                      PROTOCOL_PREFIX
-                      (sha256tree (c (* -1 reconcile_amount) new_treasury_amount))
-                    )
-                    treasury_coin_id
-                  )
-                  conditions
+        (list
+          (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
+          ; signal to tail that it can melt BYC with certain amount
+          ; treasury coins creates two coins, first is a new treasury coin
+          ; with new amount reduced by reconcile amount, second is a melting coin
+          ; that uses RUN_TAIL puzzle to enforce running the tail of BYC
+          (list SEND_MESSAGE 0x3f
+            (concat
+              PROTOCOL_PREFIX
+              (sha256tree
+                (c STATUTES_STRUCT
+                  (c "x" (* -1 reconcile_amount))
                 )
               )
             )
-            conditions
+            (calculate-byc-coin-id
+              CAT_MOD_HASH
+              byc_tail_hash
+              (list
+                treasury_coin_id
+                reconcile_amount
+                RUN_TAIL_MOD_HASH
+              )
+            )
           )
+          ; approve treasury coin to allow a withdrawal
+          (list SEND_MESSAGE 0x3f
+            (concat
+              PROTOCOL_PREFIX
+              (sha256tree (c STATUTES_STRUCT (c (* -1 reconcile_amount) (concat new_treasury_amount RUN_TAIL_MOD_HASH))))
+            )
+            treasury_coin_id
+          )
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         )
       )
     )

@@ -1,6 +1,6 @@
 (mod
   (
-    CAT_MOD_HASH BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH RUN_TAIL_MOD_HASH TREASURY_MOD_HASH OFFER_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -9,15 +9,13 @@
     )
     (@ args
       (
-        tx_current_timestamp
+        current_timestamp
         byc_bid_amount
         byc_melting_coin_info
         byc_treasury_coin_info
         min_treasury_delta
         target_puzzle_hash
         my_coin_id
-        offer_mod_hash
-        treasury_mod_hash
       )
     )
   )
@@ -32,7 +30,6 @@
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
-    current_timestamp (+ tx_current_timestamp (* 3 MAX_TX_BLOCK_TIME))
     ; parse auction state as we'll need to verify it's still running and hasn't timed out
     (
       auction_start_time
@@ -41,10 +38,10 @@
       step_time_interval
       initiator_puzzle_hash
       initiator_incentive_balance
-      auction_timeout
-      minimum_debt_amount
+      auction_ttl
       byc_to_treasury_balance
       byc_to_melt_balance
+      minimum_bid_amount
     ) AUCTION_STATE
     ; first pay initiator
     initiator_incentive (if (> byc_bid_amount initiator_incentive_balance)
@@ -62,38 +59,29 @@
     ; leftover debt
     debt (+ initiator_incentive_balance byc_to_treasury_balance byc_to_melt_balance)
     leftover_debt (- debt byc_bid_amount)
-    ; use all byc provided from keeper to get a piece of collateral
+    ; use all byc provided by keeper to get a piece of collateral
     bid_xch_collateral_amount_pre (/
-      (*
-        (/
-          (* byc_bid_amount PRECISION)
+      (/
+        (* byc_bid_amount PRECISION_BPS PRICE_PRECISION MOJOS)
+        (-
+          (* start_price PRECISION_BPS)
           (*
-            (- start_price
+            (*
+              start_price
+              step_price_decrease_factor
+            ) ; price decrease per step
             (/
-              (*
-                (* ; current price factor
-                  (/
-                    (*
-                      start_price
-                      step_price_decrease_factor
-                    )
-                    PERCENT_PRECISION
-                  )
-                  ; current price
-                  (/ (- current_timestamp auction_start_time) step_time_interval)
-                )
-                start_price
-              )
-              PERCENT_PRECISION)
-            )
-            10
-          )
-        )
-        MOJOS)
-      PRECISION
-    )
+              (- current_timestamp auction_start_time)
+              step_time_interval
+            ) ; no. (completed) steps
+          ) ; total price decrease
+        ) ; auction price
+      )
+    1000
+    ) ; amount of collateral (in mojos)
     bid_xch_collateral_amount (
       if (> bid_xch_collateral_amount_pre COLLATERAL)
+        ; if the amount of collateral is more than the vault has, use all of it, don't raise error
         COLLATERAL
         bid_xch_collateral_amount_pre
     )
@@ -102,7 +90,11 @@
       (calculate-byc-coin-id
         CAT_MOD_HASH
         byc_tail_hash
-        byc_melting_coin_info
+        (list
+          (f byc_melting_coin_info)
+          (r byc_melting_coin_info)
+          RUN_TAIL_MOD_HASH
+        )
       )
       ()
     )
@@ -115,8 +107,8 @@
           treasury_parent
           treasury_amount
           (curry_hashes
-            treasury_mod_hash
-            (sha256 ONE treasury_mod_hash)
+            TREASURY_MOD_HASH
+            (sha256 ONE TREASURY_MOD_HASH)
             statutes_struct_hash
             (sha256 ONE treasury_launcher_id)
             (sha256 ONE treasury_ring_prev_launcher_id)
@@ -138,28 +130,40 @@
           step_time_interval
           initiator_puzzle_hash
           (- initiator_incentive_balance initiator_incentive)
-          auction_timeout
-          minimum_debt_amount
-          (- byc_to_treasury_balance byc_to_treasury)
-          (- byc_to_melt_balance byc_to_melt)
+          auction_ttl
+          (- byc_to_treasury_balance byc_to_treasury) ; byc to treasury balance
+          (- byc_to_melt_balance byc_to_melt)  ; byc to melt balance
+          minimum_bid_amount
         )
     )
     (assert
+      (> leftover_debt -1)
       (> byc_bid_amount 0)
+      (any  ; either bid amount is higher than min amount or is equal to the debt or there is no collateral is left
+        (> byc_bid_amount minimum_bid_amount)
+        (all
+          (> minimum_bid_amount (- debt ONE))
+          (= byc_bid_amount debt)
+        )
+        (= leftover_collateral 0)
+      )
       (> current_timestamp auction_start_time)
-      ; check that we haven't passed liquidation timeout
+      ; check that we haven't passed auction TTL
       ; is previous auction still running by checking if auction_start_time hasn't timed out
-      (> auction_timeout (- current_timestamp auction_start_time))
+      (> auction_ttl (- current_timestamp auction_start_time))
       ; sanity check for time
       (> current_timestamp (- auction_start_time 1))
       ; check that there is collateral to bid for
       (> COLLATERAL 0)
       (> leftover_collateral -1)
-      (any (> leftover_debt minimum_debt_amount) (= leftover_debt 0))
-      (any (> byc_to_treasury min_treasury_delta) (= byc_to_treasury byc_to_treasury_balance) (= byc_to_treasury 0))
+      (any
+        (> byc_to_treasury min_treasury_delta)
+        (= byc_to_treasury byc_to_treasury_balance)
+        (= byc_to_treasury 0)
+        (= leftover_collateral 0)
+      )
       (list 
         (list
-          ;0 ; leftover_transferred_fees
           leftover_collateral
           0 ; leftover_principal
           auction_state
@@ -168,10 +172,8 @@
         )
         (assign
           conditions (list
-            (list ASSERT_SECONDS_ABSOLUTE (- tx_current_timestamp MAX_TX_BLOCK_TIME))
-            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ tx_current_timestamp MAX_TX_BLOCK_TIME))
-            (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MOD_HASH treasury_mod_hash)
-            (assert-statute statutes_puzzle_hash STATUTE_OFFER_MOD_HASH offer_mod_hash)
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             ; validate coin id
             (list ASSERT_MY_COIN_ID my_coin_id)
             ; signal to tail that it can melt the BYC
@@ -180,10 +182,8 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c 'x'
-                      (c (* -1 byc_to_melt)
-                        STATUTES_STRUCT
-                      )
+                    (c STATUTES_STRUCT
+                      (c 'x' (* -1 byc_to_melt))
                     )
                   )
                 )
@@ -196,10 +196,10 @@
               ; assert that keeper absorbed their collateral + left over mojos from melting
               (list ASSERT_PUZZLE_ANNOUNCEMENT
                 (sha256
-                  offer_mod_hash
+                  OFFER_MOD_HASH
                   (sha256tree
                     (c
-                      my_coin_id ; nonce. LATER: needed?
+                      my_coin_id
                       (list
                         (list
                           target_puzzle_hash
@@ -220,11 +220,11 @@
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)
                     (sha256 ONE byc_tail_hash)
-                    offer_mod_hash
+                    OFFER_MOD_HASH
                   )
                   ; nonce = my_coin_id, payments = (initiator puzzle hash, initiator incentive fee)
                   (sha256tree
-                    (c my_coin_id ; nonce. LATER: needed?
+                    (c my_coin_id
                       (list
                         (list initiator_puzzle_hash initiator_incentive (list initiator_puzzle_hash))
                       )
@@ -243,7 +243,7 @@
                 (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (sha256tree (c byc_to_treasury new_treasury_amount))
+                    (sha256tree (c STATUTES_STRUCT (c byc_to_treasury new_treasury_amount)))
                   )
                   treasury_coin_id
                 )

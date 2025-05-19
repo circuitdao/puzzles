@@ -1,25 +1,24 @@
 (mod
   (
-    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash)
+    (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+     statutes_puzzle_hash
+    )
     (
-      amount
-      parent_parent_id
-      prev_bill_hash
-      enactment_timeout_seconds
+      _ ; amount
+      current_timestamp
     )
   )
 
   (include *standard-cl-23.1*)
-  (include curry.clib)
   (include condition_codes.clib)
-  (include statutes_utils.clib)
+  (include prefixes.clib)
   (include utils.clib)
 
   (defconst ANN_ENACTED '$')
 
   (assign
     (
-      (veto_seconds . enact_seconds)
+      (veto_period_expiry implementation_delay_expiry . implementation_interval_expiry)
       new_statute_index
       new_statute_value
       new_threshold_amount_to_propose
@@ -27,41 +26,24 @@
       new_delay_seconds
       new_max_delta
     ) BILL
-    (list
-      ; if enactment passes, reset this coin's bill state
-      ()
-      ; conditions to return
+    (assert
+      ; can only implement in implementation interval
+      (> current_timestamp implementation_delay_expiry)
+      (> implementation_interval_expiry current_timestamp)
       (list
-        ; proposal coin must have a parent that was a governance coin
-        (list ASSERT_MY_PARENT_ID
-          (calculate-coin-id
-            parent_parent_id
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE CRT_TAIL_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256 ONE INNER_PUZZLE_HASH)
-                prev_bill_hash
-              )
-            )
-            amount
+        ; if enactment passes, reset this coin's bill state
+        ()
+        ; conditions to return
+        (list
+          (list SEND_MESSAGE 0x12
+            ; we skip the first two elements that are used for voting process, they're not stored in statutes
+            (concat PROTOCOL_PREFIX (sha256tree (r BILL)))
+            statutes_puzzle_hash
           )
+          (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_ENACTED)))
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         )
-        ; has enough time passed since this coin was last spent (veto included)
-        (list ASSERT_SECONDS_RELATIVE enact_seconds)
-        (list SEND_MESSAGE 0x12
-          ; we skip the first two elements that are used for voting process, they're not stored in statutes
-          (concat PROTOCOL_PREFIX (sha256tree (r BILL)))
-          statutes_puzzle_hash
-        )
-        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_ENACTED)))
-        ; enactment must happen within enactment timeout seconds otherwise times out and resets the bill
-        (list ASSERT_BEFORE_SECONDS_RELATIVE (+ enact_seconds enactment_timeout_seconds))
-        (assert-statute statutes_puzzle_hash STATUTE_ENACTMENT_TIMEOUT_SECONDS enactment_timeout_seconds)
       )
     )
   )

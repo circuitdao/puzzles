@@ -1,12 +1,11 @@
 (mod (
-    (MOD_HASH
-    ;CAT_MOD_HASH
-    BYC_TAIL_HASH
-    LAUNCHER_ID STATUTES_STRUCT START_TIME LAST_BID)
-    statutes_puzzle_hash
+    (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     lineage_proof
-    announcements
-    (my_coin_id)
+    input_conditions
+    (
+      statutes_inner_puzzle_hash
+      my_coin_id
+    )
   )
 
   (include *standard-cl-23.1*)
@@ -14,24 +13,21 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
-  (include recharge_auction.clib)
 
   (assert
-    ; can't run if LAST_BID is set
-    (= LAST_BID ())
+    ; enforce eve state
     (= LAUNCHER_ID 0)
-    (= START_TIME 0)
-    (size_b32 statutes_puzzle_hash)
+    (= AUCTION_PARAMS ())
+    (= LAST_BID ()) 
     (c
       (list
         CREATE_COIN
         (curry_hashes
           MOD_HASH
           (sha256 ONE MOD_HASH)
-          (sha256 ONE BYC_TAIL_HASH)
-          (sha256 ONE my_coin_id)
           (sha256tree STATUTES_STRUCT)
-          (sha256 ONE 0)
+          (sha256 ONE my_coin_id) ; launcher ID
+          (sha256 ONE ())
           (sha256 ONE ())
         )
         0
@@ -40,21 +36,20 @@
         (list REMARK
           PROTOCOL_PREFIX
           my_coin_id
-          0
+          () ; no params
           () ; no bids
         )
         (c
           (list ASSERT_MY_AMOUNT 0)
           (c
             (list ASSERT_MY_COIN_ID my_coin_id)
-            ; not LAUNCHER set, this is a launch, we need to get approval from statutes
             (c
-              ; confirm back to statutes that we indeed updated the curried args
+              ; get approval from statutes
               (list RECEIVE_MESSAGE 0x12
                 (concat PROTOCOL_PREFIX CUSTOM_CONDITION_PREFIX (sha256tree '*'))
-                statutes_puzzle_hash
+                (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
               )
-              announcements
+              input_conditions
             )
           )
         )

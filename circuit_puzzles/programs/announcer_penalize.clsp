@@ -1,8 +1,10 @@
 ; penalize announcer for not updating the price
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY ATOM_VALUE MIN_DEPOSIT COOLDOWN_START LAST_PENALTY_INTERVAL TIMESTAMP_EXPIRES)
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+      )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes announcer_min_deposit announcer_max_delay current_timestamp)
+      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit announcer_max_delay current_timestamp)
      )
 
   (include *standard-cl-23.1*)
@@ -13,7 +15,6 @@
   (include announcer.clib)
 
   (assign
-    current_penalty_interval (/ (/ current_timestamp 60) penalty_interval_in_minutes)
     penalized_deposit
       ; if not expired, we penalize per full deposit
       (/
@@ -21,30 +22,33 @@
           DEPOSIT
           penalty_factor_per_interval
         )
-        PERCENT_PRECISION
+        PRECISION_BPS
       )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (assert
-      ; penalize once per interval
-      (> current_penalty_interval LAST_PENALTY_INTERVAL)
+      ; must be past penalty timestamp to penalize
+      (> current_timestamp PENALIZABLE_AT)
       (any
-        ; if it's expired, we penalize on expiration time
+        ; penalize if expired
         (> current_timestamp TIMESTAMP_EXPIRES)
-        ; penalize if announcers deposit is below min
-        (> announcer_min_deposit DEPOSIT)
-        ; penalize if announcers delay is above expected delay
+        ; penalize if deposit is less than announcer's min deposit
+        (> MIN_DEPOSIT DEPOSIT)
+        ; penalize if announcer's min deposit is less than Statues min deposit
+        (> min_deposit MIN_DEPOSIT)
+        ; penalize if announcer's delay is above expected delay
         (> DELAY announcer_max_delay)
       )
       APPROVED
       LAUNCHER_ID
       (> DEPOSIT penalized_deposit)
-      (> penalized_deposit 0)
+      (> penalized_deposit MINUS_ONE)
       (li
+        (list RESERVE_FEE (- DEPOSIT penalized_deposit))
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval_in_minutes)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL_BPS penalty_factor_per_interval)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT announcer_min_deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PRICE_TTL announcer_max_delay)
         (list ASSERT_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
         &rest
@@ -55,10 +59,11 @@
           APPROVED
           penalized_deposit
           DELAY
-          ATOM_VALUE
+          VALUE
           MIN_DEPOSIT
+          CLAIM_COUNTER
           COOLDOWN_START
-          current_penalty_interval
+          (+ current_timestamp (* 60 penalty_interval_in_minutes))
           TIMESTAMP_EXPIRES
           input_conditions
         )

@@ -1,7 +1,7 @@
 ;; Mint BYC to borrow and update the principal and other state variables accordingly
 (mod
   (
-    CAT_MOD_HASH BYC_TAIL_MOD_HASH
+    CAT_MOD_HASH BYC_TAIL_MOD_HASH RUN_TAIL_MOD_HASH
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
@@ -10,11 +10,11 @@
     )
     (@ args
       (
-         byc_amount_to_mint minimum_debt_amount liquidation_ratio
-         price_info
-         byc_issuing_coin_info  ; (parent_id amount inner_puzzle_hash)
-         statutes_cumulative_stability_fee_rate
-         current_stability_fee_rate current_timestamp
+         borrow_amount ; amount of byc to be issued to borrower
+         minimum_debt_amount liquidation_ratio price_info
+         byc_issuing_coin_info  ; -> (parent_id amount inner_puzzle_hash)
+         statutes_cumulative_stability_fee_df
+         current_stability_fee_df current_timestamp
       )
     )
   )
@@ -27,36 +27,42 @@
   (include curry.clib)
 
   (assign
+    ; we want cat puzzle to use the same statutes struct in the tail as this puzzle
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    ; calculate the latest cumulative stability fee rate
-    cumulative_stability_fee_rate (calculate-cumulative-discount-factor
-      statutes_cumulative_stability_fee_rate
-      current_stability_fee_rate
+    ; calculate the latest cumulative stability fee discount factor
+    cumulative_stability_fee_df (calculate-cumulative-discount-factor
+      statutes_cumulative_stability_fee_df
+      current_stability_fee_df
       current_timestamp
       (r price_info)
     )
     (collateral_price . last_updated) price_info
-    principal (+ PRINCIPAL byc_amount_to_mint)
+    principal (+ PRINCIPAL borrow_amount)
     ; we're discounting the minted amount by the cumulative stability fee rate to avoid calculating cumulative stability fee
     ; each time we mint BYC, since the complexity grows with debt's age
     discounted_mint_amount (*
       -1  ; multiply with negative numbers to ceil
-      (/ (* -1 byc_amount_to_mint PRECISION) cumulative_stability_fee_rate)
+      (/ (* -1 borrow_amount PRECISION) cumulative_stability_fee_df)
     )
     discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_mint_amount)
     ; calculate the coin id for the new BYC coin by enforcing the tail hash
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
-      byc_issuing_coin_info
+      (list
+        (f byc_issuing_coin_info)  ; parent_id
+        (r byc_issuing_coin_info)  ; amount
+        RUN_TAIL_MOD_HASH
+      )
     )
-    undiscounted_principal (/ (* DISCOUNTED_PRINCIPAL cumulative_stability_fee_rate) PRECISION)
-    ; check that total debt is larger than minted amount, not minimum mint amount
+    undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
     (assert
-      (> (+ undiscounted_principal byc_amount_to_mint) minimum_debt_amount)
-      (> byc_amount_to_mint 0)
+      (> (+ undiscounted_principal borrow_amount) minimum_debt_amount)
+      (> borrow_amount 0)
+      ; ensure the coin we're using to issue has correct amount so user can't mint arbitrary amount
+      (= (r byc_issuing_coin_info)  borrow_amount)
       ; check if requested amount of BYC to mint takes us over the collateralization ratio
-      (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) byc_amount_to_mint)
+      (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) borrow_amount)
       (list
         ; updated state
         (list COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
@@ -65,18 +71,18 @@
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat PROTOCOL_PREFIX
-              (sha256tree (c "i" (c byc_amount_to_mint STATUTES_STRUCT)))
+              (sha256tree (c STATUTES_STRUCT (c "i" borrow_amount)))
             )
             byc_issuing_coin_id
           )
-          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_rate)
+          (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
           (assert-price-info statutes_puzzle_hash price_info)
           ; validate current timestamp is within bounds
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_rate)
+          (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
         )
       )
     )
