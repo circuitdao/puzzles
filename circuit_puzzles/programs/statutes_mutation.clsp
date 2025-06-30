@@ -38,7 +38,7 @@
       ; updating statutes
       (assert
         (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
-        (> STATUTES_MAX_IDX mutation_index)
+        (> STATUTES_MAX_IDX (- mutation_index ONE))
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
           ; voting for custom conditions. only need to check first element of mutation_value
           (fail-on-invalid-custom-statutes-conditions (f mutation_value))
