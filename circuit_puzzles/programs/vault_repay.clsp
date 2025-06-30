@@ -9,7 +9,7 @@
     )
     (@ args
       (
-         repay_amount ; amount of byc to being repaid
+         repay_amount ; amount of byc to repay
          sf_transfer_amount ; SFs to transfer to treasury
          statutes_cumulative_stability_fee_df
          byc_melting_coin_info
@@ -81,8 +81,9 @@
     )
     (assert
       (> repay_amount MINUS_ONE) ; repay amount must not be negative (but can be 0)
-      (> undiscounted_principal (- repay_amount ONE)) ; cannot repay more than outstanding debt      
+      (> undiscounted_principal (- repay_amount ONE)) ; cannot repay more than outstanding debt
       (> sf_transfer_amount MINUS_ONE) ; cannot transfer a negative amount
+      (> repay_amount (- sf_transfer_amount ONE)) ; SF transfer amount is part of repay amount
       (> accrued_sf (- sf_transfer_amount ONE)) ; cannot transfer more than accrued SFs
       ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep vault liquidation costs at healthy levels
       (any (= new_undiscounted_principal 0) (> new_undiscounted_principal minimum_debt_amount))
