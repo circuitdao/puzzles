@@ -69,7 +69,7 @@
       (+ (/ (* delta_amount PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
     )
     treasury_coin_id (if treasury_coin_info
-      (calculate-coin-id
+      (coinid
         treasury_coin_parent_id
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
@@ -103,7 +103,7 @@
         )
         (c
           (list ASSERT_MY_PARENT_ID
-            (calculate-coin-id
+            (coinid
               (f lineage_proof)
               (curry_hashes CAT_MOD_HASH
                 (sha256 ONE CAT_MOD_HASH)

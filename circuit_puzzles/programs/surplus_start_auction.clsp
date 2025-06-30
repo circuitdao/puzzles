@@ -32,7 +32,7 @@
       (assign
         (parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount) (f treasury_coins)
         treasury_coin_id
-          (calculate-coin-id
+          (coinid
             parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256 ONE CAT_MOD_HASH)
@@ -91,7 +91,7 @@
           (sha256 ONE my_coin_id)
         )
     )
-    payout_coin_id (calculate-coin-id
+    payout_coin_id (coinid
         payout_coin_parent_id
         payout_puzzle_hash
         0 ; initial amount for the coin that holds our lot should be 0

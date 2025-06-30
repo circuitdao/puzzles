@@ -89,7 +89,7 @@
           )
         )
         (list ASSERT_MY_PARENT_ID
-          (calculate-coin-id
+          (coinid
             (f lineage_proof)
             (curry_hashes
               CAT_MOD_HASH

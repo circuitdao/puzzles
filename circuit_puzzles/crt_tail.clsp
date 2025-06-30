@@ -52,7 +52,7 @@
         target_puzzle_hash  ; where this coin is going to, if issuance
       ) solution
       (statutes_struct_hash . statutes_puzzle_hash) (get-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-      approver_coin_id (calculate-coin-id
+      approver_coin_id (coinid
         approver_parent_id
         ; approval_mod_hashes is defined by statutes and we validate it by checking mod_hash is at the correct position
         (if byc_tail_hash

@@ -21,7 +21,7 @@
   (include utils.clib)
 
   (assign
-    surplus_auction_coin_id (calculate-coin-id
+    surplus_auction_coin_id (coinid
       surplus_auction_parent_id
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)

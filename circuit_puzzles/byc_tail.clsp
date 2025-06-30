@@ -29,7 +29,7 @@
   (if (any (= delta 0) (> 0 delta))
     ; we're issuing or melting
     (assign
-      vault_coin_id (calculate-coin-id
+      vault_coin_id (coinid
         vault_parent_id
         (tree_hash_of_apply vault_mod_hash vault_curried_args_hash)
         vault_amount

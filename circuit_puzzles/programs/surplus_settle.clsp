@@ -35,12 +35,12 @@
           (sha256 ONE LAUNCHER_ID)
         )
     )
-    payout_coin_id (calculate-coin-id
+    payout_coin_id (coinid
         payout_coin_parent_id
         payout_puzzle_hash
         BYC_LOT_AMOUNT
     )
-    melt_coin_id (calculate-coin-id
+    melt_coin_id (coinid
       my_coin_id
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
@@ -103,7 +103,7 @@
           payout_coin_id
         )
         (list ASSERT_MY_PARENT_ID
-          (calculate-coin-id
+          (coinid
             (f lineage_proof)
             (curry_hashes
               CAT_MOD_HASH

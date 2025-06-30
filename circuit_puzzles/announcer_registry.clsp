@@ -12,7 +12,7 @@
 
   (defconst REGISTER_OPCODE "r")
   (defconst MINT_OPCODE "m")
-  
+
   ; generates notarized payments to target puzzle hashes as required by settlement payments puzzle
   (defun generate-offer-assert ((@ announcer_registry (target_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
     (if announcer_registry
@@ -79,7 +79,7 @@
         claim_interval (f (r args))
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-        (if (= mint_or_register MINT_OPCODE)    
+        (if (= mint_or_register MINT_OPCODE)
           ; ### claim rewards ###
           (assign
             (
@@ -93,7 +93,7 @@
             ) args
             announcers_count (list-length ANNOUNCER_REGISTRY 0)
             change_amount (r (divmod crt_credits_per_interval announcers_count))
-            issuance_coin_id (calculate-coin-id
+            issuance_coin_id (coinid
               (f issuance_coin_info)
               (curry_hashes CAT_MOD_HASH
                 (sha256 ONE CAT_MOD_HASH)
@@ -165,7 +165,7 @@
             claim_interval ; rewards claimable at
             (assert
               ; check that lineage_proof is parent of launcher
-              (= (f (r STATUTES_STRUCT)) (calculate-coin-id lineage_proof (f (r (r args))) 1))
+              (= (f (r STATUTES_STRUCT)) (coinid lineage_proof (f (r (r args))) 1))
               (list
                 (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
                 (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
@@ -183,7 +183,7 @@
       (c
         (if (l lineage_proof)
           (list ASSERT_MY_PARENT_ID (
-            calculate-coin-id
+            coinid
               (f lineage_proof)
               (tree_hash_of_apply MOD_HASH (r lineage_proof))
               0

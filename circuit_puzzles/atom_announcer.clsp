@@ -30,7 +30,7 @@
         ; ensuring that parent was indeed spent with our puzzle and pubkey
         (if lineage
           (list ASSERT_MY_PARENT_ID
-            (calculate-coin-id
+            (coinid
               parent_id
               (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
               prev_deposit

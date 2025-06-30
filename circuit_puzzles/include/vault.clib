@@ -29,7 +29,7 @@
   )
 
   (defun-inline calculate-byc-coin-id (CAT_MOD_HASH BYC_TAIL_HASH (parent_id amount inner_puzzle_hash))
-    (calculate-coin-id
+    (coinid
       parent_id
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)

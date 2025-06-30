@@ -1,6 +1,6 @@
 (
 
-  (include prefixes.clib)  
+  (include prefixes.clib)
 
   ; asserts post-deposit treasury ring amounts, ensuring intended amount has been deposited to treasury
   ; total deposited to treasury = no. treasury coins * deposit_amount_per_coin + remainder
@@ -24,8 +24,7 @@
         delta (+ deposit_amount_per_coin potential_remainder)
         new_amount (+ next_current_amount delta)
         new_prev_amount (+ current_amount deposit_amount_per_coin (if (= launcher_id (f (r first_treasury_coin))) remainder 0))
-        prev_treasury_coin_id (
-          calculate-coin-id
+        prev_treasury_coin_id (coinid
             parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)
@@ -40,8 +39,7 @@
             )
             current_amount
         )
-        treasury_coin_id (
-          calculate-coin-id
+        treasury_coin_id (coinid
             next_parent_id
             (curry_hashes CAT_MOD_HASH
               (sha256tree CAT_MOD_HASH)

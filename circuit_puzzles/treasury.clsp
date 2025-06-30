@@ -21,7 +21,7 @@
       ; -> (approver_parent_id approver_mod_hash approver_mod_curried_args_hash
       ;      approver_amount approval_mod_hashes new_amount run_tail_mod_hash) when spending. i.e. solution is a list.
       ; note: run_tail_mod_hash must be provided when recovering bad debt or else set to nil
-      . args 
+      . args
     )
 
   (include *standard-cl-23.1*)
@@ -64,7 +64,7 @@
       )
       parent_id (if lineage_proof
         ; non-eve spend, assert parent id
-        (calculate-coin-id
+        (coinid
           (f lineage_proof) ; parent parent id
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
@@ -163,17 +163,17 @@
                     next_curried_args_hash
                     next_amount
                   ) next_coin_info
-                  (               
+                  (
                     min_parent_id
                     min_curried_args_hash
                     min_amount
                   ) min_coin_info
-                  (               
+                  (
                     max_parent_id
                     max_curried_args_hash
                     max_amount
                   ) max_coin_info
-                  prev_coin_id (calculate-coin-id
+                  prev_coin_id (coinid
                     prev_parent_id
                     (curry_hashes CAT_MOD_HASH
                       (sha256 ONE CAT_MOD_HASH)
@@ -182,7 +182,7 @@
                     )
                     prev_amount
                   )
-                  next_coin_id (calculate-coin-id
+                  next_coin_id (coinid
                     next_parent_id
                     (curry_hashes CAT_MOD_HASH
                       (sha256 ONE CAT_MOD_HASH)
@@ -191,7 +191,7 @@
                     )
                     next_amount
                   )
-                  min_coin_id (calculate-coin-id
+                  min_coin_id (coinid
                     min_parent_id
                     (curry_hashes CAT_MOD_HASH
                       (sha256 ONE CAT_MOD_HASH)
@@ -200,7 +200,7 @@
                     )
                     min_amount
                   )
-                  max_coin_id (calculate-coin-id
+                  max_coin_id (coinid
                     max_parent_id
                     (curry_hashes CAT_MOD_HASH
                       (sha256 ONE CAT_MOD_HASH)
@@ -261,7 +261,7 @@
                       run_tail_mod_hash
                     ) args
                     approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
-                    approver_coin_id (calculate-coin-id
+                    approver_coin_id (coinid
                       approver_parent_id
                       ; we want to ensure that the approver puzzle is using the correct mod
                       (if (all

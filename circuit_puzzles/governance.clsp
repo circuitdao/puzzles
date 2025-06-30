@@ -13,8 +13,8 @@
       inner_puzzle ; if provided, we're in owner mode
       inner_solution
       veto_conditions
-     ) 
-   
+     )
+
   (include *standard-cl-23.1*)
   (include curry.clib)
   (include utils.clib)
@@ -290,7 +290,7 @@
           (c
             (list ASSERT_MY_PARENT_ID
               (if (r lineage_proof)
-                (calculate-coin-id
+                (coinid
                   (f lineage_proof) ; parent parent id
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)
@@ -306,7 +306,7 @@
                   new_coin_amount
                 )
                 ; launch
-                (calculate-coin-id
+                (coinid
                   (f lineage_proof)
                   (curry_hashes CAT_MOD_HASH
                     (sha256 ONE CAT_MOD_HASH)

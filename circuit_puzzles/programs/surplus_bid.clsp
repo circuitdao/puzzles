@@ -82,7 +82,7 @@
         (list ASSERT_MY_COIN_ID my_coin_id)
         ; ensure lineage so we don't lose track of the lot
         (list ASSERT_MY_PARENT_ID
-          (sha256
+          (coinid
             (f lineage_proof)
             (curry_hashes
               CAT_MOD_HASH

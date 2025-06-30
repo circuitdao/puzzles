@@ -44,7 +44,7 @@
           ; assert announcement from another CRT coin with higher amount than this one
           (list RECEIVE_MESSAGE 0x3f
             (concat PROTOCOL_PREFIX (sha256tree BILL))
-            (calculate-coin-id
+            (coinid
               parent_veto_id
               ; governance coin puzzle hash
               (curry_hashes CAT_MOD_HASH

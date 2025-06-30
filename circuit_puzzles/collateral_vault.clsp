@@ -156,7 +156,7 @@
             ; verify lineage by calculating parent coin id based on lineage proof
             (list
               ASSERT_MY_PARENT_ID
-              (calculate-coin-id
+              (coinid
                 (f lineage_proof)
                 (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
                 (f (r (r lineage_proof)))
