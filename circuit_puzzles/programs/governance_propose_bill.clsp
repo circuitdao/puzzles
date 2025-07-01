@@ -32,6 +32,7 @@
   (defconst ANN_PROPOSED '^')
 
   (assert
+    (not BILL) ; may not overwrite an existing bill
     (> amount threshold_amount_to_propose)
     (> new_threshold_amount_to_propose 0)
     (> new_veto_interval 0)
