@@ -20,6 +20,15 @@
   (include statutes_utils.clib)
   (include utils.clib)
 
+  (defun not-contains-launcher-id (lst item)
+    (if lst
+      (if (= (f (r (f lst))) item)
+        (x)
+        (not-contains-launcher-id (r lst) item)
+      )
+      ONE
+    )
+  )
 
   (defun assert-treasury-coins-withdrawal (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
         treasury_coins ; any subset of treasury coins -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
@@ -29,40 +38,43 @@
         input_conditions
       )
     (if treasury_coins
-      (assign
-        (parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount) (f treasury_coins)
-        treasury_coin_id
-          (coinid
-            parent_id
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE BYC_TAIL_HASH)
-              (curry_hashes
-                TREASURY_MOD_HASH
-                (sha256 ONE TREASURY_MOD_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256 ONE launcher_id)
-                (sha256 ONE ring_prev_launcher_id)
+      (assert
+        (not-contains-launcher-id (r treasury_coins) (f (r (f treasury_coins)))) ; cannot use same treasury coin multiple times
+        (assign
+          (parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount) (f treasury_coins)
+          treasury_coin_id
+            (coinid
+              parent_id
+              (curry_hashes CAT_MOD_HASH
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE BYC_TAIL_HASH)
+                (curry_hashes
+                  TREASURY_MOD_HASH
+                  (sha256 ONE TREASURY_MOD_HASH)
+                  (sha256tree STATUTES_STRUCT)
+                  (sha256 ONE launcher_id)
+                  (sha256 ONE ring_prev_launcher_id)
+                )
               )
+              current_amount
             )
-            current_amount
-          )
-        (c
-          ; send a message to approve treasury coins for withdrawal
-          (list SEND_MESSAGE 0x3f
-            (concat
-              PROTOCOL_PREFIX
-              (sha256tree (c STATUTES_STRUCT (c (* -1 withdraw_amount) (- current_amount withdraw_amount))))
+          (c
+            ; send a message to approve treasury coins for withdrawal
+            (list SEND_MESSAGE 0x3f
+              (concat
+                PROTOCOL_PREFIX
+                (sha256tree (c STATUTES_STRUCT (c (* -1 withdraw_amount) (- current_amount withdraw_amount))))
+              )
+              treasury_coin_id
             )
-            treasury_coin_id
-          )
-          (assert-treasury-coins-withdrawal
-            TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
-            (r treasury_coins)
-            lot_amount
-            (+ sum_amounts_withdrawn withdraw_amount)
-            (- (+ new_treasury_coins_amount current_amount) withdraw_amount)
-            input_conditions
+            (assert-treasury-coins-withdrawal
+              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+              (r treasury_coins)
+              lot_amount
+              (+ sum_amounts_withdrawn withdraw_amount)
+              (- (+ new_treasury_coins_amount current_amount) withdraw_amount)
+              input_conditions
+            )
           )
         )
       )
