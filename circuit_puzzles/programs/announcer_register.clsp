@@ -1,5 +1,5 @@
 ; register the announcer with announcer registry coin
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
         CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
@@ -52,7 +52,7 @@
               INNER_PUZZLE_HASH
               APPROVED
               deposit
-              DELAY
+              VALUE_TTL
               VALUE
               MIN_DEPOSIT
               registry_claim_counter

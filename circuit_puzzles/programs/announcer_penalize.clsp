@@ -1,10 +1,10 @@
 ; penalize announcer for not updating the price
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
         CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit announcer_max_delay current_timestamp)
+      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit max_value_ttl current_timestamp)
      )
 
   (include *standard-cl-23.1*)
@@ -35,8 +35,8 @@
         (> MIN_DEPOSIT DEPOSIT)
         ; penalize if announcer's min deposit is less than Statues min deposit
         (> min_deposit MIN_DEPOSIT)
-        ; penalize if announcer's delay is above expected delay
-        (> DELAY announcer_max_delay)
+        ; penalize if announcer's value TTL is above expected value TTL
+        (> VALUE_TTL max_value_ttl)
       )
       APPROVED
       LAUNCHER_ID
@@ -49,7 +49,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval_in_minutes)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL_BPS penalty_factor_per_interval)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PRICE_TTL announcer_max_delay)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
         &rest
         (recreate-myself-condition MOD_HASH
           STATUTES_STRUCT
@@ -57,7 +57,7 @@
           INNER_PUZZLE_HASH
           APPROVED
           penalized_deposit
-          DELAY
+          VALUE_TTL
           VALUE
           MIN_DEPOSIT
           CLAIM_COUNTER

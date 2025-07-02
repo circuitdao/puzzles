@@ -1,4 +1,4 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
         CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
@@ -42,7 +42,7 @@
             (sha256 ONE INNER_PUZZLE_HASH)
             (sha256 ONE APPROVED)
             (sha256 ONE DEPOSIT)
-            (sha256 ONE DELAY)
+            (sha256 ONE VALUE_TTL)
             (sha256tree VALUE)
             (sha256 ONE MIN_DEPOSIT)
             (sha256 ONE CLAIM_COUNTER)
@@ -61,7 +61,7 @@
             INNER_PUZZLE_HASH
             DEPOSIT
             APPROVED
-            DELAY
+            VALUE_TTL
             VALUE
             MIN_DEPOSIT
             CLAIM_COUNTER

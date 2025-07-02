@@ -1,12 +1,12 @@
 ;; We can configure an announcer singleton using this operation, which is part of main announcer puzzle.
-;; It enables us to change:
-;; - the inner puzzle hash
-;; - the deposit
-;; - the delay
-;; - the atom value
-;; - the min deposit
+;; It enables us to change the:
+;; - inner puzzle hash
+;; - deposit
+;; - value TTL
+;; - atom value
+;; - min deposit
 ;; It also allows the owner to exit being approved announcer for circuit protocol. Exiting needs to wait for a cooldown period.
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
         CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
@@ -30,8 +30,8 @@
         input_toggle_activation
         deactivation_cooldown_interval
         min_deposit
-        new_delay
-        max_delay
+        new_value_ttl
+        max_value_ttl
         new_value
         new_min_deposit
       ) args
@@ -79,13 +79,13 @@
           (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
           approved
           deposit
-          new_delay
+          new_value_ttl
           (if new_value new_value VALUE)
           new_min_deposit
           CLAIM_COUNTER
           cooldown_start
           PENALIZABLE_AT
-          (+ current_timestamp new_delay)
+          (+ current_timestamp new_value_ttl)
           input_conditions
         )
       (assert
@@ -93,13 +93,13 @@
         inner_puzzle_hash
         ; new deposit must be no less than new min deposit
         (> deposit (- new_min_deposit ONE))
-        ; new delay must be no greater than the maximum delay statute to enforce timely announcements
-        (> (+ max_delay ONE) new_delay)
-        ; new delay must not be negative
-        (> new_delay MINUS_ONE)
+        ; new value TTL must be no greater than the maximum value TTL statute to enforce timely announcements
+        (> (+ max_value_ttl ONE) new_value_ttl)
+        ; new value TTL must not be negative
+        (> new_value_ttl MINUS_ONE)
         (li
           ; assert passed variable against statutes singleton announcements
-          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PRICE_TTL max_delay)
+          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
           (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
           ; assert current_timestamp is within the latest block time
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))

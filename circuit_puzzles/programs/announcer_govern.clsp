@@ -1,6 +1,6 @@
 ; governance
 ; we either activate this announcer or deactivate, can happen at any time via CRT vote
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT DELAY VALUE MIN_DEPOSIT
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
         CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
@@ -34,7 +34,7 @@
       INNER_PUZZLE_HASH
       toggle_activation
       deposit
-      DELAY
+      VALUE_TTL
       VALUE
       MIN_DEPOSIT
       CLAIM_COUNTER
@@ -59,7 +59,7 @@
         )
         ; we're approving
         (assert
-          ; we're not requiring that DELAY <= Statutes max delay or that price is not expired in case an announcer has a
+          ; we're not requiring that VALUE_TTL <= Statutes max value TTL or that price is not expired in case an announcer has a
           ;  technical issue just when governance wants to enact approval. but we always want DEPOSIT and MIN_DEPOSIT
           ;  to be set properly so that announcer can be penalized
           (= deposit DEPOSIT) ; can't steal deposit
