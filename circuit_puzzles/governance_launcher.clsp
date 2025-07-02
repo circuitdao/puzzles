@@ -1,14 +1,15 @@
-(mod (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT_HASH current_timestamp inner_puzzle_hash my_parents_parent_id amount)
+(mod (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT_HASH
+        ; solution
+        inner_puzzle_hash my_parents_parent_id amount
+     )
+
+  (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include curry.clib)
+  (include prefixes.clib)
+  (include sha256tree.clib)
 
   (defconstant ONE 1)
-  (defun sha256tree (TREE)
-    (if (l TREE)
-      (sha256 TWO (sha256tree (f TREE)) (sha256tree (r TREE)))
-      (sha256 ONE TREE)
-    )
-  )
 
   (list
     (list CREATE_COIN
@@ -22,10 +23,6 @@
       amount
       (list inner_puzzle_hash)
     )
-    (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
-    ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
-    ; within a boundary of last_block > current_timestamp - 1 block < next block
-    (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
     (list ASSERT_MY_PARENT_ID
       (coinid
         my_parents_parent_id
@@ -52,6 +49,6 @@
         amount
       )
     )
-    (list REMARK 'C' () () inner_puzzle_hash)
+    (list REMARK PROTOCOL_PREFIX () () inner_puzzle_hash)
   )
 )
