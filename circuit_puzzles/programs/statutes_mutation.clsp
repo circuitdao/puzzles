@@ -41,7 +41,7 @@
         (> STATUTES_MAX_IDX (- mutation_index ONE))
         (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
           ; voting for custom conditions. only need to check first element of mutation_value
-          (fail-on-invalid-custom-statutes-conditions (f mutation_value))
+          (fail-on-protocol-condition-or-create-coin (f mutation_value))
           ; should be  a list with 5 elements if mutating statutes
           (not (r (r (r (r (r mutation_value))))))
         )

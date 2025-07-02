@@ -75,29 +75,6 @@
     )
   )
 
-  ; fails if create coin or protocol condition encountered, o/w returns 1
-  (defun fail-on-invalid-custom-statutes-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
-    (if conditions
-      (if (any (= condition_code CREATE_COIN) (= condition_code REMARK))
-        (x) ; no create coin allowed
-        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-          (assert
-            (is-valid-msg-cond condition_body)
-            (fail-on-protocol-condition-or-create-coin rest_of_conditions)
-          )
-          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-            (assert
-              (is-valid-ann-cond condition_body)
-              (fail-on-protocol-condition-or-create-coin rest_of_conditions)
-            )
-            ; other conditions allowed
-            (fail-on-protocol-condition-or-create-coin rest_of_conditions)
-          )
-        )
-      )
-      ONE
-    )
-  )
 
   ; fails if create coin or protocol condition encountered, o/w returns 1
   (defun fail-on-protocol-condition-or-create-coin ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
