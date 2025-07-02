@@ -8,7 +8,7 @@
     lineage_proof ; -> (parent_parent_id parent_amount parent_cat_inner_puzzle_hash)
     input_conditions
     (
-      bid_crt_amount
+      crt_bid_amount
       target_puzzle_hash
       current_timestamp
       my_amount
@@ -25,14 +25,12 @@
   (assign
     (last_target_puzzle_hash . last_bid_timestamp) (if LAST_BID LAST_BID (c 0 0))
     (assert
-      ; we need lineage proof to ensure that a CAT lot is associated with this surplus auction
-      (l lineage_proof)
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
-      (any (all (= my_amount 0) (> bid_crt_amount 0)) (> bid_crt_amount my_amount))
+      (any (all (= my_amount 0) (> crt_bid_amount 0)) (> crt_bid_amount my_amount))
       ; TTL for bid hasn't expired yet
       (any (not last_bid_timestamp) (> BID_TTL (- current_timestamp last_bid_timestamp)))
-      ; bid_crt_amount is min_bid_increase_bps higher than my_amount
-      (> bid_crt_amount (/ (* my_amount (+ PRECISION_BPS MIN_BID_INCREASE_BPS)) PRECISION_BPS))
+      ; crt_bid_amount is min_bid_increase_bps higher than my_amount
+      (> crt_bid_amount (/ (* my_amount (+ PRECISION_BPS MIN_BID_INCREASE_BPS)) PRECISION_BPS))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
         (list ASSERT_MY_PUZZLE_HASH
@@ -64,7 +62,7 @@
             (sha256 ONE BYC_LOT_AMOUNT)
             (sha256tree (c target_puzzle_hash current_timestamp))
           )
-          bid_crt_amount
+          crt_bid_amount
         )
         (list REMARK  ; this is for the driver to create the reveal
           PROTOCOL_PREFIX
@@ -72,7 +70,7 @@
           BID_TTL
           MIN_BID_INCREASE_BPS
           BYC_LOT_AMOUNT
-          bid_crt_amount
+          crt_bid_amount
           (c target_puzzle_hash current_timestamp)
         )
         ; current_time minus one tx block time should already be in the past

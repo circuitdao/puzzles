@@ -23,7 +23,7 @@
         (= (f (r OPERATIONS)) operation_hash)
         (= (f (r (r OPERATIONS))) operation_hash)
       )
-      1
+      ONE
       (x)
     )
   )
