@@ -75,7 +75,12 @@
       auction_ttl
       (if AUCTION_STATE
         (f (r (r (r (r (r (r (r AUCTION_STATE)))))))) ; byc_to_treasury_balance
-        (- total_fees initiator_incentive_balance)
+        ; total_fees < initiator incentive should never happen if governance sets Statutes correctly,
+        ;  but just in case we're handling this case regardless by ensuring that byc_to_treasury can never be negative
+        (if (> initiator_incentive_balance total_fees)
+          0
+          (- total_fees initiator_incentive_balance)
+        )
       )
       (if AUCTION_STATE
         (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_melt_balance
