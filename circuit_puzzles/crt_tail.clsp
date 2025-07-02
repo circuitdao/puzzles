@@ -2,8 +2,8 @@
 ; CRT token is used for governance voting and can be used to bid in surplus auctions.
 ; CRT tokens are minted at protocol launch, by announcer registry and recharge auctions.
 ; CRT tokens are melted in surplus auctions.
-(mod (RUN_TAIL_MOD_HASH
-      STATUTES_STRUCT
+(mod (RUN_TAIL_MOD_HASH ; fixed
+      STATUTES_STRUCT ; immutable
       Truths
       parent_is_cat
       lineage_proof

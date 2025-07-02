@@ -5,6 +5,7 @@
 (mod (
     CAT_MOD_HASH
     RUN_TAIL_MOD_HASH
+    CRT_TAIL_MOD_HASH
     TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     lineage_proof input_conditions
@@ -12,8 +13,6 @@
       current_timestamp
       treasury_coins
       funding_coin_info
-      target_puzzle_hash
-      crt_tail_hash
     )
   )
 
@@ -24,6 +23,10 @@
   (include recharge_auction.clib)
 
   (assign-lambda
+    crt_tail_hash (curry_hashes
+      CRT_TAIL_MOD_HASH
+      (sha256tree STATUTES_STRUCT)
+    )
     bid_ttl (f (r (r AUCTION_PARAMS)))
     ((winning_byc_bid_amount . winning_crt_bid_amount) target_puzzle_hash timestamp) LAST_BID
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
