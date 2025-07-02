@@ -40,7 +40,7 @@
         assert
           (any
             (= input_toggle_activation 0)
-            (all (= input_toggle_activation 1) APPROVED) ; cannot approve self
+            (all (= input_toggle_activation ONE) APPROVED) ; cannot approve self
           )
           ; input_toggle_activation is passed in solution
           (if
@@ -55,9 +55,9 @@
               (c 0 0)
               (if (= COOLDOWN_START 0)
                 ; cooldown not set yet, setting cooldown start timestamp
-                (c 1 current_timestamp)
+                (c ONE current_timestamp)
                 ; we're in cooldown period but it's not over yet, keep the current state
-                (c 1 COOLDOWN_START)
+                (c ONE COOLDOWN_START)
               )
             )
             ; input toggle activation is
@@ -91,10 +91,12 @@
       (assert
         ; must be owner
         inner_puzzle_hash
-        ; must be higher than the minimum deposit statute for announcer to have stake in announcing
-        (> deposit (- new_min_deposit 1))
-        ; must be lower or equal than the maximum delay statute to enforce timely announcements
-        (> (+ max_delay 1) new_delay)
+        ; new deposit must be no less than new min deposit
+        (> deposit (- new_min_deposit ONE))
+        ; new delay must be no greater than the maximum delay statute to enforce timely announcements
+        (> (+ max_delay ONE) new_delay)
+        ; new delay must not be negative
+        (> new_delay MINUS_ONE)
         (li
           ; assert passed variable against statutes singleton announcements
           (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PRICE_TTL max_delay)
@@ -107,9 +109,9 @@
           ; we explicitly allow new MIN_DEPOSIT > Statute min deposit so that announcers can increase their MIN_DEPOSIT in advance of the Statute increasing
           (if approved
             (assert
-              (> new_min_deposit (- min_deposit 1))
+              (> new_min_deposit (- min_deposit ONE))
               (c
-                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit) 
+                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
                 operation_conditions
               )
             )
