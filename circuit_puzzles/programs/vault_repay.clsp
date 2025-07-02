@@ -85,6 +85,7 @@
       (> sf_transfer_amount MINUS_ONE) ; cannot transfer a negative amount
       (> repay_amount (- sf_transfer_amount ONE)) ; SF transfer amount is part of repay amount
       (> accrued_sf (- sf_transfer_amount ONE)) ; cannot transfer more than accrued SFs
+      (> new_principal MINUS_ONE) ; cannot repay more principal than PRINCIPAL (ie must choose sf_transfer_amount sufficiently large)
       ; either we're above min debt or we're at zero debt, to avoid dusting attacks and keep vault liquidation costs at healthy levels
       (any (= new_undiscounted_principal 0) (> new_undiscounted_principal minimum_debt_amount))
       (any (= sf_transfer_amount 0) (> sf_transfer_amount min_treasury_delta)) ; if there is a deposit to treasury, it must exceed required min
