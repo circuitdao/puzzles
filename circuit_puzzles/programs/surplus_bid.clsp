@@ -25,6 +25,7 @@
   (assign
     (last_target_puzzle_hash . last_bid_timestamp) (if LAST_BID LAST_BID (c 0 0))
     (assert
+      (size_b32 target_puzzle_hash) ; must be a puzzle hash
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> crt_bid_amount 0)) (> crt_bid_amount my_amount))
       ; TTL for bid hasn't expired yet

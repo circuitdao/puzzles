@@ -67,7 +67,10 @@
       start_price
       step_price_decrease_factor
       step_time_interval
-      initiator_puzzle_hash
+      (assert
+        (size_b32 initiator_puzzle_hash) ; must be a puzzle hash
+        initiator_puzzle_hash
+      )
       (if AUCTION_STATE
         (f (r (r (r (r (r AUCTION_STATE)))))) ; initiator_incentive_balance
         initiator_incentive_balance

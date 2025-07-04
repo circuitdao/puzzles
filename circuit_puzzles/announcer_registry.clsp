@@ -50,26 +50,29 @@
       (assign
         (target_puzzle_hash announcer_curried_args_hash) args
         announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH announcer_curried_args_hash)
-        (list
-          (c target_puzzle_hash ANNOUNCER_REGISTRY)
-          CLAIM_COUNTER
-          REWARDS_CLAIMABLE_AT
+        (assert
+          (size_b32 target_puzzle_hash) ; must be a puzzle hash
           (list
-            ; assert approval from announcer coin with correct puzzle hash
-            (list RECEIVE_MESSAGE 0x12
-              (concat
-                PROTOCOL_PREFIX
-                (sha256tree
-                  (c STATUTES_STRUCT ; must be on same protocol
-                    (c target_puzzle_hash
-                      (c ONE ; must be an approved announcer
-                        CLAIM_COUNTER
+            (c target_puzzle_hash ANNOUNCER_REGISTRY)
+            CLAIM_COUNTER
+            REWARDS_CLAIMABLE_AT
+            (list
+              ; assert approval from announcer coin with correct puzzle hash
+              (list RECEIVE_MESSAGE 0x12
+                (concat
+                  PROTOCOL_PREFIX
+                  (sha256tree
+                    (c STATUTES_STRUCT ; must be on same protocol
+                      (c target_puzzle_hash
+                        (c ONE ; must be an approved announcer
+                          CLAIM_COUNTER
+                        )
                       )
                     )
                   )
                 )
+                announcer_puzzle_hash
               )
-              announcer_puzzle_hash
             )
           )
         )
