@@ -3,7 +3,7 @@
       OPERATIONS
       MOD_HASH
       ; indicates whether previous spend was an announce (1) or not (()). Set to 2 in eve state
-      PREV_ANNOUNCE 
+      PREV_ANNOUNCE
       STATUTES ; -> ((value proposal_threshold veto_period implementation_delay maximum_delta))
       PRICE_INFO ; Statute price info. -> (price . last_updated)
       ; cumulative stability fee discount factor as of last Statutes price info update
@@ -15,6 +15,7 @@
 
       ; solution
       governance_curried_args_hash ; as required by tree_hash_of_apply
+      .
       mutation
      )
 
@@ -87,7 +88,9 @@
         )
         ; announce
         (assert
-          (= governance_curried_args_hash ()) ; ensure unique solution when announcing to facilitate identical spend aggregation
+          ; ensure unique solution when announcing to facilitate identical spend aggregation
+          (= governance_curried_args_hash ())
+          (= mutation ())
           (list
             ; set PREV_ANNOUNCE to 1
             ONE
