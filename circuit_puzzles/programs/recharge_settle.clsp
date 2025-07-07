@@ -42,7 +42,7 @@
     )
     (assert
       ; must have something to deposit
-      (> treasury_deposit_per_coin 0)
+      (> treasury_deposit_per_coin MINUS_ONE)
       (> treasury_coins_count 0)
       (> winning_byc_bid_amount 0)
       (> winning_crt_bid_amount 0)
