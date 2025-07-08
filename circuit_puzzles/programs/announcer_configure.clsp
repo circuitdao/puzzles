@@ -127,9 +127,9 @@
     ; exit announcer layer
     (assert
       (not APPROVED) ; can't exit approved announcer
-      ; melting into normal XCH coin
+      ; melting, vacuum coin should use this announcement to ensure integrity
       (list
-        (list CREATE_COIN INNER_PUZZLE_HASH DEPOSIT (list INNER_PUZZLE_HASH))
+        (list CREATE_COIN_ANNOUNCEMENT 'X')
       )
     )
   )

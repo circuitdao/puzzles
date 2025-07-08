@@ -24,7 +24,13 @@
     )
     ((new_puzzle_hash deposit (operation . args)) input_conditions) (filter-and-extract-unique-create-coin raw_conditions () ())
     (assert
-      (any inner_puzzle_hash (all (not inner_puzzle_hash) (= new_puzzle_hash INNER_PUZZLE_HASH)))
+      (any
+        inner_puzzle_hash
+        (all
+          (not inner_puzzle_hash)
+          (= new_puzzle_hash INNER_PUZZLE_HASH)
+        )
+      )
       (contains OPERATIONS (sha256tree operation))
       (c
         ; ensuring that parent was indeed spent with our puzzle and pubkey
