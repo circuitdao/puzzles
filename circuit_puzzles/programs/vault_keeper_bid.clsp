@@ -139,7 +139,7 @@
     (assert
       (> leftover_debt -1)
       (> byc_bid_amount 0)
-      (any  ; either bid amount is higher than min amount or is equal to the debt or there is no collateral is left
+      (any  ; either bid amount is higher than min amount or is equal to the debt or the bid consumes all remaining collateral
         (> byc_bid_amount minimum_bid_amount)
         (all
           (> minimum_bid_amount (- debt ONE))

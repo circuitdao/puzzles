@@ -16,7 +16,8 @@
         starting_price_factor
         initiator_puzzle_hash
         auction_ttl
-        minimum_bid_amount
+        minimum_bid_amount_flat
+        minimum_bid_amount_bps
       )
     )
   )
@@ -62,6 +63,33 @@
     )
     ; start and restart
     start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
+    byc_to_treasury_balance (if (> initiator_incentive_balance total_fees)
+      0
+      (- total_fees initiator_incentive_balance)
+    )
+    new_initiator_incentive_balance (if AUCTION_STATE
+      (f (r (r (r (r (r AUCTION_STATE)))))) ; initiator_incentive_balance
+      initiator_incentive_balance
+    )
+    new_byc_to_treasury_balance (if AUCTION_STATE
+      (f (r (r (r (r (r (r (r AUCTION_STATE)))))))) ; byc_to_treasury_balance
+      ; total_fees < initiator incentive should never happen if governance sets Statutes correctly,
+      ;  but just in case we're handling this case regardless by ensuring that byc_to_treasury can never be negative
+      byc_to_treasury_balance
+    )
+    new_byc_to_melt_balance (if AUCTION_STATE
+      (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_melt_balance
+      PRINCIPAL
+    )
+    debt (+ new_initiator_incentive_balance
+      new_byc_to_treasury_balance
+      new_byc_to_melt_balance
+    )
+    minimum_bid_amount_relative (/ (* debt minimum_bid_amount_bps) PRECISION_BPS)
+    minimum_bid_amount (if (> minimum_bid_amount_relative minimum_bid_amount_flat)
+      minimum_bid_amount_relative
+      minimum_bid_amount_flat
+    )
     auction_state (list
       current_time
       start_price
@@ -71,24 +99,10 @@
         (size_b32 initiator_puzzle_hash) ; must be a puzzle hash
         initiator_puzzle_hash
       )
-      (if AUCTION_STATE
-        (f (r (r (r (r (r AUCTION_STATE)))))) ; initiator_incentive_balance
-        initiator_incentive_balance
-      )
+      new_initiator_incentive_balance
       auction_ttl
-      (if AUCTION_STATE
-        (f (r (r (r (r (r (r (r AUCTION_STATE)))))))) ; byc_to_treasury_balance
-        ; total_fees < initiator incentive should never happen if governance sets Statutes correctly,
-        ;  but just in case we're handling this case regardless by ensuring that byc_to_treasury can never be negative
-        (if (> initiator_incentive_balance total_fees)
-          0
-          (- total_fees initiator_incentive_balance)
-        )
-      )
-      (if AUCTION_STATE
-        (f (r (r (r (r (r (r (r (r AUCTION_STATE))))))))) ; byc_to_melt_balance
-        PRINCIPAL
-      )
+      new_byc_to_treasury_balance
+      new_byc_to_melt_balance
       minimum_bid_amount
     )
     conditions (list
@@ -99,7 +113,8 @@
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_ttl)
-      (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MINIMUM_BID minimum_bid_amount)
+      (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MINIMUM_BID_FLAT minimum_bid_amount_flat)
+      (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MINIMUM_BID_BPS minimum_bid_amount_bps)
     )
     (list
       (list
