@@ -3,6 +3,7 @@
 ; CRT tokens are minted at protocol launch, by announcer registry and recharge auctions.
 ; CRT tokens are melted in surplus auctions.
 (mod (RUN_TAIL_MOD_HASH ; fixed
+      GENESIS_COIN_ID ; immutable
       STATUTES_STRUCT ; immutable
       Truths
       parent_is_cat
@@ -132,7 +133,7 @@
     (assert (= delta 0)
       (list ; issuance at launch of protocol
         ; receive approval from statutes launcher
-        (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
+        (list ASSERT_MY_PARENT_ID GENESIS_COIN_ID)
       )
     )
   )
