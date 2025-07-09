@@ -1,7 +1,12 @@
 (mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL ATOM_ANNOUNCER_MOD_HASH
-      CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
-      MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY CLAIM_COUNTER REWARDS_CLAIMABLE_AT
-      lineage_proof mint_or_register . args)
+       CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
+       MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY CLAIM_COUNTER REWARDS_CLAIMABLE_AT
+       (@ solution (
+         lineage_proof
+         reward_or_register
+         args
+       ))
+     )
 
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
@@ -11,7 +16,7 @@
   (include statutes_utils.clib)
 
   (defconst REGISTER_OPCODE "r")
-  (defconst MINT_OPCODE "m")
+  (defconst REWARD_OPCODE "m")
 
   ; generates notarized payments to target puzzle hashes as required by settlement payments puzzle
   (defun generate-offer-assert ((@ announcer_registry (target_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
@@ -45,7 +50,7 @@
       new_claim_counter
       new_rewards_claimable_at
       operation_conditions
-    ) (if (= mint_or_register REGISTER_OPCODE)
+    ) (if (= reward_or_register REGISTER_OPCODE)
       ; ### register ###
       (assign
         (target_puzzle_hash announcer_curried_args_hash) args
@@ -82,8 +87,8 @@
         claim_interval (f (r args))
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-        (if (= mint_or_register MINT_OPCODE)
-          ; ### claim rewards ###
+        (if (= reward_or_register REWARD_OPCODE)
+          ; ### distribute rewards ###
           (assign
             (
               _ ; statutes_inner_puzzle_hash
@@ -109,7 +114,7 @@
               (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
               (> claim_interval MIN_CLAIM_INTERVAL)
               (> announcers_count 0)
-              ; we can't mint more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
+              ; we can't issue more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
               (> MAX_MINT_AMOUNT crt_credits_per_interval)
               (list
                 () ; clear the registry when claiming rewards
@@ -142,7 +147,7 @@
                             ANNOUNCER_REGISTRY
                             (/ crt_credits_per_interval announcers_count)
                             (if (> change_amount 0)
-                              ; we reward the mint spender with remainder if any
+                              ; we reward the reward spender with remainder if any
                               (list
                                 (list
                                   change_receiver_hash
@@ -180,54 +185,50 @@
       )
     )
     ;### MAIN EXPRESSION ###
-    (c
+    (li
+      (list SEND_MESSAGE 0x38 ; coin ID to none
+        (sha256tree solution)
+      ) ; secure solution
       (list ASSERT_MY_AMOUNT 0)
       ; prove lineage
-      (c
-        (if (l lineage_proof)
-          (list ASSERT_MY_PARENT_ID (
-            coinid
-              (f lineage_proof)
-              (tree_hash_of_apply MOD_HASH (r lineage_proof))
-              0
-            )
+      (if (l lineage_proof)
+        (list ASSERT_MY_PARENT_ID (
+          coinid
+            (f lineage_proof)
+            (tree_hash_of_apply MOD_HASH (r lineage_proof))
+            0
           )
-          ; this is a launch
-          ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
-          (list RECEIVE_MESSAGE 0x04 lineage_proof)
         )
-        (c
-          (list ASSERT_MY_PUZZLE_HASH
-            (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256tree ANNOUNCER_REGISTRY)
-              (sha256 ONE CLAIM_COUNTER)
-              (sha256 ONE REWARDS_CLAIMABLE_AT)
-            )
-          )
-          (c
-            (list CREATE_COIN
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256tree announcer_registry)
-                (sha256 ONE new_claim_counter)
-                (sha256 ONE new_rewards_claimable_at)
-              )
-              0 ; registry coin amount is always zero
-            )
-            (c
-              (list REMARK PROTOCOL_PREFIX
-                 announcer_registry
-                 new_claim_counter
-                 new_rewards_claimable_at
-              )
-              operation_conditions
-            )
-          )
+        ; this is a launch
+        ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
+        (list RECEIVE_MESSAGE 0x04 lineage_proof)
+      )
+      (list ASSERT_MY_PUZZLE_HASH
+        (curry_hashes MOD_HASH
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256tree ANNOUNCER_REGISTRY)
+          (sha256 ONE CLAIM_COUNTER)
+          (sha256 ONE REWARDS_CLAIMABLE_AT)
         )
       )
+      (list CREATE_COIN
+        (curry_hashes MOD_HASH
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256tree announcer_registry)
+          (sha256 ONE new_claim_counter)
+          (sha256 ONE new_rewards_claimable_at)
+        )
+        0 ; registry coin amount is always zero
+      )
+      (list REMARK PROTOCOL_PREFIX
+         announcer_registry
+         new_claim_counter
+         new_rewards_claimable_at
+      )
+      &rest
+      operation_conditions
     )
   )
 

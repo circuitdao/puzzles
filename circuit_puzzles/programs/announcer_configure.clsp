@@ -128,8 +128,9 @@
     (assert
       (not APPROVED) ; can't exit approved announcer
       ; melting into normal XCH coin
-      (list
+      (c
         (list CREATE_COIN INNER_PUZZLE_HASH DEPOSIT (list INNER_PUZZLE_HASH))
+        input_conditions
       )
     )
   )
