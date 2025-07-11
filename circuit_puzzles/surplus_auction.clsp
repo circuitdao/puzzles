@@ -6,8 +6,13 @@
       MIN_BID_INCREASE_BPS
       BYC_LOT_AMOUNT ; amount of BYC in a lot to win
       LAST_BID ; holds bid data -> (target_puzzle_hash . timestamp). amount of CRT bid is surplus auction coin amount
-      lineage_proof ; -> (parent_id launcher_id amount last_bid)
-      operation input_conditions . op_args)
+      (@ solution (
+        lineage_proof ; -> (parent_id launcher_id amount last_bid)
+        operation
+        input_conditions
+        op_args ;. op_args
+      ))
+    )
 
   (include *standard-cl-23.1*)
   (include prefixes.clib)
@@ -34,11 +39,16 @@
     (assert
       (is-valid-operation (sha256tree operation) OPERATIONS)
       (fail-on-protocol-condition-or-create-coin input_conditions)
-      (a
-        operation
-        (list
-          (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-          lineage_proof input_conditions op_args
+      (c
+        (list SEND_MESSAGE 0x38 ; coin ID to none
+          (sha256tree solution)
+        ) ; secure solution
+        (a
+          operation
+          (list
+            (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+            lineage_proof input_conditions op_args
+          )
         )
       )
     )
