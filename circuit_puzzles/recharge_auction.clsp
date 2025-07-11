@@ -1,6 +1,12 @@
 (mod (OPERATIONS BYC_TAIL_MOD_HASH
       MOD_HASH STATUTES_STRUCT LAUNCHER_ID AUCTION_PARAMS LAST_BID
-      lineage_proof operation input_conditions . op_args)
+      (@ solution (
+        lineage_proof
+        operation
+        input_conditions
+        op_args ;. op_args
+      ))
+    )
 
   (include *standard-cl-23.1*)
   (include prefixes.clib)
@@ -15,11 +21,16 @@
     (assert
       (contains OPERATIONS (sha256tree operation))
       (fail-on-protocol-condition-or-create-coin input_conditions)
-      (a
-        operation
-        (list
-          (list MOD_HASH STATUTES_STRUCT byc_tail_hash LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-          lineage_proof input_conditions op_args
+      (c
+        (list SEND_MESSAGE 0x38 ; coin ID to none
+          (sha256tree solution)
+        ) ; secure solution
+        (a
+          operation
+          (list
+            (list MOD_HASH STATUTES_STRUCT byc_tail_hash LAUNCHER_ID AUCTION_PARAMS LAST_BID)
+            lineage_proof input_conditions op_args
+          )
         )
       )
     )
