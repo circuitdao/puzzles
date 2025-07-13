@@ -129,7 +129,7 @@
         (not APPROVED) ; can't exit approved announcer
         ; melting, vacuum coin should use this announcement to ensure integrity
         (list
-          (list CREATE_COIN_ANNOUNCEMENT 'X')
+          (list CREATE_COIN_ANNOUNCEMENT 'x')
         )
       )
     )
