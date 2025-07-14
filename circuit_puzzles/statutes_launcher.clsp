@@ -1,4 +1,4 @@
-(mod (singleton_full_puzzle_hash amount crt_genesis_coin_name key_value_list)
+(mod (singleton_full_puzzle_hash amount crt_genesis_coin_name oracle_coin_name key_value_list)
   (include condition_codes.clib)
 
   ; takes a lisp tree and returns the hash of it
@@ -16,8 +16,12 @@
   (list
     (list CREATE_COIN singleton_full_puzzle_hash amount)
     (list CREATE_COIN_ANNOUNCEMENT (sha256tree
-      (list singleton_full_puzzle_hash amount crt_genesis_coin_name key_value_list))
+      (list singleton_full_puzzle_hash amount crt_genesis_coin_name oracle_coin_name key_value_list))
     )
     (list SEND_MESSAGE 0x3c '*' crt_genesis_coin_name)
+    (if oracle_coin_name
+      (list SEND_MESSAGE 0x3f '*' oracle_coin_name)
+      (list REMARK)
+    )
   )
 )

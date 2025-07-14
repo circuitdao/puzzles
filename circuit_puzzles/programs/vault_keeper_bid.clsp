@@ -139,7 +139,7 @@
     (assert
       (> leftover_debt -1)
       (> byc_bid_amount 0)
-      (any  ; either bid amount is higher than min amount or is equal to the debt or there is no collateral is left
+      (any  ; either bid amount is higher than min amount or is equal to the debt or the bid consumes all remaining collateral
         (> byc_bid_amount minimum_bid_amount)
         (all
           (> minimum_bid_amount (- debt ONE))
@@ -147,12 +147,10 @@
         )
         (= leftover_collateral 0)
       )
+      ; sanity check for time
       (> current_timestamp auction_start_time)
       ; check that we haven't passed auction TTL
-      ; is previous auction still running by checking if auction_start_time hasn't timed out
       (> auction_ttl (- current_timestamp auction_start_time))
-      ; sanity check for time
-      (> current_timestamp (- auction_start_time 1))
       ; check that there is collateral to bid for
       (> COLLATERAL 0)
       (> leftover_collateral -1)
@@ -162,7 +160,7 @@
         (= byc_to_treasury 0)
         (= leftover_collateral 0)
       )
-      (list 
+      (list
         (list
           leftover_collateral
           0 ; leftover_principal

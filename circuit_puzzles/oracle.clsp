@@ -20,6 +20,7 @@
         oracle_program_args
         (= (sha256tree (f oracle_program_args)) MUTATION_PROGRAM_HASH)
       )
+    ; mutate oracle
     (a
       (f oracle_program_args)
       (list
@@ -32,14 +33,21 @@
     )
     ; no updates, just assert and announce
     ; recreate yourself to conserve updates so far
-    (verify-announcement-asserts
+    (verify-announcement-asserts  ; TODO: remove announcement potentially
       input_announcement_asserts
       (assign
-        (current_timestamp price_delay) announce_args
+        (current_timestamp price_delay statutes_inner_puzzle_hash) announce_args
         cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
         (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
         (oldest_price . oldest_updated) (if last_matured_price_info last_matured_price_info (c () ()))
         (list
+          ; can only announce the price if we're updating statutes
+          (if statutes_inner_puzzle_hash
+            ; normal price update for statutes
+            (list RECEIVE_MESSAGE 0x12 '*' (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash))
+            ; launch
+            (list RECEIVE_MESSAGE 0x3f '*' (f (r STATUTES_STRUCT)))
+          )
           (list CREATE_COIN
             (curry_hashes MOD_HASH
               (sha256 ONE MOD_HASH)
