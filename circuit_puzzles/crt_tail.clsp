@@ -132,7 +132,7 @@
     (assert (= delta 0)
       (list ; issuance at launch of protocol
         ; receive approval from statutes launcher
-        (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
+        (list RECEIVE_MESSAGE 0x3c '*' (f (r STATUTES_STRUCT)))
       )
     )
   )

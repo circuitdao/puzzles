@@ -21,116 +21,116 @@
   (include statutes_utils.clib)
   (include announcer.clib)
 
-  (if args
-    ; configure the announcer
-    (assign
-      (
-        current_timestamp
-        statutes_inner_puzzle_hash
-        input_toggle_activation
-        deactivation_cooldown_interval
-        min_deposit
-        new_value_ttl
-        max_value_ttl
-        new_value
-        new_min_deposit
-      ) args
-      statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-      (approved . cooldown_start) (
-        assert
-          (any
-            (= input_toggle_activation 0)
-            (all (= input_toggle_activation ONE) APPROVED) ; cannot approve self
-          )
-          ; input_toggle_activation is passed in solution
-          (if
-            (all (= input_toggle_activation 0) APPROVED)
-            ; potentially deactivating announcer
-            (if
-              (all
-                (> COOLDOWN_START 0)
-                (> (- current_timestamp COOLDOWN_START) deactivation_cooldown_interval)
-              )
-              ; cooldown period was set, and it's over, deactivating
-              (c 0 0)
-              (if (= COOLDOWN_START 0)
-                ; cooldown not set yet, setting cooldown start timestamp
-                (c ONE current_timestamp)
-                ; we're in cooldown period but it's not over yet, keep the current state
-                (c ONE COOLDOWN_START)
-              )
-            )
-            ; input toggle activation is
-            ;   1 and APPROVED; or
-            ;   0 and not APPROVED
-            (if (= COOLDOWN_START 0) ; always true if 0 and not APPROVED
-              ; cooldown is not set, just keep the current state
-              (c APPROVED COOLDOWN_START)
-              ; toggle is 1, disable the cooldown and keep the current state
-              (c APPROVED 0)
-            )
-          )
-        )
-      operation_conditions (
-        ; this generates a CREATE_COIN condition with valid parameters
-        recreate-myself-condition MOD_HASH
-          STATUTES_STRUCT
-          LAUNCHER_ID
-          (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
-          approved
-          deposit
+  (assert
+    inner_puzzle_hash ; must be owner
+    (if args
+      ; configure the announcer
+      (assign
+        (
+          current_timestamp
+          statutes_inner_puzzle_hash
+          input_toggle_activation
+          deactivation_cooldown_interval
+          min_deposit
           new_value_ttl
-          (if new_value new_value VALUE)
+          max_value_ttl
+          new_value
           new_min_deposit
-          CLAIM_COUNTER
-          cooldown_start
-          PENALIZABLE_AT
-          (+ current_timestamp new_value_ttl)
-          input_conditions
-        )
-      (assert
-        ; must be owner
-        inner_puzzle_hash
-        ; new deposit must be no less than new min deposit
-        (> deposit (- new_min_deposit ONE))
-        ; new value TTL must be no greater than the maximum value TTL statute to enforce timely announcements
-        (> (+ max_value_ttl ONE) new_value_ttl)
-        ; new value TTL must not be negative
-        (> new_value_ttl MINUS_ONE)
-        (li
-          ; assert passed variable against statutes singleton announcements
-          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
-          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
-          ; assert current_timestamp is within the latest block time
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-          &rest
-          ; only enforce new MIN_DEPOSIT >= Statute min deposit if approved. this allows announcer to be run with no deposit when not approved.
-          ; we explicitly allow new MIN_DEPOSIT > Statute min deposit so that announcers can increase their MIN_DEPOSIT in advance of the Statute increasing
-          (if approved
-            (assert
-              (> new_min_deposit (- min_deposit ONE))
-              (c
-                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
+        ) args
+        statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+        (approved . cooldown_start) (
+          assert
+            (any
+              (= input_toggle_activation 0)
+              (all (= input_toggle_activation ONE) APPROVED) ; cannot approve self
+            )
+            ; input_toggle_activation is passed in solution
+            (if
+              (all (= input_toggle_activation 0) APPROVED)
+              ; potentially deactivating announcer
+              (if
+                (all
+                  (> COOLDOWN_START 0)
+                  (> (- current_timestamp COOLDOWN_START) deactivation_cooldown_interval)
+                )
+                ; cooldown period was set, and it's over, deactivating
+                (c 0 0)
+                (if (= COOLDOWN_START 0)
+                  ; cooldown not set yet, setting cooldown start timestamp
+                  (c ONE current_timestamp)
+                  ; we're in cooldown period but it's not over yet, keep the current state
+                  (c ONE COOLDOWN_START)
+                )
+              )
+              ; input toggle activation is
+              ;   1 and APPROVED; or
+              ;   0 and not APPROVED
+              (if (= COOLDOWN_START 0) ; always true if 0 and not APPROVED
+                ; cooldown is not set, just keep the current state
+                (c APPROVED COOLDOWN_START)
+                ; toggle is 1, disable the cooldown and keep the current state
+                (c APPROVED 0)
+              )
+            )
+          )
+        operation_conditions (
+          ; this generates a CREATE_COIN condition with valid parameters
+          recreate-myself-condition MOD_HASH
+            STATUTES_STRUCT
+            LAUNCHER_ID
+            (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
+            approved
+            deposit
+            new_value_ttl
+            (if new_value new_value VALUE)
+            new_min_deposit
+            CLAIM_COUNTER
+            cooldown_start
+            PENALIZABLE_AT
+            (+ current_timestamp new_value_ttl)
+            input_conditions
+          )
+        (assert
+          ; new deposit must be no less than new min deposit
+          (> deposit (- new_min_deposit ONE))
+          ; new value TTL must be no greater than the maximum value TTL statute to enforce timely announcements
+          (> (+ max_value_ttl ONE) new_value_ttl)
+          ; new value TTL must not be negative
+          (> new_value_ttl MINUS_ONE)
+          (li
+            ; assert passed variable against statutes singleton announcements
+            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
+            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_COOLDOWN_INTERVAL deactivation_cooldown_interval)
+            ; assert current_timestamp is within the latest block time
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+            &rest
+            ; only enforce new MIN_DEPOSIT >= Statute min deposit if approved. this allows announcer to be run with no deposit when not approved.
+            ; we explicitly allow new MIN_DEPOSIT > Statute min deposit so that announcers can increase their MIN_DEPOSIT in advance of the Statute increasing
+            (if approved
+              (assert
+                (> new_min_deposit (- min_deposit ONE))
+                (c
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
+                  operation_conditions
+                )
+              )
+              (assert
+                ; if not approved, we only require that min deposit be non-negative
+                (> new_min_deposit MINUS_ONE)
                 operation_conditions
               )
-            )
-            (assert
-              ; if not approved, we only require that min deposit be non-negative
-              (> new_min_deposit MINUS_ONE)
-              operation_conditions
             )
           )
         )
       )
-    )
-    ; exit announcer layer
-    (assert
-      (not APPROVED) ; can't exit approved announcer
-      ; melting into normal XCH coin
-      (c
-        (list CREATE_COIN INNER_PUZZLE_HASH DEPOSIT (list INNER_PUZZLE_HASH))
-        input_conditions
+      ; exit announcer layer
+      (assert
+        (not APPROVED) ; can't exit approved announcer
+        ; melting, vacuum coin should use this announcement to ensure integrity
+        (list
+          (list CREATE_COIN_ANNOUNCEMENT 'x')
+        )
       )
     )
   )

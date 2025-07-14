@@ -16,6 +16,7 @@
     (f (f (r (r (r (r (r (r (r statutes)))))))))
   )
 
+
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
   (list
@@ -55,25 +56,38 @@
     (assert
       ; new price should be fresher than current one
       (> last_updated (r PRICE_INFO))
-      ; confirm oracle price info to update statutes price info
-      (list
-        ; no need to check current_timestamp as this is already done by oracle
-        (list ASSERT_PUZZLE_ANNOUNCEMENT
-          (sha256
-            ; generate oracle singleton puzzle hash
-            (curry_hashes
-              SINGLETON_MOD_HASH
+      (assign-inline
+        ; generate oracle singleton puzzle hash
+        oracle_puzzle_hash (curry_hashes
+          SINGLETON_MOD_HASH
+          (sha256tree
+            (c SINGLETON_MOD_HASH
+              (c
+                (f (f STATUTES)) ; -> oracle_launcher_id
+                SINGLETON_LAUNCHER_HASH
+              )
+            )
+          )
+          oracle_inner_puz_hash
+        )
+        ; confirm oracle price info to update statutes price info
+        (list
+          ; allow oracle to announce price
+          (list SEND_MESSAGE 0x12 '*' oracle_puzzle_hash)
+          ; no need to check current_timestamp as this is already done by oracle
+          (list ASSERT_PUZZLE_ANNOUNCEMENT
+            (sha256
+              oracle_puzzle_hash
               (sha256tree
-                (c SINGLETON_MOD_HASH
-                  (c
-                    (f (f STATUTES)) ; -> oracle_launcher_id
-                    SINGLETON_LAUNCHER_HASH
+                (c price
+                  (c last_updated
+                    (c current_timestamp
+                      (price-delay-statute STATUTES)
+                    )
                   )
                 )
               )
-              oracle_inner_puz_hash
             )
-            (sha256tree (c price (c last_updated (c current_timestamp (price-delay-statute STATUTES)))))
           )
         )
       )
