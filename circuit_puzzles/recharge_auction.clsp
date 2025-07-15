@@ -1,11 +1,11 @@
 (mod (OPERATIONS BYC_TAIL_MOD_HASH
       MOD_HASH STATUTES_STRUCT LAUNCHER_ID AUCTION_PARAMS LAST_BID
-      (@ solution (
+      (
         lineage_proof
         operation
         input_conditions
         op_args ;. op_args
-      ))
+      )
     )
 
   (include *standard-cl-23.1*)
@@ -16,14 +16,15 @@
   (include curry.clib)
   (include statutes_utils.clib)
 
-  (assign-inline
+  (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    operation_hash (sha256tree operation)
     (assert
-      (contains OPERATIONS (sha256tree operation))
+      (contains OPERATIONS operation_hash)
       (fail-on-protocol-condition-or-create-coin input_conditions)
       (c
         (list SEND_MESSAGE 0x38 ; coin ID to none
-          (sha256tree solution)
+          (sha256tree (list lineage_proof operation_hash input_conditions op_args))
         ) ; secure solution
         (a
           operation
