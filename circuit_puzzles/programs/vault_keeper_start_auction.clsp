@@ -18,6 +18,7 @@
         auction_ttl
         minimum_bid_amount_flat
         minimum_bid_amount_bps
+        min_price_factor
       )
     )
   )
@@ -63,7 +64,9 @@
     )
     ; start and restart
     start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
-    byc_to_treasury_balance (if (> initiator_incentive_balance total_fees)
+    ; calculate min price for auction algorithm
+    min_price (/ (* start_price min_price_factor) PRECISION_BPS)
+      byc_to_treasury_balance (if (> initiator_incentive_balance total_fees)
       0
       (- total_fees initiator_incentive_balance)
     )
@@ -104,6 +107,7 @@
       new_byc_to_treasury_balance
       new_byc_to_melt_balance
       minimum_bid_amount
+      min_price
     )
     conditions (list
       (list ASSERT_SECONDS_ABSOLUTE (- current_time MAX_TX_BLOCK_TIME))
