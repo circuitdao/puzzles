@@ -9,11 +9,11 @@
   (@ args
     (
       deposit_amount
-      current_timestamp ; NEW
-      price_info ; NEW
-      liquidation_ratio ; NEW
-      statutes_cumulative_stability_fee_df ; NEW
-      current_stability_fee_df ; NEW
+      current_timestamp
+      price_info
+      liquidation_ratio
+      statutes_cumulative_stability_fee_df
+      current_stability_fee_df
     )
   )
  )
@@ -27,7 +27,6 @@
 
  (assign
    new_collateral (+ COLLATERAL deposit_amount)
-   ; NEW START
    cumulative_stability_fee_df (calculate-cumulative-discount-factor
      statutes_cumulative_stability_fee_df
      current_stability_fee_df
@@ -40,10 +39,9 @@
      liquidation_ratio
      (f price_info)
    )
-   ; NEW END
    (assert
      (> deposit_amount 0)
-     (> new_collateral (- min_collateral_amount ONE))  ; NEW. must be at or above liquidation threshold post-deposit
+     (> new_collateral (- min_collateral_amount ONE))
      (list
        (list
          new_collateral
@@ -53,12 +51,12 @@
          DISCOUNTED_PRINCIPAL
        )
        (list
-        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME)) ; NEW
-        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME)) ; NEW
-        (assert-price-info statutes_puzzle_hash price_info) ; NEW
-        (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio) ; NEW
-        (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df) ; NEW
-        (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df) ; NEW
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+        (assert-price-info statutes_puzzle_hash price_info)
+        (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
+        (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
+        (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
        )
      )
    )

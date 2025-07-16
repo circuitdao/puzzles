@@ -17,6 +17,7 @@
         current_timestamp
         current_stability_fee_df
         price_info
+        liquidation_ratio
       )
     )
   )
@@ -38,6 +39,11 @@
       (r price_info)
     )
     undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
+    min_collateral_amount (get-min-collateral-amount
+      undiscounted_principal
+      liquidation_ratio
+      (f price_info)
+    )
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
     new_treasury_amount (+ fees_to_treasury treasury_amount)
@@ -65,13 +71,15 @@
         )
       )
     )
-    (assert
+    (assert_debug
       ; only if there are fees to transfer
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins
       (> fees_to_treasury min_treasury_delta)
       ; only if vault is not in liquidation or bad debt
       (not AUCTION_STATE)
+      ; vault must not be liquidatable
+      (> COLLATERAL (- min_collateral_amount ONE))
       ; issuing coin must have the same as amount we're transferring
       (= (r byc_issuing_coin_info) fees_to_treasury)
       (list
@@ -102,6 +110,7 @@
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
+          (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
         )
       )
     )
