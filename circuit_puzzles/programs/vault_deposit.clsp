@@ -1,29 +1,65 @@
-(mod
-  (
-    (@ VAULT_STATE
-      (
-       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
-       statutes_puzzle_hash
-      )
-    )
-    (@ args
-      (
-        deposit_amount
-      )
+(mod (
+  (@ VAULT_STATE
+    (
+      COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
+      STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+      statutes_puzzle_hash
     )
   )
-  (if (> deposit_amount 0)
-    (list
-      (list
-        (+ deposit_amount COLLATERAL)
-        PRINCIPAL
-        AUCTION_STATE
-        INNER_PUZZLE_HASH
-        DISCOUNTED_PRINCIPAL)
-      ; nothing else to assert here, just create a coin with new amount
-      (list )
+  (@ args
+    (
+      deposit_amount
+      current_timestamp
+      price_info
+      liquidation_ratio
+      statutes_cumulative_stability_fee_df
+      current_stability_fee_df
     )
-    (x)
   )
+ )
+
+ (include *standard-cl-23.1*)
+ (include condition_codes.clib)
+ (include utils.clib)
+ (include vault.clib)
+ (include statutes_utils.clib)
+
+
+ (assign
+   new_collateral (+ COLLATERAL deposit_amount)
+   cumulative_stability_fee_df (calculate-cumulative-discount-factor
+     statutes_cumulative_stability_fee_df
+     current_stability_fee_df
+     (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
+     (r price_info)
+   )
+   undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
+   min_collateral_amount (get-min-collateral-amount
+     undiscounted_principal
+     liquidation_ratio
+     (f price_info)
+   )
+   (assert
+     (> deposit_amount 0)
+     (> new_collateral (- min_collateral_amount ONE))
+     (list
+       (list
+         new_collateral
+         PRINCIPAL
+         AUCTION_STATE
+         INNER_PUZZLE_HASH
+         DISCOUNTED_PRINCIPAL
+       )
+       (list
+        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+        (assert-price-info statutes_puzzle_hash price_info)
+        (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
+        (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
+        (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
+       )
+     )
+   )
+ )
+
 )

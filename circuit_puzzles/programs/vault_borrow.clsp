@@ -10,11 +10,14 @@
     )
     (@ args
       (
-         borrow_amount ; amount of byc to be issued to borrower
-         minimum_debt_amount liquidation_ratio price_info
-         byc_issuing_coin_info  ; -> (parent_id amount inner_puzzle_hash)
-         statutes_cumulative_stability_fee_df
-         current_stability_fee_df current_timestamp
+        borrow_amount ; amount of byc to be issued to borrower
+        minimum_debt_amount
+        liquidation_ratio
+        price_info
+        byc_issuing_coin_info  ; -> (parent_id amount inner_puzzle_hash)
+        statutes_cumulative_stability_fee_df
+        current_stability_fee_df
+        current_timestamp
       )
     )
   )

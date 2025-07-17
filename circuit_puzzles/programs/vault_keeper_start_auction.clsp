@@ -9,7 +9,7 @@
     (@ args
       (
         start_only ; -> () or (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
-        current_time
+        current_timestamp
         step_time_interval
         step_price_decrease_factor
         price_info
@@ -46,7 +46,7 @@
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
       ; don't allow anyone to exploit our processing interval buffer to get tx into mempool and borrow from the future
-      (+ current_time (* 3 MAX_TX_BLOCK_TIME))
+      (+ current_timestamp (* 3 MAX_TX_BLOCK_TIME))
       (r price_info)
     )
     undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
@@ -94,7 +94,7 @@
       minimum_bid_amount_flat
     )
     auction_state (list
-      current_time
+      current_timestamp
       start_price
       step_price_decrease_factor
       step_time_interval
@@ -110,8 +110,8 @@
       min_price
     )
     conditions (list
-      (list ASSERT_SECONDS_ABSOLUTE (- current_time MAX_TX_BLOCK_TIME))
-      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_time MAX_TX_BLOCK_TIME))
+      (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+      (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
       (assert-price-info statutes_puzzle_hash price_info)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS minimum_price_factor_bps)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR starting_price_factor)
@@ -148,7 +148,7 @@
         ; restart auction
         (assert
           ; auction must have timed out
-          (> (- current_time (f AUCTION_STATE)) auction_ttl)
+          (> (- current_timestamp (f AUCTION_STATE)) auction_ttl)
           ; there should be collateral to auction off, o/w it's bad debt
           (> COLLATERAL 0)
           conditions
