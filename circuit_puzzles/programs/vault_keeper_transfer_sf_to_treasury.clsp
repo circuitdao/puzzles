@@ -71,7 +71,7 @@
         )
       )
     )
-    (assert_debug
+    (assert
       ; only if there are fees to transfer
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins
