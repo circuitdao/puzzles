@@ -16,7 +16,6 @@
     (f (f (r (r (r (r (r (r (r statutes)))))))))
   )
 
-
   ; we're updating prices
   ; returning -> statutes, price_info, cumulative_stability_fee, cumulative_interest_rate, price_updates, mutation_conditions
   (list

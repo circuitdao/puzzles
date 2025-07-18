@@ -4,7 +4,7 @@
       PRICE_INFOS
       ; solution
       oracle_program_args
-      input_announcement_asserts
+      input_conditions
       . announce_args
      )
 
@@ -28,18 +28,18 @@
         STATUTES_STRUCT
         PRICE_INFOS
         (r oracle_program_args)
-        input_announcement_asserts
+        input_conditions
       )
     )
     ; no updates, just assert and announce
     ; recreate yourself to conserve updates so far
-    (verify-announcement-asserts  ; TODO: remove announcement potentially
-      input_announcement_asserts
+    (fail-on-non-puzzle-announcement
+      input_conditions
       (assign
         (current_timestamp price_delay statutes_inner_puzzle_hash) announce_args
         cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
         (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
-        (oldest_price . oldest_updated) (if last_matured_price_info last_matured_price_info (c () ()))
+        (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
         (list
           ; can only announce the price if we're updating statutes
           (if statutes_inner_puzzle_hash
@@ -57,14 +57,13 @@
             ; min singleton amount, force it to be this
             ONE
           )
-          (if oldest_updated
-            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c oldest_price (c oldest_updated (c current_timestamp price_delay)))))
-            (x)  ; no matured prices available, fail. this occurs on launch and potentially when price_delay exceeds STATUTE_PRICE_DELAY
+          (if last_matured_price_updated
+            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c last_matured_price (c last_matured_price_updated (c current_timestamp price_delay)))))
+            (x)  ; no matured price infos available, fail. this can only occur during launch
           )
-          (list REMARK oldest_price oldest_updated current_timestamp price_delay)
+          (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
+          ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
-          ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
-          ; within a boundary of last_block > current_timestamp - 1 block < next block
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         )
       )

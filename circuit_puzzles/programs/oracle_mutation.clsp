@@ -1,7 +1,7 @@
 (mod (ATOM_ANNOUNCER_MOD_HASH
       MOD_HASH
       STATUTES_STRUCT
-      PRICES
+      PRICE_INFOS
       (@ oracle_mutation
         (
           statutes_inner_puzzle_hash
@@ -13,7 +13,7 @@
           price_announcers ; -> ((launcher_id args_hash price))
         )
       )
-      input_announcement_asserts
+      input_conditions
       )
 
   (include *standard-cl-23.1*)
@@ -24,55 +24,53 @@
   (include oracle.clib)
 
   (assign
-    price_announcers_length (list-length price_announcers 0)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    ; number of announcers being used in oracle price update
+    price_announcers_length (list-length price_announcers 0)
+    ; extract and sort announcer prices in ascending order
     sorted_prices (mergesort price_announcers)
-    ; get median price, divide length by 2 and add 1 to get the middle when length is even
+    ; get (upper) median price
     median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
-    announcer_conditions (generate-ann-conditions
+    announcer_conditions (generate-announcer-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
       price_announcers
     )
-    ; we add latest price to the end of the list
-    (matured_price_info . cut_price_infos) (cut-price-infos PRICES (- current_timestamp price_delay) ())
-    price_to_apply (c median_price current_timestamp)
-    ; push new price to the end of the queue, we have a FILO queue
+    ; discard matured price infos other than most recent one, if any
+    (last_matured_price_info . cut_price_infos) (cut-price-infos PRICE_INFOS (- current_timestamp price_delay) ())
+    ; append new price info to the end of the buffer (FILO)
     new_price_infos (merge-lists
         cut_price_infos
-        (list price_to_apply)
+        (list (c median_price current_timestamp))
     )
-    (next_price . next_price_updated) (if matured_price_info matured_price_info (c () ()))
-    (last_price . last_price_updated) (last-item PRICES)
-    ;###  main expression
-    ; check that we haven't updated the price recently OR new price is much higher than previous
+    (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
+    ; most recent price info in existing buffer, i.e. excluding new price info being appended
+    (last_price . last_price_updated) (last-item PRICE_INFOS)
     (assert
+      ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))
-      ; check that prices are unique
+      ; check that no announcer is being used more than once
       (unique price_announcers)
+      ; oracle price must be greater than 0
+      (> median_price 0)
+      ; price info timestamps must increase strictly
       (> current_timestamp last_price_updated)
+      ; oracle price update only allowed if enough time has passed or price change sufficiently large
       (any
         (> (- current_timestamp last_price_updated) price_updatable_after_seconds)
-        (if (> last_price 0)
-          (> (abs (/ (* (- last_price median_price) PRECISION_BPS) last_price) ) price_updatable_threshold_bps)
-          ; no prices in buffer, update now
-          ONE
-        )
-        (not (r new_price_infos)) ; only latest price in the list, this is fine too as all other prices are expired
+        (> (abs (/ (* (- last_price median_price) PRECISION_BPS) last_price) ) price_updatable_threshold_bps)
       )
-      ; should be confirmed at least within 5 blocks since it was pushed to mempool
       (li
+        ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
-        ; current_timestamp - 1 min should've passed already too, this is to ensure current timestamp is
-        ; within a boundary of last_block > current_timestamp - 1 block < next block
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_bps)
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
-        (if next_price
+        (if last_matured_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (sha256tree (c next_price (c next_price_updated (c current_timestamp price_delay))))
+            (sha256tree (c last_matured_price (c last_matured_price_updated (c current_timestamp price_delay))))
           )
           (list REMARK)
         )
@@ -86,8 +84,9 @@
           ; min singleton amount, force it to be ONE
           ONE
         )
-        (list REMARK new_price_infos next_price)
-        &rest (verify-announcement-asserts input_announcement_asserts announcer_conditions)
+        (list REMARK new_price_infos last_matured_price)
+        &rest
+        (fail-on-non-puzzle-announcement input_conditions announcer_conditions)
       )
     )
   )

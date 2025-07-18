@@ -63,23 +63,6 @@
     )
   )
 
-  (defun validate-conditions-for-invalid-msgs ( (@ conditions ((condition_code . condition_rest) . rest_of_conditions)) coin_id)
-    (if conditions
-      (if
-        (or
-          (= condition_code SEND_MESSAGE)
-          (= condition_code RECEIVE_MESSAGE)
-        )
-        (if (= (f (r (r condition_rest))) coin_id)
-          (x)
-          (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
-        )
-        (validate-conditions-for-invalid-msgs rest_of_conditions coin_id)
-      )
-      ONE
-    )
-  )
-
   (defun-inline is-approval-mod (approval_mod_hashes approval_mod)
     (any
       (= (f approval_mod_hashes) approval_mod)
@@ -137,18 +120,6 @@
           list_b)
         )
       list_b
-    )
-  )
-
-  (defun filter (pred (@ lst (first . rest)))
-    (if lst
-      (assign item (a pred (list first))
-        (if item
-          (c item (filter pred rest))
-          (filter pred rest)
-        )
-      )
-      ()
     )
   )
 
