@@ -2,19 +2,17 @@
       MOD_HASH
       STATUTES_STRUCT
       PRICE_INFOS
-      (@ oracle_mutation
-        (
-          statutes_inner_puzzle_hash
-          m_of_n
-          price_updatable_after_seconds
-          price_updatable_threshold_bps
-          price_delay
-          current_timestamp
-          price_announcers ; -> ((launcher_id args_hash price))
-        )
+      (
+        statutes_inner_puzzle_hash
+        m_of_n
+        price_updatable_after_seconds
+        price_updatable_threshold_bps
+        price_delay
+        current_timestamp
+        price_announcers ; -> ((launcher_id args_hash price))
       )
       input_conditions
-      )
+    )
 
   (include *standard-cl-23.1*)
   (include curry.clib)

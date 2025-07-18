@@ -3,10 +3,12 @@
       STATUTES_STRUCT
       PRICE_INFOS
       ; solution
-      oracle_program_args
-      input_conditions
-      . announce_args
-     )
+      (
+        operation
+        input_conditions
+        op_args
+      )
+    )
 
   (include *standard-cl-23.1*)
   (include curry.clib)
@@ -16,57 +18,63 @@
   (include oracle.clib)
 
 
-  (if (and
-        oracle_program_args
-        (= (sha256tree (f oracle_program_args)) MUTATION_PROGRAM_HASH)
-      )
-    ; mutate oracle
-    (a
-      (f oracle_program_args)
-      (list
-        MOD_HASH
-        STATUTES_STRUCT
-        PRICE_INFOS
-        (r oracle_program_args)
-        input_conditions
-      )
-    )
-    ; no updates, just assert and announce
-    ; recreate yourself to conserve updates so far
-    (fail-on-non-puzzle-announcement
-      input_conditions
-      (assign
-        (current_timestamp price_delay statutes_inner_puzzle_hash) announce_args
-        cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
-        (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
-        (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
-        (list
-          ; can only announce the price if we're updating statutes
-          (if statutes_inner_puzzle_hash
-            ; normal price update for statutes
-            (list RECEIVE_MESSAGE 0x12 '*' (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash))
-            ; launch
-            (list RECEIVE_MESSAGE 0x3f '*' (f (r STATUTES_STRUCT)))
+  (assign
+    operation_hash (sha256tree operation)
+    (c
+      (list SEND_MESSAGE 0x38 ; coin ID to none
+        (sha256tree (list operation_hash input_conditions op_args))
+      ) ; secure solution
+      (if (= operation_hash MUTATION_PROGRAM_HASH)
+        ; update oracle price
+        (a
+          operation
+          (list
+            MOD_HASH
+            STATUTES_STRUCT
+            PRICE_INFOS
+            op_args
+            input_conditions
           )
-          (list CREATE_COIN
-            (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256tree PRICE_INFOS)
+        )
+        ; ELSE announce oracle price
+        (fail-on-non-puzzle-announcement
+          input_conditions
+          (assign
+            (current_timestamp price_delay statutes_inner_puzzle_hash) op_args
+            cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
+            (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
+            (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
+            (list
+              ; can only announce the price if we're updating statutes
+              (if statutes_inner_puzzle_hash
+                ; normal price update for statutes
+                (list RECEIVE_MESSAGE 0x12 '*' (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash))
+                ; launch
+                (list RECEIVE_MESSAGE 0x3f '*' (f (r STATUTES_STRUCT)))
+              )
+              ; recreate self conserving price infos
+              (list CREATE_COIN
+                (curry_hashes MOD_HASH
+                  (sha256 ONE MOD_HASH)
+                  (sha256tree STATUTES_STRUCT)
+                  (sha256tree PRICE_INFOS)
+                )
+                ; min singleton amount, force it to be this
+                ONE
+              )
+              (if last_matured_price_updated
+                (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c last_matured_price (c last_matured_price_updated (c current_timestamp price_delay)))))
+                (x)  ; no matured price infos available, fail. this can only occur during launch
+              )
+              (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
+              ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
+              (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+              (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             )
-            ; min singleton amount, force it to be this
-            ONE
           )
-          (if last_matured_price_updated
-            (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c last_matured_price (c last_matured_price_updated (c current_timestamp price_delay)))))
-            (x)  ; no matured price infos available, fail. this can only occur during launch
-          )
-          (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
-          ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         )
       )
     )
   )
+
 )
