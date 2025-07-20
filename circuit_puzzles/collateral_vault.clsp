@@ -18,8 +18,9 @@
         ; owner mode iff keeper_operation_info is nil
         inner_puzzle
         solution ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
-        ; a keeper operation can be run only if vault is under-collateralized
-        ; - start auction
+        ; the following keeper operations can be performed:
+        ; - transfer stability fees
+        ; - (re-)start auction
         ; - bid
         ; - recover bad debt
         keeper_operation_info
@@ -122,9 +123,14 @@
     inner_conditions (merge-lists conditions operation_conditions)
     ;### MAIN EXPRESSION ###
     (c
+      (if keeper_operation_info
+        (list SEND_MESSAGE 0x38 ; coin ID to none
+          (sha256tree keeper_operation_info)
+        ) ; secure keeper solution
+        (list REMARK)
+      )
       (c
-        CREATE_COIN
-        (c
+        (list CREATE_COIN
           (curry_hashes MOD_HASH
             (sha256tree MOD_HASH)
             statutes_struct_hash
@@ -134,66 +140,65 @@
             (sha256 ONE final_inner_puzzle_hash)
             (sha256 ONE final_discounted_principal)
           ) ; puzzle hash
-          (c  final_collateral_amount ; amount
-            ; this is a list that forms the create coin condition (using cons), hence double list operator
-            (list (list final_inner_puzzle_hash)) ; memos
-          )
+          final_collateral_amount ; amount
+          ; this is a list that forms the create coin condition (using cons), hence double list operator
+          (list final_inner_puzzle_hash) ; memos
         )
-      )
-      (c
-        (list
-          ; this is for the driver code to make it easy to generate puzzle reveal
-          REMARK
-          PROTOCOL_PREFIX
-          final_collateral_amount
-          final_principal_amount
-          final_auction_state
-          final_inner_puzzle_hash
-          final_discounted_principal
-        )
-        (if lineage_proof
-          (li
-            ; verify lineage by calculating parent coin id based on lineage proof
-            (list
-              ASSERT_MY_PARENT_ID
-              (coinid
-                (f lineage_proof)
-                (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
-                (f (r (r lineage_proof)))
-              )
-            )
-            (list ASSERT_MY_PUZZLE_HASH
-              (curry_hashes MOD_HASH
-                (sha256tree MOD_HASH)
-                statutes_struct_hash
-                (sha256 ONE COLLATERAL)
-                (sha256 ONE PRINCIPAL)
-                (sha256tree AUCTION_STATE)
-                (sha256 ONE INNER_PUZZLE_HASH)
-                (sha256 ONE DISCOUNTED_PRINCIPAL)
-              )
-            )
-            (list ASSERT_MY_AMOUNT COLLATERAL)
-            &rest
-            inner_conditions
+        (c
+          (list
+            ; this is for the driver code to make it easy to generate puzzle reveal
+            REMARK
+            PROTOCOL_PREFIX
+            final_collateral_amount
+            final_principal_amount
+            final_auction_state
+            final_inner_puzzle_hash
+            final_discounted_principal
           )
-          ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
-          ; otherwise launching a vault with pre-existing debt could cause a lot of issues
-          (li
-            (list ASSERT_MY_PUZZLE_HASH
-              (curry_hashes MOD_HASH
-                (sha256tree MOD_HASH)
-                statutes_struct_hash
-                (sha256 ONE 0)
-                (sha256 ONE 0)
-                (sha256 ONE ())
-                (sha256 ONE INNER_PUZZLE_HASH)
-                (sha256 ONE 0)
+          (if lineage_proof
+            (li
+              ; verify lineage by calculating parent coin id based on lineage proof
+              (list
+                ASSERT_MY_PARENT_ID
+                (coinid
+                  (f lineage_proof)
+                  (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
+                  (f (r (r lineage_proof)))
+                )
               )
+              (list ASSERT_MY_PUZZLE_HASH
+                (curry_hashes MOD_HASH
+                  (sha256tree MOD_HASH)
+                  statutes_struct_hash
+                  (sha256 ONE COLLATERAL)
+                  (sha256 ONE PRINCIPAL)
+                  (sha256tree AUCTION_STATE)
+                  (sha256 ONE INNER_PUZZLE_HASH)
+                  (sha256 ONE DISCOUNTED_PRINCIPAL)
+                )
+              )
+              (list ASSERT_MY_AMOUNT COLLATERAL)
+              &rest
+              inner_conditions
             )
-            (list ASSERT_MY_AMOUNT 0)
-            &rest
-            inner_conditions
+            ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
+            ; otherwise launching a vault with pre-existing debt could cause a lot of issues
+            (li
+              (list ASSERT_MY_PUZZLE_HASH
+                (curry_hashes MOD_HASH
+                  (sha256tree MOD_HASH)
+                  statutes_struct_hash
+                  (sha256 ONE 0)
+                  (sha256 ONE 0)
+                  (sha256 ONE ())
+                  (sha256 ONE INNER_PUZZLE_HASH)
+                  (sha256 ONE 0)
+                )
+              )
+              (list ASSERT_MY_AMOUNT 0)
+              &rest
+              inner_conditions
+            )
           )
         )
       )
