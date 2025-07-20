@@ -2,21 +2,8 @@
 ;       collateral vaults and new treasury coin puzzle
 (mod (CAT_MOD_HASH BYC_TAIL_MOD_HASH TREASURY_MOD_HASH
       MOD_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
-      lineage_proof
-      statutes_inner_puzzle_hash
-      current_amount
-      statutes_cumulative_interest_df current_timestamp current_interest_df price_info min_treasury_delta
       inner_solution
-      .
-      (@ treasury_coin_info
-        (
-          (
-            treasury_coin_parent_id treasury_coin_launcher_id
-            treasury_coin_prev_launcher_id treasury_coin_amount
-            treasury_withdraw_amount ; amount of interest to be paid
-          )
-        )
-      ))
+    )
 
   (include *standard-cl-23.1*)
   (include curry.clib)
@@ -31,6 +18,29 @@
   )
 
   (assign
+    (create_coin_body conditions) (filter-and-extract-unique-create-coin
+      (a INNER_PUZZLE inner_solution)
+      0 ; found first create coin set to false
+      ()
+    )
+    (
+      lineage_proof
+      statutes_inner_puzzle_hash
+      current_amount
+      statutes_cumulative_interest_df
+      current_timestamp
+      current_interest_df
+      price_info
+      min_treasury_delta
+      (@ treasury_coin_info
+        (
+          treasury_coin_parent_id treasury_coin_launcher_id
+          treasury_coin_prev_launcher_id treasury_coin_amount
+          treasury_withdraw_amount ; amount of interest to be paid
+        )
+      )
+      memos ; memos for CREATE_COIN condition
+    ) (f (r (r create_coin_body)))
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
@@ -39,11 +49,6 @@
       current_interest_df
       current_timestamp
       (r price_info)
-    )
-    (create_coin_body conditions) (filter-and-extract-unique-create-coin
-      (a INNER_PUZZLE inner_solution)
-      0 ; found first create coin set to false
-      ()
     )
     (accrued_interest . interest_payment) (if treasury_coin_info
       (c
@@ -141,7 +146,6 @@
       )
     )
     inner_puzzle_hash (f create_coin_body)
-    memos (r (r create_coin_body))
     (assert
       (> interest_payment MINUS_ONE)
       (li
@@ -153,18 +157,15 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         ; constructing CREATE_COIN so we can prepend to whatever memos we got
-        (c CREATE_COIN
-          (c
-            (curry_hashes MOD_HASH ; puzzle hash
-              (sha256 ONE MOD_HASH)
-              statutes_struct_hash
-              (sha256 ONE new_discounted_balance)
-              inner_puzzle_hash
-            )
-            (c new_amount
-              memos
-            )
+        (list CREATE_COIN
+          (curry_hashes MOD_HASH ; puzzle hash
+            (sha256 ONE MOD_HASH)
+            statutes_struct_hash
+            (sha256 ONE new_discounted_balance)
+            inner_puzzle_hash
           )
+          new_amount
+          memos
         )
         &rest
         (if treasury_coin_id
