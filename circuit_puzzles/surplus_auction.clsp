@@ -10,7 +10,7 @@
         lineage_proof ; -> (parent_id launcher_id amount last_bid)
         operation
         input_conditions
-        op_args ;. op_args
+        op_args
       )
     )
 
