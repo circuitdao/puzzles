@@ -6,6 +6,7 @@
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp new_value)
+      rest_of_condition
      )
 
   ; not using cl-23 standard to save costs
@@ -40,6 +41,7 @@
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
               (sha256 ONE APPROVED)
+              (sha256 ONE DEPOSIT)
               (sha256 ONE deposit)
               (sha256 ONE VALUE_TTL)
               (sha256tree new_value)
@@ -57,6 +59,7 @@
               PROTOCOL_PREFIX
               LAUNCHER_ID
               (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
+              DEPOSIT
               deposit
               APPROVED
               VALUE_TTL

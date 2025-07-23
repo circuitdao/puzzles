@@ -1,7 +1,12 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
+       PREV_DEPOSIT DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
-       (@ lineage (parent_id prev_deposit prev_puzzle_args_hash))
+       ;; lineage_proof is
+       ;;   () for eve spend
+       ;;   (prev_parent_id prev_deposit . prev_puzzle_args_hash) for non-eve spends
+       lineage_proof
        inner_puzzle
+       .
        solution_or_conditions
      )
 
@@ -22,7 +27,7 @@
       ; otherwise, solution_or_conditions is conditions
       solution_or_conditions
     )
-    ((new_puzzle_hash deposit (operation . args)) input_conditions) (filter-and-extract-unique-create-coin raw_conditions () ())
+    ((new_puzzle_hash deposit (operation . args) . rest_of_condition) input_conditions) (filter-and-extract-unique-create-coin raw_conditions () ())
     (assert
       (any
         inner_puzzle_hash
@@ -34,17 +39,18 @@
       (contains OPERATIONS (sha256tree operation))
       (c
         ; ensuring that parent was indeed spent with our puzzle and pubkey
-        (if lineage
+        (if lineage_proof
           (list ASSERT_MY_PARENT_ID
             (coinid
-              parent_id
-              (tree_hash_of_apply MOD_HASH prev_puzzle_args_hash)
-              prev_deposit
+              (f lineage_proof)
+              (tree_hash_of_apply MOD_HASH (r lineage_proof))
+              PREV_DEPOSIT
             )
           )
           ; launch
           (assert
             (= APPROVED 0)
+            (= PREV_DEPOSIT 0)
             (= DEPOSIT 0)
             (= VALUE_TTL 0)
             (= VALUE 0)
@@ -64,6 +70,7 @@
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE INNER_PUZZLE_HASH)
               (sha256 ONE APPROVED)
+              (sha256 ONE PREV_DEPOSIT)
               (sha256 ONE DEPOSIT)
               (sha256 ONE VALUE_TTL)
               (sha256tree VALUE)
@@ -81,7 +88,7 @@
                 DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
               )
               inner_puzzle_hash new_puzzle_hash deposit input_conditions
-              args
+              args rest_of_condition
             )
           )
         )

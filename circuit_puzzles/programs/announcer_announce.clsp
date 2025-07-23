@@ -1,9 +1,10 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
+        DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
         CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      _
+      args rest_of_condition
      )
 
   ; not using cl-23 standard to save costs
@@ -20,58 +21,64 @@
     )
   )
 
-  (c
-    (list CREATE_PUZZLE_ANNOUNCEMENT
-      (concat
-        PROTOCOL_PREFIX
-        (sha256tree
-          (c STATUTES_STRUCT
-            (c LAUNCHER_ID (c APPROVED VALUE))
+  (if (any deposit input_conditions args rest_of_condition)
+    (x) ; ensures announce spend has unique solution
+    (c
+      (list CREATE_PUZZLE_ANNOUNCEMENT
+        (concat
+          PROTOCOL_PREFIX
+          (sha256tree
+            (c STATUTES_STRUCT
+              (c LAUNCHER_ID (c APPROVED VALUE))
+            )
           )
         )
       )
-    )
-    (c
-      (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
       (c
-        (list CREATE_COIN
-          (curry_hashes MOD_HASH
-            (sha256 ONE MOD_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (sha256 ONE LAUNCHER_ID)
-            (sha256 ONE INNER_PUZZLE_HASH)
-            (sha256 ONE APPROVED)
-            (sha256 ONE DEPOSIT)
-            (sha256 ONE VALUE_TTL)
-            (sha256tree VALUE)
-            (sha256 ONE MIN_DEPOSIT)
-            (sha256 ONE CLAIM_COUNTER)
-            (sha256 ONE COOLDOWN_START)
-            (sha256 ONE PENALIZABLE_AT)
-            (sha256 ONE TIMESTAMP_EXPIRES)
-          )
-          DEPOSIT
-          (list INNER_PUZZLE_HASH)
-        )
-        ; driver remark to reveal the puzzle hash
+        (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
         (c
-          (list REMARK
-            PROTOCOL_PREFIX
-            LAUNCHER_ID
-            INNER_PUZZLE_HASH
+          (list CREATE_COIN
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE INNER_PUZZLE_HASH)
+              (sha256 ONE APPROVED)
+              (sha256 ONE DEPOSIT)
+              (sha256 ONE DEPOSIT)
+              (sha256 ONE VALUE_TTL)
+              (sha256tree VALUE)
+              (sha256 ONE MIN_DEPOSIT)
+              (sha256 ONE CLAIM_COUNTER)
+              (sha256 ONE COOLDOWN_START)
+              (sha256 ONE PENALIZABLE_AT)
+              (sha256 ONE TIMESTAMP_EXPIRES)
+            )
             DEPOSIT
-            APPROVED
-            VALUE_TTL
-            VALUE
-            MIN_DEPOSIT
-            CLAIM_COUNTER
-            COOLDOWN_START
-            PENALIZABLE_AT
-            TIMESTAMP_EXPIRES
+            (list INNER_PUZZLE_HASH)
           )
-          input_conditions
+          ; driver remark to reveal the puzzle hash
+          (c
+            (list REMARK
+              PROTOCOL_PREFIX
+              LAUNCHER_ID
+              INNER_PUZZLE_HASH
+              DEPOSIT
+              DEPOSIT
+              APPROVED
+              VALUE_TTL
+              VALUE
+              MIN_DEPOSIT
+              CLAIM_COUNTER
+              COOLDOWN_START
+              PENALIZABLE_AT
+              TIMESTAMP_EXPIRES
+            )
+            input_conditions
+          )
         )
       )
     )
   )
+
 )

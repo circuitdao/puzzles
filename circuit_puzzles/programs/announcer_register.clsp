@@ -7,6 +7,7 @@
       (registry_mod_hash registry_args_hash registry_claim_counter
         target_puzzle_hash statutes_inner_puzzle_hash min_deposit
       )
+      rest_of_condition
      )
 
   (include *standard-cl-23.1*)
@@ -51,6 +52,7 @@
               LAUNCHER_ID
               INNER_PUZZLE_HASH
               APPROVED
+              DEPOSIT
               deposit
               VALUE_TTL
               VALUE

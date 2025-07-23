@@ -11,7 +11,7 @@
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      args
+      args rest_of_condition
      )
 
   (include *standard-cl-23.1*)
@@ -80,6 +80,7 @@
             LAUNCHER_ID
             (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
             approved
+            DEPOSIT
             deposit
             new_value_ttl
             (if new_value new_value VALUE)
