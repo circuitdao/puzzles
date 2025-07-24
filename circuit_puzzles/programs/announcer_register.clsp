@@ -1,6 +1,6 @@
 ; register the announcer with announcer registry coin
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
-        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED DEPOSIT
+        VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
@@ -24,8 +24,8 @@
       inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)
-      (> deposit (- MIN_DEPOSIT 1)) ; must not be penalizable for deposit
-      (> MIN_DEPOSIT (- min_deposit 1)) ; must not be penalizable for min deposit
+      (> deposit (- MIN_DEPOSIT ONE)) ; must not be penalizable for deposit
+      (> MIN_DEPOSIT (- min_deposit ONE)) ; must not be penalizable for min deposit
       (c
         (list SEND_MESSAGE 0x12
           (concat
@@ -50,6 +50,7 @@
             (recreate-myself-condition MOD_HASH
               STATUTES_STRUCT
               LAUNCHER_ID
+              FALSE
               INNER_PUZZLE_HASH
               APPROVED
               DEPOSIT

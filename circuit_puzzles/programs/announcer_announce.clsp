@@ -1,6 +1,5 @@
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
-        DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
-        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED DEPOSIT
+        VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
@@ -42,6 +41,7 @@
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE ONE)
               (sha256 ONE INNER_PUZZLE_HASH)
               (sha256 ONE APPROVED)
               (sha256 ONE DEPOSIT)
@@ -62,6 +62,7 @@
             (list REMARK
               PROTOCOL_PREFIX
               LAUNCHER_ID
+              ONE
               INNER_PUZZLE_HASH
               DEPOSIT
               DEPOSIT
@@ -74,7 +75,10 @@
               PENALIZABLE_AT
               TIMESTAMP_EXPIRES
             )
-            input_conditions
+            (if PREV_ANNOUNCE
+              (c (list ASSERT_HEIGHT_RELATIVE 0) ()) ; if preceding spend was an announce, it must have occurred in a previous block
+              ()
+            )
           )
         )
       )

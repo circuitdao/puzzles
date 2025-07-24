@@ -6,8 +6,8 @@
 ;; - atom value
 ;; - min deposit
 ;; It also allows the owner to exit being approved announcer for circuit protocol. Exiting needs to wait for a cooldown period.
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
-        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED DEPOSIT
+        VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
@@ -41,12 +41,12 @@
         (approved . cooldown_start) (
           assert
             (any
-              (= input_toggle_activation 0)
-              (all (= input_toggle_activation ONE) APPROVED) ; cannot approve self
+              (= input_toggle_activation FALSE)
+              (all (= input_toggle_activation TRUE) APPROVED) ; cannot approve self
             )
             ; input_toggle_activation is passed in solution
             (if
-              (all (= input_toggle_activation 0) APPROVED)
+              (all (= input_toggle_activation FALSE) APPROVED)
               ; potentially deactivating announcer
               (if
                 (all
@@ -54,12 +54,12 @@
                   (> (- current_timestamp COOLDOWN_START) deactivation_cooldown_interval)
                 )
                 ; cooldown period was set, and it's over, deactivating
-                (c 0 0)
+                (c FALSE 0)
                 (if (= COOLDOWN_START 0)
                   ; cooldown not set yet, setting cooldown start timestamp
-                  (c ONE current_timestamp)
+                  (c TRUE current_timestamp)
                   ; we're in cooldown period but it's not over yet, keep the current state
-                  (c ONE COOLDOWN_START)
+                  (c TRUE COOLDOWN_START)
                 )
               )
               ; input toggle activation is
@@ -78,6 +78,7 @@
           recreate-myself-condition MOD_HASH
             STATUTES_STRUCT
             LAUNCHER_ID
+            FALSE
             (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
             approved
             DEPOSIT

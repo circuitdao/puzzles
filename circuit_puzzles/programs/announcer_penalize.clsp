@@ -1,7 +1,6 @@
 ; penalize announcer for not updating the price
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
-        DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
-        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED DEPOSIT
+       VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
@@ -56,6 +55,7 @@
         (recreate-myself-condition MOD_HASH
           STATUTES_STRUCT
           LAUNCHER_ID
+          FALSE
           INNER_PUZZLE_HASH
           APPROVED
           DEPOSIT

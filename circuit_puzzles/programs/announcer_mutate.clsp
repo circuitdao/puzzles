@@ -1,7 +1,7 @@
 ; owner operation
 ; updates atom value of the announcer. can optionally topup or reduce deposit
-(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
-        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+(mod ((MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED DEPOSIT
+        VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
@@ -16,6 +16,7 @@
 
   (defconst MAX_TX_BLOCK_TIME 120)
   (defconst ONE 1)
+  (defconst FALSE 0)
 
   (defun sha256tree (TREE)
     (if (l TREE)
@@ -27,7 +28,7 @@
   (if (all
         LAUNCHER_ID
         inner_puzzle_hash ; must be owner
-        (> deposit (- MIN_DEPOSIT 1)) ; deposit must be no less than min deposit to pay for fees and penalties
+        (> deposit (- MIN_DEPOSIT ONE)) ; deposit must be no less than min deposit to pay for fees and penalties
       )
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
@@ -39,6 +40,7 @@
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE FALSE)
               (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
               (sha256 ONE APPROVED)
               (sha256 ONE DEPOSIT)
@@ -58,6 +60,7 @@
             (list REMARK
               PROTOCOL_PREFIX
               LAUNCHER_ID
+              FALSE
               (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
               DEPOSIT
               deposit

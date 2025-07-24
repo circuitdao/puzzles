@@ -1,4 +1,4 @@
-(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
+(mod (OPERATIONS MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED
        PREV_DEPOSIT DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT
        CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
        ;; lineage_proof is
@@ -27,7 +27,10 @@
       ; otherwise, solution_or_conditions is conditions
       solution_or_conditions
     )
-    ((new_puzzle_hash deposit (operation . args) . rest_of_condition) input_conditions) (filter-and-extract-unique-create-coin raw_conditions () ())
+    (
+     (new_puzzle_hash deposit (operation . args) . rest_of_condition)
+     input_conditions
+    ) (filter-and-extract-unique-create-coin raw_conditions () ())
     (assert
       (any
         inner_puzzle_hash
@@ -49,6 +52,7 @@
           )
           ; launch
           (assert
+            (= PREV_ANNOUNCE 0)
             (= APPROVED 0)
             (= PREV_DEPOSIT 0)
             (= DEPOSIT 0)
@@ -68,6 +72,7 @@
               (sha256 ONE MOD_HASH)
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
+              (sha256 ONE PREV_ANNOUNCE)
               (sha256 ONE INNER_PUZZLE_HASH)
               (sha256 ONE APPROVED)
               (sha256 ONE PREV_DEPOSIT)
@@ -84,7 +89,7 @@
           (a
             operation
             (list
-              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID INNER_PUZZLE_HASH APPROVED
+              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED
                 DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
               )
               inner_puzzle_hash new_puzzle_hash deposit input_conditions
