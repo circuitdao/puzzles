@@ -21,16 +21,18 @@
   (assign
     inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
     raw_conditions (if inner_puzzle_hash
+      ; owner spend
       (assert (= inner_puzzle_hash INNER_PUZZLE_HASH)
         (a inner_puzzle solution_or_conditions)
       )
-      ; otherwise, solution_or_conditions is conditions
+      ; keeper/governance spend. solution_or_conditions is conditions
       solution_or_conditions
     )
     (
-     (new_puzzle_hash deposit (operation . args) . rest_of_condition)
-     input_conditions
+      (new_puzzle_hash deposit (operation . args) . rest_of_condition)
+      input_conditions
     ) (filter-and-extract-unique-create-coin raw_conditions () ())
+    operation_hash (sha256tree operation)
     (assert
       (any
         inner_puzzle_hash
@@ -39,61 +41,73 @@
           (= new_puzzle_hash INNER_PUZZLE_HASH)
         )
       )
-      (contains OPERATIONS (sha256tree operation))
+      (contains OPERATIONS operation_hash)
       (c
-        ; ensuring that parent was indeed spent with our puzzle and pubkey
-        (if lineage_proof
-          (list ASSERT_MY_PARENT_ID
-            (coinid
-              (f lineage_proof)
-              (tree_hash_of_apply MOD_HASH (r lineage_proof))
-              PREV_DEPOSIT
+        (if (not inner_puzzle_hash)
+          (list SEND_MESSAGE 0x38 ; coin ID to none
+            (sha256tree
+              ; no need to include lineage_proof, inner_puzzle and new_puzzle_hash
+              ; in message as all three are verified by puzzle
+              (list deposit operation_hash args rest_of_condition input_conditions)
             )
-          )
-          ; launch
-          (assert
-            (= PREV_ANNOUNCE 0)
-            (= APPROVED 0)
-            (= PREV_DEPOSIT 0)
-            (= DEPOSIT 0)
-            (= VALUE_TTL 0)
-            (= VALUE 0)
-            (= MIN_DEPOSIT 0)
-            (= CLAIM_COUNTER 0)
-            (= COOLDOWN_START 0)
-            (= PENALIZABLE_AT 0)
-            (= TIMESTAMP_EXPIRES 0)
-            (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
-          )
+          ) ; secure solution of non-owner spends
+          (list REMARK)
         )
         (c
-          (list ASSERT_MY_PUZZLE_HASH
-            (curry_hashes MOD_HASH
-              (sha256 ONE MOD_HASH)
-              (sha256tree STATUTES_STRUCT)
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE PREV_ANNOUNCE)
-              (sha256 ONE INNER_PUZZLE_HASH)
-              (sha256 ONE APPROVED)
-              (sha256 ONE PREV_DEPOSIT)
-              (sha256 ONE DEPOSIT)
-              (sha256 ONE VALUE_TTL)
-              (sha256tree VALUE)
-              (sha256 ONE MIN_DEPOSIT)
-              (sha256 ONE CLAIM_COUNTER)
-              (sha256 ONE COOLDOWN_START)
-              (sha256 ONE PENALIZABLE_AT)
-              (sha256 ONE TIMESTAMP_EXPIRES)
+          ; ensuring that parent was indeed spent with our puzzle and pubkey
+          (if lineage_proof
+            (list ASSERT_MY_PARENT_ID
+              (coinid
+                (f lineage_proof)
+                (tree_hash_of_apply MOD_HASH (r lineage_proof))
+                PREV_DEPOSIT
+              )
+            )
+            ; launch
+            (assert
+              (= PREV_ANNOUNCE 0)
+              (= APPROVED 0)
+              (= PREV_DEPOSIT 0)
+              (= DEPOSIT 0)
+              (= VALUE_TTL 0)
+              (= VALUE 0)
+              (= MIN_DEPOSIT 0)
+              (= CLAIM_COUNTER 0)
+              (= COOLDOWN_START 0)
+              (= PENALIZABLE_AT 0)
+              (= TIMESTAMP_EXPIRES 0)
+              (list ASSERT_MY_PARENT_ID LAUNCHER_ID)
             )
           )
-          (a
-            operation
-            (list
-              (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED
-                DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+          (c
+            (list ASSERT_MY_PUZZLE_HASH
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256 ONE LAUNCHER_ID)
+                (sha256 ONE PREV_ANNOUNCE)
+                (sha256 ONE INNER_PUZZLE_HASH)
+                (sha256 ONE APPROVED)
+                (sha256 ONE PREV_DEPOSIT)
+                (sha256 ONE DEPOSIT)
+                (sha256 ONE VALUE_TTL)
+                (sha256tree VALUE)
+                (sha256 ONE MIN_DEPOSIT)
+                (sha256 ONE CLAIM_COUNTER)
+                (sha256 ONE COOLDOWN_START)
+                (sha256 ONE PENALIZABLE_AT)
+                (sha256 ONE TIMESTAMP_EXPIRES)
               )
-              inner_puzzle_hash new_puzzle_hash deposit input_conditions
-              args rest_of_condition
+            )
+            (a
+              operation
+              (list
+                (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED
+                  DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
+                )
+                inner_puzzle_hash new_puzzle_hash deposit input_conditions
+                args rest_of_condition
+              )
             )
           )
         )
