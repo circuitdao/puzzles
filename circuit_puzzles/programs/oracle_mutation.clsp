@@ -84,7 +84,7 @@
         )
         (list REMARK new_price_infos last_matured_price)
         &rest
-        (fail-on-non-puzzle-announcement input_conditions announcer_conditions)
+        (fail-on-non-coin-announcement input_conditions announcer_conditions)
       )
     )
   )

@@ -45,10 +45,12 @@
       (c
         (if (not inner_puzzle_hash)
           (list SEND_MESSAGE 0x38 ; coin ID to none
-            (sha256tree
-              ; no need to include lineage_proof, inner_puzzle and new_puzzle_hash
-              ; in message as all three are verified by puzzle
-              (list deposit operation_hash args rest_of_condition input_conditions)
+            (concat PROTOCOL_PREFIX
+              (sha256tree
+                ; no need to include lineage_proof, inner_puzzle and new_puzzle_hash
+                ; in message as all three are verified by puzzle
+                (list deposit operation_hash args rest_of_condition input_conditions)
+              )
             )
           ) ; secure solution of non-owner spends
           (list REMARK)

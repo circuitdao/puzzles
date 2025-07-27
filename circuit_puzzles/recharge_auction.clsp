@@ -24,7 +24,7 @@
       (fail-on-protocol-condition-or-create-coin input_conditions)
       (c
         (list SEND_MESSAGE 0x38 ; coin ID to none
-          (sha256tree (list lineage_proof operation_hash input_conditions op_args))
+          (concat PROTOCOL_PREFIX (sha256tree (list lineage_proof operation_hash input_conditions op_args)))
         ) ; secure solution
         (a
           operation

@@ -22,7 +22,7 @@
     operation_hash (sha256tree operation)
     (c
       (list SEND_MESSAGE 0x38 ; coin ID to none
-        (sha256tree (list operation_hash input_conditions op_args))
+        (concat PROTOCOL_PREFIX (sha256tree (list operation_hash input_conditions op_args)))
       ) ; secure solution
       (if (= operation_hash MUTATION_PROGRAM_HASH)
         ; update oracle price
@@ -37,7 +37,7 @@
           )
         )
         ; ELSE announce oracle price
-        (fail-on-non-puzzle-announcement
+        (fail-on-non-coin-announcement
           input_conditions
           (assign
             (current_timestamp price_delay statutes_inner_puzzle_hash) op_args

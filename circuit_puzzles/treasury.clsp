@@ -125,7 +125,7 @@
         ;(x (sha256tree solution) solution)
         (c
           (list SEND_MESSAGE 0x38 ; coin ID to none
-            (sha256tree solution)
+            (concat PROTOCOL_PREFIX (sha256tree solution))
           ) ; secure solution
           (c
             (list ASSERT_MY_AMOUNT current_amount)

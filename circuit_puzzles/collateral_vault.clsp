@@ -1,15 +1,18 @@
 ;; Collateral Vault Puzzle enables XCH to be locked and BYC to be minted based on XCH price.
 ;; This main puzzle controls creation and recreation of the coin and different run modes for the vault, since it can
 ;; be run by the owner or keepers. It also enforces strict lineage.
-;; The operations available for the coin are:
+;; Owner operations available for the coin are:
 ;; - deposit collateral
 ;; - withdraw collateral
-;; - mint BYC (create debt)
-;; - repay BYC (debt + fees)
-;; - liquidate vault
-;; - transfer fees to treasury
-;; - start auction
+;; - borrow BYC (create debt)
+;; - repay BYC (extinguish debt)
+;; - transfer (new inner puzzle)
+;; Keeper operations available for the coin are:
+;; - start liquidation auction
+;; - bid in liquidation auction
 ;; - recover bad debt
+;; - transfer fees to treasury
+
 
 (mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH STATUTES_STRUCT COLLATERAL PRINCIPAL
       AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
@@ -35,7 +38,11 @@
   (include prefixes.clib)
   (include statutes_utils.clib)
 
-  (defun restrict-conditions ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark)
+  ; fails on create coin
+  ; fails on protocol conditions other than remark
+  ; fails if not exactly one protocol remark encountered
+  ; returns body of protocol remark condition
+  (defun filter-and-extract-unique-protocol-remark ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark filtered_conditions)
     ; RETURNS (conditions create_coin_condition_body)
     (if conditions
       (if (= condition_code CREATE_COIN)
@@ -43,30 +50,33 @@
         (if (= condition_code REMARK)
           (if (is-valid-rmk-cond condition_body)
             ; non-protocol remarks are fine
-            (restrict-conditions rest_of_conditions found_remark)
+            (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
             ; protocol remark
             (if found_remark
               (x) ; only one protocol remark allowed
-              (restrict-conditions rest_of_conditions (r condition_body))
+              (filter-and-extract-unique-protocol-remark rest_of_conditions (r condition_body) filtered_conditions)
             )
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
             (assert
               (is-valid-msg-cond condition_body)
-              (restrict-conditions rest_of_conditions found_remark)
+              (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
             )
             (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
               (assert
                 (is-valid-ann-cond condition_body)
-                (restrict-conditions rest_of_conditions found_remark)
+                (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
               )
               ; all other conditions allowed
-              (restrict-conditions rest_of_conditions found_remark)
+              (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
             )
           )
         )
       )
-      found_remark
+      (assert
+        found_remark
+        (list found_remark filtered_conditions)
+      )
     )
   )
 
@@ -77,32 +87,13 @@
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
-    vault_operation_condition_pre (restrict-conditions conditions 0)
-    operation_mod (operation-program vault_operation_condition_pre)
-    operation_mod_hash (sha256tree operation_mod)
-    vault_operation_condition
-      (if keeper_operation_info
-        ; keeper mode
-        (assert
-          (contains KEEPER_OPERATIONS operation_mod_hash)
-          vault_operation_condition_pre
-        )
-        ; owner mode must have empty AUCTION_STATE, ie vault is not in liquidation or bad debt
-        (assert
-          (not AUCTION_STATE)
-          (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
-          (contains OWNER_OPERATIONS operation_mod_hash)
-          vault_operation_condition_pre
-        )
-      )
+    (vault_operation_condition filtered_conditions) (filter-and-extract-unique-protocol-remark conditions () ())
     (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash
-      (c
-        (f STATUTES_STRUCT)
-        statutes_struct_hash
-      )
+      (c (f STATUTES_STRUCT) statutes_struct_hash)
       statutes_inner_puzzle_hash
     )
+    vault_operation_hash (sha256tree vault_operation)
     (
       (
         final_collateral_amount
@@ -120,88 +111,103 @@
         args
       )
     )
-    inner_conditions (merge-lists conditions operation_conditions)
+    inner_conditions (merge-lists filtered_conditions operation_conditions)
     ;### MAIN EXPRESSION ###
-    (c
+    (assert
       (if keeper_operation_info
-        (list SEND_MESSAGE 0x38 ; coin ID to none
-          (sha256tree keeper_operation_info)
-        ) ; secure keeper solution
-        (list REMARK)
+        ; keeper mode
+        (contains KEEPER_OPERATIONS vault_operation_hash)
+        ; owner mode
+        (all
+          (not AUCTION_STATE)
+          (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
+          (contains OWNER_OPERATIONS vault_operation_hash)
+        )
       )
       (c
-        (list CREATE_COIN
-          (curry_hashes MOD_HASH
-            (sha256tree MOD_HASH)
-            statutes_struct_hash
-            (sha256 ONE final_collateral_amount)
-            (sha256 ONE final_principal_amount)
-            (sha256tree final_auction_state)
-            (sha256 ONE final_inner_puzzle_hash)
-            (sha256 ONE final_discounted_principal)
-          ) ; puzzle hash
-          final_collateral_amount ; amount
-          ; this is a list that forms the create coin condition (using cons), hence double list operator
-          (list final_inner_puzzle_hash) ; memos
+        (if keeper_operation_info
+          (list SEND_MESSAGE 0x38 ; coin ID to none
+            (concat
+              PROTOCOL_PREFIX
+              (sha256tree (list statutes_inner_puzzle_hash vault_operation_hash args filtered_conditions))
+            )
+          ) ; secure keeper solution
+          (list REMARK)
         )
         (c
-          (list
-            ; this is for the driver code to make it easy to generate puzzle reveal
-            REMARK
-            PROTOCOL_PREFIX
-            final_collateral_amount
-            final_principal_amount
-            final_auction_state
-            final_inner_puzzle_hash
-            final_discounted_principal
+          (list CREATE_COIN
+            (curry_hashes MOD_HASH
+              (sha256tree MOD_HASH)
+              statutes_struct_hash
+              (sha256 ONE final_collateral_amount)
+              (sha256 ONE final_principal_amount)
+              (sha256tree final_auction_state)
+              (sha256 ONE final_inner_puzzle_hash)
+              (sha256 ONE final_discounted_principal)
+            ) ; puzzle hash
+            final_collateral_amount ; amount
+            (list final_inner_puzzle_hash) ; memos
           )
-          (if lineage_proof
-            (li
-              ; verify lineage by calculating parent coin id based on lineage proof
-              (list
-                ASSERT_MY_PARENT_ID
-                (coinid
-                  (f lineage_proof)
-                  (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
-                  (f (r (r lineage_proof)))
-                )
-              )
-              (list ASSERT_MY_PUZZLE_HASH
-                (curry_hashes MOD_HASH
-                  (sha256tree MOD_HASH)
-                  statutes_struct_hash
-                  (sha256 ONE COLLATERAL)
-                  (sha256 ONE PRINCIPAL)
-                  (sha256tree AUCTION_STATE)
-                  (sha256 ONE INNER_PUZZLE_HASH)
-                  (sha256 ONE DISCOUNTED_PRINCIPAL)
-                )
-              )
-              (list ASSERT_MY_AMOUNT COLLATERAL)
-              &rest
-              inner_conditions
+          (c
+            (list
+              ; this is for the driver code to make it easy to generate puzzle reveal
+              REMARK
+              PROTOCOL_PREFIX
+              final_collateral_amount
+              final_principal_amount
+              final_auction_state
+              final_inner_puzzle_hash
+              final_discounted_principal
             )
-            ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
-            ; otherwise launching a vault with pre-existing debt could cause a lot of issues
-            (li
-              (list ASSERT_MY_PUZZLE_HASH
-                (curry_hashes MOD_HASH
-                  (sha256tree MOD_HASH)
-                  statutes_struct_hash
-                  (sha256 ONE 0)
-                  (sha256 ONE 0)
-                  (sha256 ONE ())
-                  (sha256 ONE INNER_PUZZLE_HASH)
-                  (sha256 ONE 0)
+            (if lineage_proof
+              (li
+                ; verify lineage by calculating parent coin id based on lineage proof
+                (list
+                  ASSERT_MY_PARENT_ID
+                  (coinid
+                    (f lineage_proof)
+                    (tree_hash_of_apply MOD_HASH (f (r lineage_proof)))
+                    (f (r (r lineage_proof)))
+                  )
                 )
+                (list ASSERT_MY_PUZZLE_HASH
+                  (curry_hashes MOD_HASH
+                    (sha256tree MOD_HASH)
+                    statutes_struct_hash
+                    (sha256 ONE COLLATERAL)
+                    (sha256 ONE PRINCIPAL)
+                    (sha256tree AUCTION_STATE)
+                    (sha256 ONE INNER_PUZZLE_HASH)
+                    (sha256 ONE DISCOUNTED_PRINCIPAL)
+                  )
+                )
+                (list ASSERT_MY_AMOUNT COLLATERAL)
+                &rest
+                inner_conditions
               )
-              (list ASSERT_MY_AMOUNT 0)
-              &rest
-              inner_conditions
+              ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
+              ; otherwise launching a vault with pre-existing debt could cause a lot of issues
+              (li
+                (list ASSERT_MY_PUZZLE_HASH
+                  (curry_hashes MOD_HASH
+                    (sha256tree MOD_HASH)
+                    statutes_struct_hash
+                    (sha256 ONE 0)
+                    (sha256 ONE 0)
+                    (sha256 ONE ())
+                    (sha256 ONE INNER_PUZZLE_HASH)
+                    (sha256 ONE 0)
+                  )
+                )
+                (list ASSERT_MY_AMOUNT 0)
+                &rest
+                inner_conditions
+              )
             )
           )
         )
       )
     )
   )
+
 )
