@@ -1,5 +1,5 @@
 (mod (RUN_TAIL_MOD_HASH ; fixed
-      STATUTES_STRUCT
+      STATUTES_STRUCT ; immutable
       Truths
       parent_is_cat
       lineage_proof

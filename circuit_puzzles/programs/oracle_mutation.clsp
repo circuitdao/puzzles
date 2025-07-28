@@ -36,7 +36,7 @@
     )
     ; discard matured price infos other than most recent one, if any
     (last_matured_price_info . cut_price_infos) (cut-price-infos PRICE_INFOS (- current_timestamp price_delay) ())
-    ; append new price info to the end of the buffer (FILO)
+    ; append new price info to the end of the buffer (FIFO)
     new_price_infos (merge-lists
         cut_price_infos
         (list (c median_price current_timestamp))
