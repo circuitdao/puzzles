@@ -17,21 +17,6 @@
     (= (strlen var) b32)
   )
 
-  (defun-inline size_uint32 (var)
-    ; 5 bytes for uint32
-    (all (> var MINUS_ONE) (> 6 (strlen var)))
-  )
-
-  (defun-inline size_uint64 (var)
-    ; 9 bytes for uint64
-    (all (> var MINUS_ONE) (> 10 (strlen var)))
-  )
-
-  (defun-inline size_b1 (var)
-    ; zero or one byte
-    (all (> (strlen var) MINUS_ONE) (> TWO (strlen var)))
-  )
-
   (defun and_ (CLAUSES)
     (if (r CLAUSES)
       (qq (if (unquote (f CLAUSES)) (unquote (and_ (r CLAUSES))) ()))
