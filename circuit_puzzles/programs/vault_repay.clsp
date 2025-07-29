@@ -99,8 +99,6 @@
       (any (> repay_amount 0) (> sf_transfer_amount 0)) ; noop if both are 0. not strictly necessary, unless we open repay up to keepers
       ; vault must be left in non-liquidatable state
       (> COLLATERAL (- min_collateral_amount ONE))
-      ; current time must be at least after last oracle update
-      (> current_timestamp (r price_info))
       (list
         (list COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
         (assign

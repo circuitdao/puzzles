@@ -35,6 +35,7 @@
       price_announcers
     )
     ; discard matured price infos other than most recent one, if any
+    ; the Oracle Price is by definition the most recent matured price
     (last_matured_price_info . cut_price_infos) (cut-price-infos PRICE_INFOS (- current_timestamp price_delay) ())
     ; append new price info to the end of the buffer (FIFO)
     new_price_infos (merge-lists
@@ -68,7 +69,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
         (if last_matured_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
-            (sha256tree (c last_matured_price (c last_matured_price_updated (c current_timestamp price_delay))))
+            (sha256tree (c last_matured_price (c last_matured_price_updated price_delay)))
           )
           (list REMARK)
         )

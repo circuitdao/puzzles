@@ -63,7 +63,9 @@
                 ONE
               )
               (if last_matured_price_updated
-                (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (c last_matured_price (c last_matured_price_updated (c current_timestamp price_delay)))))
+                (list CREATE_PUZZLE_ANNOUNCEMENT
+                  (sha256tree (c last_matured_price (c last_matured_price_updated price_delay)))
+                )
                 (x)  ; no matured price infos available, fail. this can only occur during launch
               )
               (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
