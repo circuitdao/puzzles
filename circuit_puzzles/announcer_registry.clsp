@@ -19,15 +19,15 @@
   (defconst REWARD_OPCODE "m")
 
   ; generates notarized payments to target puzzle hashes as required by settlement payments puzzle
-  (defun generate-offer-assert ((@ announcer_registry (target_puzzle_hash . rest_of_announcer_registry)) crt_credits_per_announcer payments)
+  (defun generate-offer-assert ((@ announcer_registry (target_puzzle_hash . rest_of_announcer_registry)) reward_per_announcer payments)
     (if announcer_registry
       (generate-offer-assert
         rest_of_announcer_registry
-        crt_credits_per_announcer
+        reward_per_announcer
         (c
           (list
             target_puzzle_hash
-            crt_credits_per_announcer
+            reward_per_announcer
             (list target_puzzle_hash)
           )
           payments
@@ -94,13 +94,13 @@
               _ ; statutes_inner_puzzle_hash
               _ ; claim interval
               statutes_price_update_counter
-              crt_credits_per_interval
+              rewards_per_interval
               issuance_coin_info
               change_receiver_hash
               my_coin_id
             ) args
             announcers_count (list-length ANNOUNCER_REGISTRY 0)
-            change_amount (r (divmod crt_credits_per_interval announcers_count))
+            change_amount (r (divmod rewards_per_interval announcers_count))
             issuance_coin_id (coinid
               (f issuance_coin_info)
               (curry_hashes CAT_MOD_HASH
@@ -115,7 +115,7 @@
               (> claim_interval MIN_CLAIM_INTERVAL)
               (> announcers_count 0)
               ; we can't issue more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
-              (> MAX_MINT_AMOUNT crt_credits_per_interval)
+              (> MAX_MINT_AMOUNT rewards_per_interval)
               (list
                 () ; clear the registry when claiming rewards
                 (+ CLAIM_COUNTER 1)
@@ -124,13 +124,13 @@
                   (list SEND_MESSAGE 0x3f
                     (concat
                       PROTOCOL_PREFIX
-                      (sha256tree (c STATUTES_STRUCT (c OFFER_MOD_HASH crt_credits_per_interval)))
+                      (sha256tree (c STATUTES_STRUCT (c OFFER_MOD_HASH rewards_per_interval)))
                     )
                     issuance_coin_id
                   )
                   (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_PER_INTERVAL crt_credits_per_interval)
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL claim_interval)
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_PER_INTERVAL rewards_per_interval)
                   (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_update_counter)
                   (list ASSERT_MY_COIN_ID my_coin_id)
                   (list ASSERT_PUZZLE_ANNOUNCEMENT
@@ -145,7 +145,7 @@
                           my_coin_id ; nonce
                           (generate-offer-assert
                             ANNOUNCER_REGISTRY
-                            (/ crt_credits_per_interval announcers_count)
+                            (/ rewards_per_interval announcers_count)
                             (if (> change_amount 0)
                               ; we reward the reward spender with remainder if any
                               (list
@@ -176,7 +176,7 @@
               (= (f (r STATUTES_STRUCT)) (coinid lineage_proof (f (r (r args))) 1))
               (list
                 (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
-                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_CREDITS_INTERVAL claim_interval)
+                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL claim_interval)
                 (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
               )
             )
