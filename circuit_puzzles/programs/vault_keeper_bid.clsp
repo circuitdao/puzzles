@@ -151,7 +151,8 @@
         )
         (= leftover_collateral 0)
       )
-      ; auction price must be greater than min_price to avoid calculation edge cases
+      ; auction price must be greater than min_price. provides protection against
+      ; misconfigured auction params leading to lower auction prices than intended
       (> (/ auction_price PRECISION_BPS) min_price)
       ; sanity check for time
       (> current_timestamp auction_start_time)

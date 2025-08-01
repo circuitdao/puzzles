@@ -9,7 +9,7 @@
     )
     (@ args
       (
-        reconcile_amount
+        recover_amount
         current_timestamp
         treasury_coin_info
         min_treasury_delta
@@ -27,7 +27,7 @@
   (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if treasury_coin_info treasury_coin_info (list 0 0 0 0))
-    new_treasury_amount (- treasury_amount reconcile_amount)
+    new_treasury_amount (- treasury_amount recover_amount)
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
@@ -55,7 +55,7 @@
       byc_to_melt_balance
       min_byc_auction_price
     ) (assert AUCTION_STATE AUCTION_STATE)
-    leftover_byc_to_melt_balance (- byc_to_melt_balance reconcile_amount)
+    leftover_byc_to_melt_balance (- byc_to_melt_balance recover_amount)
     auction_state (if (= leftover_byc_to_melt_balance 0)
       ; paid off all debt, reset auction state
       ()
@@ -78,8 +78,8 @@
       (= COLLATERAL 0)
       ; must recover debt fully or partially, but amount must be at least min treasury delta
       (> leftover_byc_to_melt_balance -1)
-      (> reconcile_amount 0)
-      (any (> reconcile_amount min_treasury_delta) (= reconcile_amount byc_to_melt_balance))
+      (> recover_amount 0)
+      (any (> recover_amount min_treasury_delta) (= recover_amount byc_to_melt_balance))
       (list
         (list
           COLLATERAL
@@ -92,14 +92,14 @@
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM_DELTA min_treasury_delta)
           ; signal to tail that it can melt BYC with certain amount
           ; treasury coins creates two coins, first is a new treasury coin
-          ; with new amount reduced by reconcile amount, second is a melting coin
+          ; with new amount reduced by recover amount, second is a melting coin
           ; that uses RUN_TAIL puzzle to enforce running the tail of BYC
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
               (sha256tree
                 (c STATUTES_STRUCT
-                  (c "x" (* -1 reconcile_amount))
+                  (c "x" (* -1 recover_amount))
                 )
               )
             )
@@ -108,7 +108,7 @@
               byc_tail_hash
               (list
                 treasury_coin_id
-                reconcile_amount
+                recover_amount
                 RUN_TAIL_MOD_HASH
               )
             )
@@ -117,7 +117,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c STATUTES_STRUCT (c (* -1 reconcile_amount) (concat new_treasury_amount RUN_TAIL_MOD_HASH))))
+              (sha256tree (c STATUTES_STRUCT (c (* -1 recover_amount) (concat new_treasury_amount RUN_TAIL_MOD_HASH))))
             )
             treasury_coin_id
           )

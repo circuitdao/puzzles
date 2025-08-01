@@ -28,7 +28,7 @@
     )
   )
 
-  (defun fail-on-non-puzzle-announcement (input_conditions conditions)
+  (defun fail-on-non-coin-announcement (input_conditions conditions)
     (if input_conditions
       (if
         (any
@@ -36,7 +36,7 @@
           (= (f (f input_conditions)) ASSERT_COIN_ANNOUNCEMENT)
           (= (f (f input_conditions)) CREATE_COIN_ANNOUNCEMENT)
         )
-        (fail-on-non-puzzle-announcement (r input_conditions) (c (f input_conditions) conditions))
+        (fail-on-non-coin-announcement (r input_conditions) (c (f input_conditions) conditions))
         (x) ; no other conditions allowed
       )
       conditions

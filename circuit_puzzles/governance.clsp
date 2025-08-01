@@ -7,11 +7,11 @@
       MOD_HASH
       CRT_TAIL_HASH
       STATUTES_STRUCT
-      INNER_PUZZLE_HASH ; hash of the inner puzzle, so that we don't need to reveal it in veto conditions
+      INNER_PUZZLE_HASH ; hash of the inner puzzle. saves costs in veto operation vs currying full puzzle
       BILL ; -> (bill_expiries statute_index statute) where bill_expiries -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
       lineage_proof
-      inner_puzzle ; if provided, we're in owner mode
-      inner_solution
+      inner_puzzle
+      inner_solution ; if provided, we're in owner mode, else keeper mode
       veto_conditions
      )
 
@@ -37,12 +37,12 @@
           INNER_PUZZLE_HASH BILL statutes_puzzle_hash
           final_bill bill_operation
           rest_of_conditions
-          1 ; we found a create coin condition
+          TRUE ; we found a create coin condition
           (assert
             ; amount should be >= 0
-            (> (f (r condition_body)) MINUS_ONE )
+            (> (f (r condition_body)) MINUS_ONE)
             ; only one create coin allowed when in governance mode
-            (= found_create_coin 0)
+            (= found_create_coin FALSE)
             (c
               ; REMARK condition to make it easy to generate puzzle reveal for drivers
               (list REMARK
@@ -221,111 +221,138 @@
   ; ###################  MAIN ENTRY POINT  ########################
   (assign
     raw_inner_conditions (if inner_solution
-      (a (assert (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH) inner_puzzle) inner_solution)
-      ; someone is trying to veto
-      ; there should be specific create_coin in the conditions with same puzzle hash as curried in, announcements are allowed too
+      ; owner spend
+      (a (assert
+           (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
+           (not veto_conditions) ; prevent veto_conditions from being used as unsecured
+           inner_puzzle
+         ) inner_solution
+      )
+      ; keeper spend. someone is trying to veto
+      ; create_coin condition must have same puzzle hash as curried in
+      ; non-protocol conditions are allowed too, as are protocol REMARKs,
+      ; the first of which bill_operation is extracted from (and rest of which are discarded)
       (assert
+        (not inner_puzzle) ; cosmetics. don't allow gibberish to be passed in
         (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions)
         veto_conditions
       )
     )
-    ; find the bill operation in the conditions using REMARK condition and potentially updated coin amount
-    ((statutes_inner_puzzle_hash bill_operation . args) . new_coin_amount) (find-bill-condition raw_inner_conditions () MINUS_ONE)
+    (
+      (statutes_inner_puzzle_hash bill_operation . args) ; from first protocol REMARK encountered
+      . new_coin_amount ; from first CREATE_COIN encountered
+    ) (find-bill-condition raw_inner_conditions () MINUS_ONE)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    operation_mod_hash (if bill_operation (sha256tree bill_operation) ())
-    operation (if operation_mod_hash
-      (if inner_solution
-        (assert (contains OPERATIONS operation_mod_hash)
-          bill_operation
+    bill_operation_hash (sha256tree bill_operation)
+    (final_bill bill_conditions) (if bill_operation
+      (assert
+        (if inner_solution
+          ; owner operation
+          (contains OPERATIONS bill_operation_hash)
+          ; keeper operation. veto bill
+          (= (f OPERATIONS) bill_operation_hash)
         )
-        ; first operation is veto operation, but only if inner_solution is null
-        (assert (= operation_mod_hash (f OPERATIONS))
+        (a
           bill_operation
-        )
-      )
-      ()
-    )
-    (final_bill bill_conditions) (if operation
-      (a
-        operation
-        (list
-          (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-                statutes_puzzle_hash)
-          (c new_coin_amount args)
+          (list
+            (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+                  statutes_puzzle_hash)
+            (c new_coin_amount args)
+          )
         )
       )
       ; no bill operation, this is a transfer or exit
       (assert
         inner_solution ; must be in owner mode
         (not BILL) ; can only transfer or exit when not in proposal mode
-        (list () ()))
+        (list () ())
+      )
     )
-    ; iterate over all conditions and filter out the ones we don't need (REMARK)
+    ; filter raw_inner_conditions:
+    ; discard any protocol REMARKs encountered
+    ; fail on any non-REMARK protocol condition
     ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
-    ; add a REMARK for driver assistance
+    ; add a protocol REMARK for driver assistance
+    ; let all other conditions pass
     (filter-conditions
       EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
       INNER_PUZZLE_HASH BILL statutes_puzzle_hash
       final_bill bill_operation
-      raw_inner_conditions 0
+      raw_inner_conditions FALSE
       (c
-        ; amount can't change while under governance mode
-        ; to avoid double spending coins
-        (list ASSERT_MY_AMOUNT new_coin_amount)
-        (c
-          ; mod hash must match the parent mod hash to keep integrity
-          (list ASSERT_MY_PUZZLE_HASH
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              (curry_hashes MOD_HASH
-                (sha256 ONE MOD_HASH)
-                (sha256 ONE CRT_TAIL_HASH)
-                (sha256tree STATUTES_STRUCT)
-                (sha256 ONE INNER_PUZZLE_HASH)
-                (sha256tree BILL)
-              )
+        (if (not inner_solution)
+          ; keeper mode. secure solution
+          (list SEND_MESSAGE 0x38
+            (concat
+              PROTOCOL_PREFIX
+              ; lineage_proof, inner_puzzle and inner_solution enforced by puzzle,
+              ; so only need to verify veto_conditions
+              (sha256tree veto_conditions)
             )
           )
+          ; owner mode
+          (list REMARK)
+        )
+        (c
+          ; amount can't change while under governance mode
+          ; to avoid double spending coins
+          (list ASSERT_MY_AMOUNT new_coin_amount)
           (c
-            (list ASSERT_MY_PARENT_ID
-              (if (r lineage_proof)
-                (coinid
-                  (f lineage_proof) ; parent parent id
-                  (curry_hashes CAT_MOD_HASH
-                    (sha256 ONE CAT_MOD_HASH)
-                    (sha256 ONE CRT_TAIL_HASH)
-                    (curry_hashes MOD_HASH
-                      (sha256 ONE MOD_HASH) ; ensure parent is currying the same mod hash
-                      (sha256 ONE CRT_TAIL_HASH)
-                      (sha256tree STATUTES_STRUCT)
-                      (sha256 ONE INNER_PUZZLE_HASH)
-                      (f (r lineage_proof)) ; parent bill hash
-                    )
-                  )
-                  new_coin_amount
-                )
-                ; launch
-                (coinid
-                  (f lineage_proof)
-                  (curry_hashes CAT_MOD_HASH
-                    (sha256 ONE CAT_MOD_HASH)
-                    (sha256 ONE CRT_TAIL_HASH)
-                    (curry_hashes LAUNCHER_MOD_HASH
-                      (sha256 ONE MOD_HASH)
-                      (sha256 ONE CAT_MOD_HASH)
-                      (sha256 ONE CRT_TAIL_HASH)
-                      (sha256 ONE (sha256tree STATUTES_STRUCT))
-                    )
-                  )
-                  new_coin_amount
+            ; mod hash must match the parent mod hash to keep integrity
+            (list ASSERT_MY_PUZZLE_HASH
+              (curry_hashes CAT_MOD_HASH
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE CRT_TAIL_HASH)
+                (curry_hashes MOD_HASH
+                  (sha256 ONE MOD_HASH)
+                  (sha256 ONE CRT_TAIL_HASH)
+                  (sha256tree STATUTES_STRUCT)
+                  (sha256 ONE INNER_PUZZLE_HASH)
+                  (sha256tree BILL)
                 )
               )
             )
-            bill_conditions
+            (c
+              (list ASSERT_MY_PARENT_ID
+                (if (r lineage_proof)
+                  (coinid
+                    (f lineage_proof) ; parent parent id
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
+                      (sha256 ONE CRT_TAIL_HASH)
+                      (curry_hashes MOD_HASH
+                        (sha256 ONE MOD_HASH) ; ensure parent is currying the same mod hash
+                        (sha256 ONE CRT_TAIL_HASH)
+                        (sha256tree STATUTES_STRUCT)
+                        (sha256 ONE INNER_PUZZLE_HASH)
+                        (f (r lineage_proof)) ; parent bill hash
+                      )
+                    )
+                    new_coin_amount
+                  )
+                  ; launch
+                  (coinid
+                    (f lineage_proof)
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
+                      (sha256 ONE CRT_TAIL_HASH)
+                      (curry_hashes LAUNCHER_MOD_HASH
+                        (sha256 ONE MOD_HASH)
+                        (sha256 ONE CAT_MOD_HASH)
+                        (sha256 ONE CRT_TAIL_HASH)
+                        (sha256 ONE (sha256tree STATUTES_STRUCT))
+                      )
+                    )
+                    new_coin_amount
+                  )
+                )
+              )
+              bill_conditions
+            )
           )
         )
       )
     )
   )
+
 )
