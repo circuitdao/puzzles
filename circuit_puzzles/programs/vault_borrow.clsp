@@ -62,9 +62,9 @@
     (assert
       (> (+ undiscounted_principal borrow_amount) minimum_debt_amount)
       (> borrow_amount 0)
-      ; ensure the coin we're using to issue has correct amount so user can't mint arbitrary amount
+      ; ensure only exact borrow amount can be issued
       (= (r byc_issuing_coin_info)  borrow_amount)
-      ; check if requested amount of BYC to mint takes us over the collateralization ratio
+      ; check if requested amount of BYC to borrow takes us over the liquidation threshold
       (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) borrow_amount)
       (list
         ; updated state

@@ -5,8 +5,7 @@
   )
 
   (defun-inline available-to-mint (collateral debt liquidation_ratio_pct xch_price)
-    ; returns amount of byc that can be borrowed + 1
-    ; used when borrowing
+    ; returns max amount that can be borrowed + 1
     (- (/ (/ (* collateral xch_price 1000 PRECISION_PCT) (* liquidation_ratio_pct PRICE_PRECISION)) MOJOS) debt)
   )
 

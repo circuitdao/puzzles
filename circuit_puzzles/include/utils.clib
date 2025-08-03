@@ -35,18 +35,28 @@
 
   (defmac or CLAUSES (if CLAUSES (or_ CLAUSES) ()))
 
-  (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
+
+  (defun cumulative-discount-factor-helper (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
     (if (> previous_timestamp current_timestamp)
       past_cumulative_discount_factor
-      (calculate-cumulative-discount-factor
+      (cumulative-discount-factor-helper
         (/ (* past_cumulative_discount_factor current_discount_factor) PRECISION)
         current_discount_factor
         current_timestamp
-        ; per minute calculation
-        (+ previous_timestamp ONE_MINUTE)
+        (+ previous_timestamp ONE_MINUTE) ; per-minute compounding
       )
     )
   )
+
+
+  (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
+    (assign
+      (quotient . remainder) (divmod previous_timestamp ONE_MINUTE)
+      start_timestamp (+ previous_timestamp (- ONE_MINUTE remainder))
+      (cumulative-discount-factor-helper past_cumulative_discount_factor current_discount_factor current_timestamp start_timestamp)
+    )
+  )
+
 
   (defun-inline is-approval-mod (approval_mod_hashes approval_mod)
     (any
