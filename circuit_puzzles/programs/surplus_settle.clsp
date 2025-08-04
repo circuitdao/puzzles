@@ -8,7 +8,6 @@
     lineage_proof input_conditions
     (
       statutes_inner_puzzle_hash
-      current_timestamp
       payout_coin_parent_id
       my_amount
       my_coin_id
@@ -52,8 +51,6 @@
     (assert
       ; must have a bid
       LAST_BID
-      ; ttl for last bid should've expired
-      (> (- current_timestamp timestamp) BID_TTL)
       (li
         (list ASSERT_MY_AMOUNT my_amount)
         (list ASSERT_MY_COIN_ID my_coin_id)
@@ -74,10 +71,9 @@
           )
         )
         (list CREATE_COIN RUN_TAIL_MOD_HASH my_amount)
-        ; current_time minus one tx block time should already be in the past
-        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-        ; make sure that current_timestamp hasn't happened yet, allow it to be in mempool for 5 tx blocks
-        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+        ; ensure auction cannot be settled in same block in which a bid was placed
+        ; and at least BID_TTL seconds have passed since a bid was last placed
+        (list ASSERT_SECONDS_RELATIVE BID_TTL)
         (list SEND_MESSAGE 0x3f
           (concat
             PROTOCOL_PREFIX
