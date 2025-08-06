@@ -39,7 +39,7 @@
     min_collateral_amount (
       get-min-collateral-amount
         undiscounted_principal
-        liquidation_ratio
+        (+ liquidation_ratio ONE)
         (f price_info)
     )
     (assert

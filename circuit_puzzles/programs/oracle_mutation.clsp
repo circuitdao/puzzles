@@ -51,6 +51,7 @@
       ; check that no announcer is being used more than once
       (unique price_announcers)
       ; oracle price must be greater than 0
+      ; this is required for get-min-collateral-amount function, which divides by price
       (> median_price 0)
       ; price info timestamps must increase strictly
       (> current_timestamp last_price_updated)

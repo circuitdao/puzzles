@@ -1,4 +1,5 @@
-;; Mint BYC to borrow and update the principal and other state variables accordingly
+;; Borrow an amount of BYC
+;; Issue BYC being borrowed and update PRINCIPAL and other state variables accordingly
 (mod
   (
     CAT_MOD_HASH BYC_TAIL_MOD_HASH RUN_TAIL_MOD_HASH
@@ -40,14 +41,10 @@
       (r price_info)
     )
     (collateral_price . last_updated) price_info
-    principal (+ PRINCIPAL borrow_amount)
-    ; we're discounting the minted amount by the cumulative stability fee rate to avoid calculating cumulative stability fee
-    ; each time we mint BYC, since the complexity grows with debt's age
-    discounted_mint_amount (*
-      -1  ; multiply with negative numbers to ceil
-      (/ (* -1 borrow_amount PRECISION) cumulative_stability_fee_df)
-    )
-    discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_mint_amount)
+    new_principal (+ PRINCIPAL borrow_amount)
+    ; multiply with negative numbers to ceil
+    discounted_borrow_amount (* -1 (/ (* -1 borrow_amount PRECISION) cumulative_stability_fee_df))
+    new_discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_borrow_amount)
     ; calculate the coin id for the new BYC coin by enforcing the tail hash
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
@@ -58,17 +55,30 @@
         RUN_TAIL_MOD_HASH
       )
     )
-    undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
+    ; multiply current_stability_fee_df six more times onto cumulative_stability_fee_df
+    cumulative_stability_fee_df_adjusted (
+      cumulative-discount-factor-helper
+        cumulative_stability_fee_df
+        current_stability_fee_df
+        (* 3 MAX_TX_BLOCK_TIME)
+        ONE
+    )
+    new_undiscounted_principal (undiscount-principal new_discounted_principal cumulative_stability_fee_df_adjusted)
+    min_collateral_amount (
+      get-min-collateral-amount
+        new_undiscounted_principal
+        (+ liquidation_ratio ONE)
+        (f price_info)
+    )
     (assert
-      (> (+ undiscounted_principal borrow_amount) minimum_debt_amount)
       (> borrow_amount 0)
-      ; ensure only exact borrow amount can be issued
-      (= (r byc_issuing_coin_info)  borrow_amount)
-      ; check if requested amount of BYC to borrow takes us over the liquidation threshold
-      (> (available-to-mint COLLATERAL undiscounted_principal liquidation_ratio collateral_price) borrow_amount)
+      (> new_undiscounted_principal minimum_debt_amount)
+      (> COLLATERAL (- min_collateral_amount ONE))
+      ; must issue exact borrow amount
+      (= (r byc_issuing_coin_info) borrow_amount)
       (list
         ; updated state
-        (list COLLATERAL principal AUCTION_STATE INNER_PUZZLE_HASH discounted_principal)
+        (list COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
         ; additional conditions
         (list
           ; signal to tail that it can issue BYC with certain amount
