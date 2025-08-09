@@ -53,7 +53,8 @@
       auction_ttl
       byc_to_treasury_balance
       byc_to_melt_balance
-      min_byc_auction_price
+      minimum_bid_amount
+      min_price
     ) (assert AUCTION_STATE AUCTION_STATE)
     leftover_byc_to_melt_balance (- byc_to_melt_balance recover_amount)
     auction_state (if (= leftover_byc_to_melt_balance 0)
@@ -69,8 +70,8 @@
         0 ; auction_ttl
         0 ; byc_to_treasury_balance. fees paid to treasury cancel out
         leftover_byc_to_melt_balance
-        0
-        0
+        0 ; minimum_bid_amount
+        0 ; min_auction_price
       )
     )
     (assert

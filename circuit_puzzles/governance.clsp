@@ -1,5 +1,6 @@
-;; a governance puzzle used to propose, enact, and veto bills that change the statutes if enacted
-;; this puzzle is to be used with CRT tail
+;; The governance puzzle is used as a CRT CAT inner puzzle. It allows CRT holders to propose, veto, and implement bills.
+;; A bill changes a Statute in state of Statutes singleton if implemented, or, alternatively, caused the Statutes singleton
+;; to output one or more custom conditions.
 (mod (CAT_MOD_HASH ; fixed to mod
       LAUNCHER_MOD_HASH ; fixed to mod
       EXIT_MOD_HASH  ; fixed to mod

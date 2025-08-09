@@ -63,7 +63,7 @@
         ; we're approving
         (assert
           ; we're not requiring that VALUE_TTL <= Statutes max value TTL or that price is not expired in case an announcer has a
-          ;  technical issue just when governance wants to enact approval. but we always want DEPOSIT and MIN_DEPOSIT
+          ;  technical issue just when governance wants to implement approval bill. but we always want DEPOSIT and MIN_DEPOSIT
           ;  to be set properly so that announcer can be penalized
           (= deposit DEPOSIT) ; can't steal deposit
           ; deposit must be no less than both announcer and statutes min deposit

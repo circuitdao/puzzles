@@ -14,7 +14,7 @@
   (include prefixes.clib)
   (include utils.clib)
 
-  (defconst ANN_ENACTED '$')
+  (defconst ANN_IMPLEMENTED '$')
 
   (assign
     (
@@ -31,7 +31,7 @@
       (> current_timestamp implementation_delay_expiry)
       (> implementation_interval_expiry current_timestamp)
       (list
-        ; if enactment passes, reset this coin's bill state
+        ; if implementation succeeds, reset this coin's bill state
         ()
         ; conditions to return
         (list
@@ -40,7 +40,7 @@
             (concat PROTOCOL_PREFIX (sha256tree (r BILL)))
             statutes_puzzle_hash
           )
-          (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_ENACTED)))
+          (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_IMPLEMENTED)))
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         )
