@@ -109,7 +109,7 @@
         0 ; initial amount for the coin that holds our lot should be 0
     )
     (li
-      (list ASSERT_MY_PUZZLE_HASH
+      (list ASSERT_MY_PUZZLEHASH
         (curry_hashes CAT_MOD_HASH
           (sha256 ONE CAT_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)

@@ -118,7 +118,7 @@
           )
           approver_coin_id
         )
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             CAT_MOD_HASH_HASH
             (sha256tree crt_tail_hash)

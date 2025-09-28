@@ -203,7 +203,7 @@
         ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
         (list RECEIVE_MESSAGE 0x04 lineage_proof)
       )
-      (list ASSERT_MY_PUZZLE_HASH
+      (list ASSERT_MY_PUZZLEHASH
         (curry_hashes MOD_HASH
           (sha256 ONE MOD_HASH)
           (sha256tree STATUTES_STRUCT)

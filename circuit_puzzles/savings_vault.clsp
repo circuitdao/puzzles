@@ -94,7 +94,7 @@
     final_conditions (if lineage_proof
       ; lineage_proof -> (parent_id, amount, discounted_balance, inner_puzzle_hash)
       (c
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE byc_tail_hash)
@@ -128,7 +128,7 @@
       )
       ; this is a launch, verify we're starting with zero amounts
       (c
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE byc_tail_hash)

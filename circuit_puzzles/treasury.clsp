@@ -130,7 +130,7 @@
           (c
             (list ASSERT_MY_AMOUNT current_amount)
             (c
-              (list ASSERT_MY_PUZZLE_HASH
+              (list ASSERT_MY_PUZZLEHASH
                 (curry_hashes
                   CAT_MOD_HASH
                   (sha256 ONE CAT_MOD_HASH)

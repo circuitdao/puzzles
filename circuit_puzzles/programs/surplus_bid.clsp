@@ -34,7 +34,7 @@
       (> crt_bid_amount (/ (* my_amount (+ PRECISION_BPS MIN_BID_INCREASE_BPS)) PRECISION_BPS))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE CRT_TAIL_HASH)

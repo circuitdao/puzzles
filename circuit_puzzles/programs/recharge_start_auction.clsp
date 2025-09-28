@@ -77,7 +77,7 @@
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_time (* 5 MAX_TX_BLOCK_TIME)))
         ; start balance should be zero
         (list ASSERT_MY_AMOUNT 0)
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE BYC_TAIL_HASH)

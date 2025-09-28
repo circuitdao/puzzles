@@ -57,7 +57,7 @@
         new_bill
       )
       (list
-        ; to avoid spamming the network with proposals, we require a fee to be paid
+        ; to avoid the network being spammed with proposals, we require a fee to be paid
         (list RESERVE_FEE bill_proposal_fee_mojos)
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
         ; assert that passed statute index corresponds to correct statute

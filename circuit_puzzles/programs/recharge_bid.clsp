@@ -76,7 +76,7 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         ; make sure that current_timestamp hasn't happen yet, allow it to be in mempool for 5 tx blocks
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE BYC_TAIL_HASH)
@@ -117,8 +117,11 @@
                   )
                   (sha256tree
                     (c my_coin_id
-                    (list
-                      (list last_target_puzzle_hash last_byc_bid_amount (list last_target_puzzle_hash)))))
+                      (list
+                        (list last_target_puzzle_hash last_byc_bid_amount (list last_target_puzzle_hash))
+                      )
+                    )
+                  )
                 )
               )
               input_conditions
