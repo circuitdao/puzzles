@@ -4,7 +4,7 @@
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (penalty_factor_per_interval statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit max_value_ttl current_timestamp)
+      (penalty_per_interval_bps statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit max_value_ttl current_timestamp)
       rest_of_condition
      )
 
@@ -21,7 +21,7 @@
       (/
         (*
           DEPOSIT
-          penalty_factor_per_interval
+          (- PRECISION_BPS penalty_per_interval_bps)
         )
         PRECISION_BPS
       )
@@ -48,7 +48,7 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval_in_minutes)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_FACTOR_PER_INTERVAL_BPS penalty_factor_per_interval)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_PER_INTERVAL_BPS penalty_per_interval_bps)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
         &rest
