@@ -70,7 +70,7 @@
           (> deposit (- MIN_DEPOSIT ONE))
           (> MIN_DEPOSIT (- max_disapproval_penalty_factor_or_min_deposit ONE))
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT max_disapproval_penalty_factor_or_min_deposit)
+            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS max_disapproval_penalty_factor_or_min_deposit)
             input_conditions
           )
         )

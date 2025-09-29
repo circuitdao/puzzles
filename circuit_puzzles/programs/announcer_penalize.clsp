@@ -47,9 +47,9 @@
         (list RESERVE_FEE (- DEPOSIT penalized_deposit))
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL penalty_interval_in_minutes)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL_MINUTES penalty_interval_in_minutes)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_PER_INTERVAL_BPS penalty_per_interval_bps)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
+        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS min_deposit)
         (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
         &rest
         (recreate-myself-condition MOD_HASH
