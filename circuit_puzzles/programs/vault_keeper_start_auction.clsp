@@ -13,7 +13,7 @@
         step_time_interval
         step_price_decrease_factor
         price_info
-        starting_price_factor
+        starting_price_factor_bps
         initiator_puzzle_hash
         auction_ttl
         minimum_bid_amount_flat
@@ -63,7 +63,7 @@
       liquidation_penalty_bps
     )
     ; start and restart
-    start_price (/ (* (f price_info) starting_price_factor) PRECISION_BPS) ; start_price -> last_price * starting_price_factor
+    start_price (/ (* (f price_info) starting_price_factor_bps) PRECISION_BPS) ; start_price = statutes price * starting price factor
     ; calculate min price for auction algorithm
     min_price (/ (* start_price minimum_price_factor_bps) PRECISION_BPS)
     byc_to_treasury_balance (if (> initiator_incentive_balance total_fees)
@@ -114,7 +114,7 @@
       (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
       (assert-price-info statutes_puzzle_hash price_info)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS minimum_price_factor_bps)
-      (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR starting_price_factor)
+      (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS starting_price_factor_bps)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_DECREASE_BPS step_price_decrease_factor)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_PRICE_TTL step_time_interval)
       (assert-statute statutes_puzzle_hash STATUTE_VAULT_AUCTION_TTL auction_ttl)
