@@ -23,7 +23,7 @@
       bid_ttl
       min_crt_price
       min_byc_bid_amount
-      min_bid_increase_bps
+      min_price_increase_bps
       max_byc_bid_amount
     ) AUCTION_PARAMS
     ((last_byc_bid_amount . last_crt_bid_amount) last_target_puzzle_hash last_bid_timestamp) (
@@ -41,7 +41,7 @@
       (> crt_price min_crt_price)
       (any
         (= last_crt_price 0)
-        (> crt_price (/ (* last_crt_price (+ PRECISION_BPS min_bid_increase_bps)) PRECISION_BPS))
+        (> crt_price (/ (* last_crt_price (+ PRECISION_BPS min_price_increase_bps)) PRECISION_BPS))
       )
       ; bids can't be smaller than this
       (> byc_bid_amount min_byc_bid_amount)

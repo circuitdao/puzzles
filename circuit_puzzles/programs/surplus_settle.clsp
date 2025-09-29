@@ -4,7 +4,7 @@
 ; and unlocks the BYC in payout coin, which gets sent to the target puzzle hash of the winning bid.
 (mod
   (PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
-    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     lineage_proof input_conditions
     (
       statutes_inner_puzzle_hash
@@ -64,7 +64,7 @@
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE BID_TTL)
-              (sha256 ONE MIN_BID_INCREASE_BPS)
+              (sha256 ONE MIN_PRICE_INCREASE_BPS)
               (sha256 ONE BYC_LOT_AMOUNT)
               (sha256tree LAST_BID)
             )

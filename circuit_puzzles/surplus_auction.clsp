@@ -3,8 +3,8 @@
       STATUTES_STRUCT ; to assert statutes
       LAUNCHER_ID ; to assert uniqueness of launcher_id
       BID_TTL
-      MIN_BID_INCREASE_BPS
-      BYC_LOT_AMOUNT ; amount of BYC in a lot to win
+      MIN_PRICE_INCREASE_BPS
+      BYC_LOT_AMOUNT ; amount of BYC being actioned off
       LAST_BID ; holds bid data -> (target_puzzle_hash . timestamp). amount of CRT bid is surplus auction coin amount
       (
         lineage_proof ; -> (parent_id launcher_id amount last_bid)
@@ -47,7 +47,7 @@
         (a
           operation
           (list
-            (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+            (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
             lineage_proof input_conditions op_args
           )
         )

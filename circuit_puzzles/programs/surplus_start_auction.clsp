@@ -1,6 +1,6 @@
 (mod
   (PAYOUT_MOD_HASH TREASURY_MOD_HASH
-    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     lineage_proof input_conditions
     (
       statutes_inner_puzzle_hash
@@ -8,7 +8,7 @@
       lot_amount
       my_coin_id
       bid_ttl
-      min_bid_increase_bps
+      min_price_increase_bps
       treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
       treasury_maximum
     )
@@ -119,7 +119,7 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE ()); LAUNCHER_ID
             (sha256 ONE 0) ; BID_TTL
-            (sha256 ONE 0) ; MIN_BID_INCREASE_BPS
+            (sha256 ONE 0) ; MIN_PRICE_INCREASE_BPS
             (sha256 ONE 0) ; BYC_LOT_AMOUNT
             (sha256 ONE ()) ; LAST_BID
           )
@@ -134,7 +134,7 @@
           (sha256tree STATUTES_STRUCT)
           (sha256 ONE my_coin_id) ; launcher ID
           (sha256 ONE bid_ttl)
-          (sha256 ONE min_bid_increase_bps)
+          (sha256 ONE min_price_increase_bps)
           (sha256 ONE lot_amount)
           (sha256 ONE ()) ; no bid yet
         )
@@ -143,7 +143,7 @@
       (list ASSERT_MY_AMOUNT 0) ; enforece eve amount
       (list ASSERT_MY_COIN_ID my_coin_id)
       (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL bid_ttl)
-      (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
+      (assert-statute statutes_puzzle_hash STATUTE_AUCTIONS_MINIMUM_PRICE_INCREASE_BPS min_price_increase_bps)
       (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
       ; assert payout coin received the lot amount
       (list RECEIVE_MESSAGE 0x3f
@@ -155,7 +155,7 @@
         PROTOCOL_PREFIX
         my_coin_id
         bid_ttl
-        min_bid_increase_bps
+        min_price_increase_bps
         lot_amount
         0 ; bid crt amount still 0
         () ; last bid
