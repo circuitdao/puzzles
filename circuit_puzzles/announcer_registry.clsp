@@ -1,4 +1,4 @@
-(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL ATOM_ANNOUNCER_MOD_HASH
+(mod (MAXIMUM_REWARDS_PER_INTERVAL MINIMUM_REWARDS_INTERVAL ATOM_ANNOUNCER_MOD_HASH
        CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
        MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY CLAIM_COUNTER REWARDS_CLAIMABLE_AT
        (@ solution (
@@ -112,10 +112,10 @@
             )
             (assert
               (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
-              (> rewards_interval MIN_CLAIM_INTERVAL)
+              (> rewards_interval MINIMUM_REWARDS_INTERVAL)
               (> announcers_count 0)
-              ; we can't issue more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
-              (> MAX_MINT_AMOUNT rewards_per_interval)
+              ; we can't issue more than MAXIMUM_REWARDS_PER_INTERVAL which is immutable to stop governance from inflating CRTs
+              (> MAXIMUM_REWARDS_PER_INTERVAL rewards_per_interval)
               (list
                 () ; clear the registry when claiming rewards
                 (+ CLAIM_COUNTER 1)
