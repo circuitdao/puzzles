@@ -92,7 +92,7 @@
     )
     new_treasury_coin_amount (if treasury_coin_id (- treasury_coin_amount interest_payment) 0)
     final_conditions (if lineage_proof
-      ; lineage_proof -> (parent_id, amount, discounted_balance, inner_puzzle_hash)
+      ; lineage_proof -> (parent_parent_id, parent_amount, parent_discounted_balance, parent_inner_puzzle_hash)
       (c
         (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
@@ -109,18 +109,18 @@
         (c
           (list ASSERT_MY_PARENT_ID
             (coinid
-              (f lineage_proof)
+              (f lineage_proof) ; parent parent id
               (curry_hashes CAT_MOD_HASH
                 (sha256 ONE CAT_MOD_HASH)
                 (sha256 ONE byc_tail_hash)
                 (curry_hashes MOD_HASH
                   (sha256 ONE MOD_HASH)
                   statutes_struct_hash
-                  (sha256 ONE (f (r (r lineage_proof)))) ; discounted balance
-                  (f (r (r (r lineage_proof)))) ; inner puzzle hash
+                  (sha256 ONE (f (r (r lineage_proof)))) ; parent discounted balance
+                  (f (r (r (r lineage_proof)))) ; parent inner puzzle hash
                 )
               )
-              (f (r lineage_proof)) ; amount
+              (f (r lineage_proof)) ; parent amount
             )
           )
           conditions
@@ -145,11 +145,12 @@
         )
       )
     )
-    inner_puzzle_hash (f create_coin_body)
+    new_inner_puzzle_hash (f create_coin_body)
     (assert
+      (size_b32 new_inner_puzzle_hash)
       (> interest_payment MINUS_ONE)
       (li
-        (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount inner_puzzle_hash memos)
+        (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount new_inner_puzzle_hash memos)
         (list ASSERT_MY_AMOUNT current_amount)
         (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
         (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
@@ -158,11 +159,11 @@
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
         ; constructing CREATE_COIN so we can prepend to whatever memos we got
         (list CREATE_COIN
-          (curry_hashes MOD_HASH ; puzzle hash
+          (curry_hashes MOD_HASH
             (sha256 ONE MOD_HASH)
             statutes_struct_hash
             (sha256 ONE new_discounted_balance)
-            inner_puzzle_hash
+            new_inner_puzzle_hash
           )
           new_amount
           memos
