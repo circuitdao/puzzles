@@ -38,6 +38,7 @@
       (f price_info)
     )
     (assert
+      (size_b32 target_puzzle_hash)
       (> COLLATERAL (- min_collateral_amount ONE))  ; must be at or above liquidation threshold
       (list
         (list COLLATERAL PRINCIPAL AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
