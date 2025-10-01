@@ -113,7 +113,7 @@
               (assert
                 (> new_min_deposit (- min_deposit ONE))
                 (c
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS min_deposit)
                   operation_conditions
                 )
               )
@@ -129,7 +129,8 @@
       ; exit announcer layer
       (assert
         (not APPROVED) ; can't exit approved announcer
-        ; melting, vacuum coin should use this announcement to ensure integrity
+        ; not outputting input_conditions to prevent creation of a child coin
+        ; coin absorbing deposit can use announcement below as anchor
         (list
           (list CREATE_COIN_ANNOUNCEMENT 'x')
         )

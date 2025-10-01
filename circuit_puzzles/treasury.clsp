@@ -13,7 +13,7 @@
         input_conditions
         ; rebalance_args are:
         ; -> () if not rebalancing
-        ; -> (prev_coin_info next_coin_info min_coin_info max_coin_info rebalance_delta prev_delta_sum baseline_amount new_amount)
+        ; -> (prev_coin_info next_coin_info min_coin_info max_coin_info rebalance_ratio_pct prev_delta_sum baseline_amount new_amount)
         ; where
         ;  X_coin_info -> (X_parent_id X_curried_args_hash X_amount)
         rebalance_args
@@ -130,7 +130,7 @@
           (c
             (list ASSERT_MY_AMOUNT current_amount)
             (c
-              (list ASSERT_MY_PUZZLE_HASH
+              (list ASSERT_MY_PUZZLEHASH
                 (curry_hashes
                   CAT_MOD_HASH
                   (sha256 ONE CAT_MOD_HASH)
@@ -154,7 +154,7 @@
                       next_coin_info
                       min_coin_info
                       max_coin_info
-                      rebalance_delta
+                      rebalance_ratio_pct
                       prev_delta_sum
                       baseline_amount
                     ) rebalance_args
@@ -221,7 +221,7 @@
                       (> new_amount (- baseline_amount 1))
                       (> (+ baseline_amount 2) new_amount)
                       ; percentage delta between min and max treasury coin amount must exceed threshold
-                      (> (* (- max_amount min_amount) PRECISION_PCT) (* min_amount rebalance_delta))
+                      (> (* (- max_amount min_amount) PRECISION_PCT) (* min_amount rebalance_ratio_pct))
                       (li
                         ; receive message from predecessor coin
                         (list RECEIVE_MESSAGE 0x3f
@@ -249,7 +249,7 @@
                         (list ASSERT_COIN_ANNOUNCEMENT (sha256 max_coin_id (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT max_amount)))))
                         (list ASSERT_COIN_ANNOUNCEMENT (sha256 min_coin_id (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT min_amount)))))
                         (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID)
-                        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_REBALANCE_DELTA_PCT rebalance_delta)
+                        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_REBALANCE_RATIO_PCT rebalance_ratio_pct)
                         &rest
                         conditions
                       )

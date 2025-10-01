@@ -9,7 +9,7 @@
       bid_ttl
       min_crt_price
       min_byc_bid_amount
-      min_bid_increase_bps
+      min_price_increase_bps
       max_byc_bid_amount
       treasury_minimum
       treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
@@ -31,7 +31,7 @@
       bid_ttl
       min_crt_price
       min_byc_bid_amount
-      min_bid_increase_bps
+      min_price_increase_bps
       max_byc_bid_amount
     )
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
@@ -68,7 +68,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_BID_TTL bid_ttl)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_CRT_PRICE min_crt_price)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MINIMUM_BID min_byc_bid_amount)
-        (assert-statute statutes_puzzle_hash STATUTE_MINIMUM_BID_INCREASE_BPS min_bid_increase_bps)
+        (assert-statute statutes_puzzle_hash STATUTE_AUCTIONS_MINIMUM_PRICE_INCREASE_BPS min_price_increase_bps)
         (assert-statute statutes_puzzle_hash STATUTE_RECHARGE_AUCTION_MAXIMUM_BID max_byc_bid_amount)
         (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MINIMUM treasury_minimum)
         ; start_time minus one tx block time should already be in the past
@@ -77,7 +77,7 @@
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_time (* 5 MAX_TX_BLOCK_TIME)))
         ; start balance should be zero
         (list ASSERT_MY_AMOUNT 0)
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE BYC_TAIL_HASH)

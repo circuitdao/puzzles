@@ -55,7 +55,7 @@
           ; we use current_coin_amount when issuing to limit the issuance to whatever vault approved
           (list ASSERT_MY_AMOUNT current_coin_amount)
           ; this tail can only be called in run tail puzzle to avoid misuse
-          (list ASSERT_MY_PUZZLE_HASH
+          (list ASSERT_MY_PUZZLEHASH
             (curry_hashes CAT_MOD_HASH
               CAT_MOD_HASH_HASH
               (sha256tree byc_tail_hash)

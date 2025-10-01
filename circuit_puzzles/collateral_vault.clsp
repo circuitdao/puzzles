@@ -169,7 +169,7 @@
                     (f (r (r lineage_proof)))
                   )
                 )
-                (list ASSERT_MY_PUZZLE_HASH
+                (list ASSERT_MY_PUZZLEHASH
                   (curry_hashes MOD_HASH
                     (sha256tree MOD_HASH)
                     statutes_struct_hash
@@ -187,7 +187,7 @@
               ; force that every vault needs to start with zero state, ie no BYC minted, no fees transferred, no principal
               ; otherwise launching a vault with pre-existing debt could cause a lot of issues
               (li
-                (list ASSERT_MY_PUZZLE_HASH
+                (list ASSERT_MY_PUZZLEHASH
                   (curry_hashes MOD_HASH
                     (sha256tree MOD_HASH)
                     statutes_struct_hash

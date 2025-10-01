@@ -1,4 +1,4 @@
-(mod (MAX_MINT_AMOUNT MIN_CLAIM_INTERVAL ATOM_ANNOUNCER_MOD_HASH
+(mod (MAXIMUM_REWARDS_PER_INTERVAL MINIMUM_REWARDS_INTERVAL ATOM_ANNOUNCER_MOD_HASH
        CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
        MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY CLAIM_COUNTER REWARDS_CLAIMABLE_AT
        (@ solution (
@@ -84,7 +84,7 @@
       )
       (assign
         statutes_inner_puzzle_hash (f args)
-        claim_interval (f (r args))
+        rewards_interval (f (r args))
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
         (if (= reward_or_register REWARD_OPCODE)
@@ -92,7 +92,7 @@
           (assign
             (
               _ ; statutes_inner_puzzle_hash
-              _ ; claim interval
+              _ ; rewards interval
               statutes_price_update_counter
               rewards_per_interval
               issuance_coin_info
@@ -112,14 +112,14 @@
             )
             (assert
               (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
-              (> claim_interval MIN_CLAIM_INTERVAL)
+              (> rewards_interval MINIMUM_REWARDS_INTERVAL)
               (> announcers_count 0)
-              ; we can't issue more than MAX_MINT_AMOUNT which is immutable to stop governance from inflating CRTs
-              (> MAX_MINT_AMOUNT rewards_per_interval)
+              ; we can't issue more than MAXIMUM_REWARDS_PER_INTERVAL which is immutable to stop governance from inflating CRTs
+              (> MAXIMUM_REWARDS_PER_INTERVAL rewards_per_interval)
               (list
                 () ; clear the registry when claiming rewards
                 (+ CLAIM_COUNTER 1)
-                (+ statutes_price_update_counter claim_interval)
+                (+ statutes_price_update_counter rewards_interval)
                 (list
                   (list SEND_MESSAGE 0x3f
                     (concat
@@ -129,7 +129,7 @@
                     issuance_coin_id
                   )
                   (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL claim_interval)
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
                   (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_PER_INTERVAL rewards_per_interval)
                   (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_update_counter)
                   (list ASSERT_MY_COIN_ID my_coin_id)
@@ -170,13 +170,13 @@
           (list
             ANNOUNCER_REGISTRY
             1 ; claim counter
-            claim_interval ; rewards claimable at
+            rewards_interval ; rewards claimable at
             (assert
               ; check that lineage_proof is parent of launcher
               (= (f (r STATUTES_STRUCT)) (coinid lineage_proof (f (r (r args))) 1))
               (list
                 (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
-                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL claim_interval)
+                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
                 (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
               )
             )
@@ -203,7 +203,7 @@
         ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
         (list RECEIVE_MESSAGE 0x04 lineage_proof)
       )
-      (list ASSERT_MY_PUZZLE_HASH
+      (list ASSERT_MY_PUZZLEHASH
         (curry_hashes MOD_HASH
           (sha256 ONE MOD_HASH)
           (sha256tree STATUTES_STRUCT)

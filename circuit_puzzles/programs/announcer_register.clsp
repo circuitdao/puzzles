@@ -46,7 +46,7 @@
         (c
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE TIMESTAMP_EXPIRES)
           (c
-            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT min_deposit)
+            (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS min_deposit)
             (recreate-myself-condition MOD_HASH
               STATUTES_STRUCT
               LAUNCHER_ID

@@ -300,7 +300,7 @@
           (list ASSERT_MY_AMOUNT new_coin_amount)
           (c
             ; mod hash must match the parent mod hash to keep integrity
-            (list ASSERT_MY_PUZZLE_HASH
+            (list ASSERT_MY_PUZZLEHASH
               (curry_hashes CAT_MOD_HASH
                 (sha256 ONE CAT_MOD_HASH)
                 (sha256 ONE CRT_TAIL_HASH)

@@ -1,10 +1,10 @@
 ;; Bid to active surplus auction coin. There can be multiple active surplus auctions.
 ;; Surplus auction puzzle is inner puzzle of CRT coin. So bids are are in CRT CAT values.
-;; The bid amount is bidding for BYC_LOT_AMOUNT. Bid amount must be at least STATUTE_MINIMUM_BID_INCREASE_BPS higher
+;; The bid amount is bidding for BYC_LOT_AMOUNT. Bid amount must be at least MIN_PRICE_INCREASE_BPS higher
 ;; than the current bid if any to avoid spamming the network with small bids.
 (mod
   (OFFER_MOD_HASH
-    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_BID_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
+    (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     lineage_proof ; -> (parent_parent_id parent_amount parent_cat_inner_puzzle_hash)
     input_conditions
     (
@@ -30,11 +30,11 @@
       (any (all (= my_amount 0) (> crt_bid_amount 0)) (> crt_bid_amount my_amount))
       ; TTL for bid hasn't expired yet
       (any (not last_bid_timestamp) (> BID_TTL (- current_timestamp last_bid_timestamp)))
-      ; crt_bid_amount is min_bid_increase_bps higher than my_amount
-      (> crt_bid_amount (/ (* my_amount (+ PRECISION_BPS MIN_BID_INCREASE_BPS)) PRECISION_BPS))
+      ; crt_bid_amount is min_price_increase_bps higher than my_amount
+      (> crt_bid_amount (/ (* my_amount (+ PRECISION_BPS MIN_PRICE_INCREASE_BPS)) PRECISION_BPS))
       (li
         (list ASSERT_MY_AMOUNT my_amount)
-        (list ASSERT_MY_PUZZLE_HASH
+        (list ASSERT_MY_PUZZLEHASH
           (curry_hashes CAT_MOD_HASH
             (sha256 ONE CAT_MOD_HASH)
             (sha256 ONE CRT_TAIL_HASH)
@@ -44,7 +44,7 @@
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE BID_TTL)
-              (sha256 ONE MIN_BID_INCREASE_BPS)
+              (sha256 ONE MIN_PRICE_INCREASE_BPS)
               (sha256 ONE BYC_LOT_AMOUNT)
               (sha256tree LAST_BID)
             )
@@ -59,7 +59,7 @@
             (sha256tree STATUTES_STRUCT)
             (sha256 ONE LAUNCHER_ID)
             (sha256 ONE BID_TTL)
-            (sha256 ONE MIN_BID_INCREASE_BPS)
+            (sha256 ONE MIN_PRICE_INCREASE_BPS)
             (sha256 ONE BYC_LOT_AMOUNT)
             (sha256tree (c target_puzzle_hash current_timestamp))
           )
@@ -69,7 +69,7 @@
           PROTOCOL_PREFIX
           LAUNCHER_ID
           BID_TTL
-          MIN_BID_INCREASE_BPS
+          MIN_PRICE_INCREASE_BPS
           BYC_LOT_AMOUNT
           crt_bid_amount
           (c target_puzzle_hash current_timestamp)

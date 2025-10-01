@@ -3,7 +3,7 @@
      statutes_puzzle_hash)
     (
       amount
-      new_bill_proposal_fee_mojos
+      bill_proposal_fee_mojos
       (@ new_bill (
         statute_index
         new_statute_value
@@ -57,8 +57,8 @@
         new_bill
       )
       (list
-        ; to avoid spamming the network with proposals, we require a fee to be paid
-        (list RESERVE_FEE new_bill_proposal_fee_mojos)
+        ; to avoid the network being spammed with proposals, we require a fee to be paid
+        (list RESERVE_FEE bill_proposal_fee_mojos)
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
         ; assert that passed statute index corresponds to correct statute
         ; and that passed statute values are correct
@@ -70,7 +70,7 @@
         )
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_BILL_PROPOSAL_FEE_MOJOS new_bill_proposal_fee_mojos)
+        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_BILL_PROPOSAL_FEE_MOJOS bill_proposal_fee_mojos)
         (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_IMPLEMENTATION_INTERVAL implementation_interval)
       )
     )

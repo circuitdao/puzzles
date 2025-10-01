@@ -35,6 +35,10 @@
     operation_hash (sha256tree operation)
     (assert
       (any
+        (size_b32 new_puzzle_hash)
+        (not new_puzzle_hash)
+      )
+      (any
         inner_puzzle_hash
         (all
           (not inner_puzzle_hash)
@@ -82,7 +86,7 @@
             )
           )
           (c
-            (list ASSERT_MY_PUZZLE_HASH
+            (list ASSERT_MY_PUZZLEHASH
               (curry_hashes MOD_HASH
                 (sha256 ONE MOD_HASH)
                 (sha256tree STATUTES_STRUCT)

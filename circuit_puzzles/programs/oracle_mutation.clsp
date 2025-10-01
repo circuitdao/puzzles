@@ -66,7 +66,7 @@
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELTA_BPS price_updatable_threshold_bps)
+        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_RATIO_BPS price_updatable_threshold_bps)
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
         (if last_matured_price
           (list CREATE_PUZZLE_ANNOUNCEMENT
