@@ -85,7 +85,9 @@
 
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    conditions (if keeper_operation_info keeper_operation_info (a inner_puzzle solution))
+    conditions (a inner_puzzle solution)
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    keeper_operation_info (if (= inner_puzzle_hash INNER_PUZZLE_HASH) () conditions)
     (vault_operation_condition filtered_conditions) (filter-and-extract-unique-protocol-remark conditions () ())
     (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash
@@ -106,33 +108,31 @@
       vault_operation
       (list
         (list COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-              STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash)
+              STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash)
         args
       )
     )
     inner_conditions (merge-lists filtered_conditions operation_conditions)
     ;### MAIN EXPRESSION ###
     (assert
+      (size_b32 final_inner_puzzle_hash)
       (if keeper_operation_info
         ; keeper mode
         (contains KEEPER_OPERATIONS vault_operation_hash)
         ; owner mode
         (all
           (not AUCTION_STATE)
-          (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
+          (= inner_puzzle_hash INNER_PUZZLE_HASH)
           (contains OWNER_OPERATIONS vault_operation_hash)
         )
       )
       (c
-        (if keeper_operation_info
-          (list SEND_MESSAGE 0x38 ; coin ID to none
-            (concat
-              PROTOCOL_PREFIX
-              (sha256tree (list statutes_inner_puzzle_hash vault_operation_hash args filtered_conditions))
-            )
-          ) ; secure keeper solution
-          (list REMARK)
-        )
+        (list CREATE_COIN_ANNOUNCEMENT
+          (concat
+            PROTOCOL_PREFIX
+            (sha256tree (list STATUTES_STRUCT inner_puzzle_hash))
+          )
+        ) ; for fee coin
         (c
           (list CREATE_COIN
             (curry_hashes MOD_HASH
@@ -208,5 +208,4 @@
       )
     )
   )
-
 )

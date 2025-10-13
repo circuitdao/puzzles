@@ -4,7 +4,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
       )
     )
     (@ args
@@ -119,9 +119,11 @@
                   (concat
                     PROTOCOL_PREFIX
                     (sha256tree
-                      (c STATUTES_STRUCT
-                        (c 'x'
-                          negative_principal_to_repay
+                      (c  inner_puzzle_hash
+                        (c STATUTES_STRUCT
+                          (c 'x'
+                            negative_principal_to_repay
+                          )
                         )
                       )
                     )

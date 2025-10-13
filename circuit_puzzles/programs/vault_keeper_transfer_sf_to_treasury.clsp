@@ -5,7 +5,7 @@
       (
        COLLATERAL
        PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
       )
     )
     (@ args
@@ -93,14 +93,14 @@
         (list
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
-            (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT (c "i" fees_to_treasury))))
+            (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c "i" fees_to_treasury)))))
             byc_issuing_coin_id
           )
           ; approve treasury coin to receive a deposit
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c STATUTES_STRUCT (c fees_to_treasury new_treasury_amount)))
+              (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c fees_to_treasury new_treasury_amount))))
             )
             treasury_coin_id
           )

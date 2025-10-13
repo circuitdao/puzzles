@@ -1,29 +1,10 @@
-(mod (
+(mod
+    (
       CAT_MOD_HASH BYC_TAIL_MOD_HASH CRT_TAIL_MOD_HASH ; fixed hashes
       MOD_HASH
       STATUTES_STRUCT LAUNCHER_ID RING_PREV_LAUNCHER_ID
-      (@ solution (
-        ; lineage proof is:
-        ; -> () at launch (enforced to be a change ring ordering spend)
-        ; -> (parent_parent_id parent_ring_prev_launcher_id) if ring ordering being changed after launch
-        ; -> (parent_parent_id . parent_amount) if balance change or rebalance
-        lineage_proof
-        statutes_inner_puzzle_hash
-        current_amount
-        input_conditions
-        ; rebalance_args are:
-        ; -> () if not rebalancing
-        ; -> (prev_coin_info next_coin_info min_coin_info max_coin_info rebalance_ratio_pct prev_delta_sum baseline_amount new_amount)
-        ; where
-        ;  X_coin_info -> (X_parent_id X_curried_args_hash X_amount)
-        rebalance_args
-        ; args are:
-        ; -> new_ring_prev_launcher_id when changing ring ordering. i.e solution is a struct
-        ; -> (approver_parent_id approver_mod_hash approver_mod_curried_args_hash
-        ;      approver_amount approval_mod_hashes new_amount run_tail_mod_hash) when spending. i.e. solution is a list.
-        ; note: run_tail_mod_hash must be provided when recovering bad debt or else set to nil
-        . args
-      ))
+      inner_puzzle
+      inner_solution
     )
 
   (include *standard-cl-23.1*)
@@ -42,312 +23,333 @@
     )
   )
 
-  (assert
-    (fail-on-protocol-condition-or-create-coin input_conditions)
-    (assign
-      statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-      statutes_struct_hash (sha256tree STATUTES_STRUCT)
-      byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
-      crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH statutes_struct_hash)
-      new_puzzle_hash (curry_hashes MOD_HASH
-        (sha256 ONE MOD_HASH)
-        statutes_struct_hash
-        (sha256 ONE LAUNCHER_ID)
-        (if rebalance_args
-          ; we're rebalancing
+  (assign
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    statutes_struct_hash (sha256tree STATUTES_STRUCT)
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    solution (a inner_puzzle inner_solution)
+    (
+      ; lineage proof is:
+      ; -> () at launch (enforced to be a change ring ordering spend)
+      ; -> (parent_parent_id parent_ring_prev_launcher_id) if ring ordering being changed after launch
+      ; -> (parent_parent_id . parent_amount) if balance change or rebalance
+      lineage_proof
+      statutes_inner_puzzle_hash
+      current_amount
+      input_conditions
+      ; rebalance_args are:
+      ; -> () if not rebalancing
+      ; -> (prev_coin_info next_coin_info min_coin_info max_coin_info rebalance_ratio_pct prev_delta_sum baseline_amount new_amount)
+      ; where
+      ;  X_coin_info -> (X_parent_id X_curried_args_hash X_amount)
+      rebalance_args
+      ; args are:
+      ; -> new_ring_prev_launcher_id when changing ring ordering. i.e solution is a struct
+      ; -> (approver_parent_id approver_mod_hash approver_mod_curried_args_hash
+      ;      approver_amount approval_mod_hashes new_amount run_tail_mod_hash) when spending. i.e. solution is a list.
+      ; note: run_tail_mod_hash must be provided when recovering bad debt or else set to nil
+      . args
+    ) solution
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
+    crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH statutes_struct_hash)
+    new_puzzle_hash (curry_hashes MOD_HASH
+      (sha256 ONE MOD_HASH)
+      statutes_struct_hash
+      (sha256 ONE LAUNCHER_ID)
+      (if rebalance_args
+        ; we're rebalancing
+        (sha256 ONE RING_PREV_LAUNCHER_ID)
+        (if (any (not (l args)) (not lineage_proof))
+          ; we're changing ring ordering
+          (sha256 ONE args) ; new ring_prev_launcher_id
+          ; we're changing balance
           (sha256 ONE RING_PREV_LAUNCHER_ID)
-          (if (any (not (l args)) (not lineage_proof))
-            ; we're changing ring ordering
-            (sha256 ONE args) ; new ring_prev_launcher_id
-            ; we're changing balance
-            (sha256 ONE RING_PREV_LAUNCHER_ID)
-          )
         )
       )
-      parent_id (if lineage_proof
-        ; non-eve spend, assert parent id
-        (coinid
-          (f lineage_proof) ; parent parent id
-          (curry_hashes CAT_MOD_HASH
-            (sha256 ONE CAT_MOD_HASH)
-            (sha256 ONE byc_tail_hash)
-            (curry_hashes MOD_HASH ; puzzle hash
-              (sha256 ONE MOD_HASH)
-              statutes_struct_hash
-              (sha256 ONE LAUNCHER_ID)
-              (sha256 ONE
-                (if (l (r lineage_proof))
-                  (f (r lineage_proof))
-                  RING_PREV_LAUNCHER_ID
-                ) ; parent ring_prev_launcher_id
-              )
+    )
+    parent_id (if lineage_proof
+      ; non-eve spend, assert parent id
+      (coinid
+        (f lineage_proof) ; parent parent id
+        (curry_hashes CAT_MOD_HASH
+          (sha256 ONE CAT_MOD_HASH)
+          (sha256 ONE byc_tail_hash)
+          (curry_hashes MOD_HASH ; puzzle hash
+            (sha256 ONE MOD_HASH)
+            statutes_struct_hash
+            (sha256 ONE LAUNCHER_ID)
+            (sha256 ONE
+              (if (l (r lineage_proof))
+                (f (r lineage_proof))
+                RING_PREV_LAUNCHER_ID
+              ) ; parent ring_prev_launcher_id
             )
           )
-          (if (l (r lineage_proof))
-            current_amount
-            (r lineage_proof)
-          ) ; parent amount
         )
-        ; this is eve spend, assert launcher id
-        LAUNCHER_ID
-      )
-      new_amount (if rebalance_args
-        (f (r (r (r (r (r (r (r rebalance_args))))))))
-        (if (l args)
-          (f (r (r (r (r (r args))))))
+        (if (l (r lineage_proof))
           current_amount
-        )
+          (r lineage_proof)
+        ) ; parent amount
       )
-      conditions (c
-        ; create child treasury coin
-        (list CREATE_COIN new_puzzle_hash new_amount)
-        input_conditions
+      ; this is eve spend, assert launcher id
+      LAUNCHER_ID
+    )
+    new_amount (if rebalance_args
+      (f (r (r (r (r (r (r (r rebalance_args))))))))
+      (if (l args)
+        (f (r (r (r (r (r args))))))
+        current_amount
       )
-      withdraw_amount (
-        if (> current_amount new_amount)
-            (- current_amount new_amount)
-          0
+    )
+    conditions (c
+      ; create child treasury coin
+      (list CREATE_COIN new_puzzle_hash new_amount)
+      input_conditions
+    )
+    withdraw_amount (
+      if (> current_amount new_amount)
+          (- current_amount new_amount)
+        0
+    )
+    (assert
+      (fail-on-protocol-condition-or-create-coin input_conditions)
+      ; can't go into negative
+      (> new_amount MINUS_ONE) (> withdraw_amount MINUS_ONE)
+      (any
+       ; we can't leave any change if withdrawing
+       (= current_amount (+ new_amount withdraw_amount))
+       ; or if depositing must be higher than previous value
+       (all (= withdraw_amount 0) (> new_amount current_amount))
       )
-      (assert
-        ; can't go into negative
-        (> new_amount MINUS_ONE) (> withdraw_amount MINUS_ONE)
-        (any
-         ; we can't leave any change if withdrawing
-         (= current_amount (+ new_amount withdraw_amount))
-         ; or if depositing must be higher than previous value
-         (all (= withdraw_amount 0) (> new_amount current_amount))
-        )
-        ; we can't do both a withdrawal and a deposit at the same time
-        (not (all (> withdraw_amount 0) (> new_amount current_amount)))
-        ; must have at least one condition
-        (l conditions)
-        ; ---- all asserts passed, return conditions
-        ;(x (sha256tree solution) solution)
+      ; we can't do both a withdrawal and a deposit at the same time
+      (not (all (> withdraw_amount 0) (> new_amount current_amount)))
+      ; must have at least one condition
+      (l conditions)
+      ; ---- all asserts passed, return conditions
+      (c
+        (list CREATE_COIN_ANNOUNCEMENT ; coin ID to none
+          (concat PROTOCOL_PREFIX inner_puzzle_hash)
+        ) ; secure solution
         (c
-          (list SEND_MESSAGE 0x38 ; coin ID to none
-            (concat PROTOCOL_PREFIX (sha256tree solution))
-          ) ; secure solution
+          (list ASSERT_MY_AMOUNT current_amount)
           (c
-            (list ASSERT_MY_AMOUNT current_amount)
-            (c
-              (list ASSERT_MY_PUZZLEHASH
+            (list ASSERT_MY_PUZZLEHASH
+              (curry_hashes
+                CAT_MOD_HASH
+                (sha256 ONE CAT_MOD_HASH)
+                (sha256 ONE byc_tail_hash)
                 (curry_hashes
-                  CAT_MOD_HASH
-                  (sha256 ONE CAT_MOD_HASH)
-                  (sha256 ONE byc_tail_hash)
-                  (curry_hashes
-                    MOD_HASH
-                    (sha256 ONE MOD_HASH)
-                    statutes_struct_hash
-                    (sha256 ONE LAUNCHER_ID)
-                    (sha256 ONE RING_PREV_LAUNCHER_ID)
-                  )
+                  MOD_HASH
+                  (sha256 ONE MOD_HASH)
+                  statutes_struct_hash
+                  (sha256 ONE LAUNCHER_ID)
+                  (sha256 ONE RING_PREV_LAUNCHER_ID)
                 )
               )
-              (c
-                (list ASSERT_MY_PARENT_ID parent_id)
-                (if (all rebalance_args lineage_proof)
-                  ; rebalance ring
+            )
+            (c
+              (list ASSERT_MY_PARENT_ID parent_id)
+              (if (all rebalance_args lineage_proof)
+                ; rebalance ring
+                (assign
+                  (
+                    prev_coin_info
+                    next_coin_info
+                    min_coin_info
+                    max_coin_info
+                    rebalance_ratio_pct
+                    prev_delta_sum
+                    baseline_amount
+                  ) rebalance_args
+                  delta (- new_amount current_amount)
+                  delta_sum (+ delta prev_delta_sum)
+                  (
+                    prev_parent_id
+                    prev_curried_args_hash
+                    prev_amount
+                  ) prev_coin_info
+                  (
+                    next_parent_id
+                    next_curried_args_hash
+                    next_amount
+                  ) next_coin_info
+                  (
+                    min_parent_id
+                    min_curried_args_hash
+                    min_amount
+                  ) min_coin_info
+                  (
+                    max_parent_id
+                    max_curried_args_hash
+                    max_amount
+                  ) max_coin_info
+                  prev_coin_id (coinid
+                    prev_parent_id
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
+                      (sha256 ONE byc_tail_hash)
+                      (tree_hash_of_apply MOD_HASH prev_curried_args_hash)
+                    )
+                    prev_amount
+                  )
+                  next_coin_id (coinid
+                    next_parent_id
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
+                      (sha256 ONE byc_tail_hash)
+                      (tree_hash_of_apply MOD_HASH next_curried_args_hash)
+                    )
+                    next_amount
+                  )
+                  min_coin_id (coinid
+                    min_parent_id
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
+                      (sha256 ONE byc_tail_hash)
+                      (tree_hash_of_apply MOD_HASH min_curried_args_hash)
+                    )
+                    min_amount
+                  )
+                  max_coin_id (coinid
+                    max_parent_id
+                    (curry_hashes CAT_MOD_HASH
+                      (sha256 ONE CAT_MOD_HASH)
+                      (sha256 ONE byc_tail_hash)
+                      (tree_hash_of_apply MOD_HASH max_curried_args_hash)
+                    )
+                    max_amount
+                  )
+                  (assert
+                    ; new_amount must be at or near baseline
+                    (> new_amount (- baseline_amount 1))
+                    (> (+ baseline_amount 2) new_amount)
+                    ; percentage delta between min and max treasury coin amount must exceed threshold
+                    (> (* (- max_amount min_amount) PRECISION_PCT) (* min_amount rebalance_ratio_pct))
+                    (li
+                      ; receive message from predecessor coin
+                      (list RECEIVE_MESSAGE 0x3f
+                        (concat
+                          PROTOCOL_PREFIX
+                          (sha256tree
+                            (c STATUTES_STRUCT (c RING_PREV_LAUNCHER_ID (c prev_delta_sum baseline_amount)))
+                          )
+                        )
+                        prev_coin_id
+                      )
+                      ; send message to successor coin
+                      (list SEND_MESSAGE 0x3f
+                        (concat
+                          PROTOCOL_PREFIX
+                          (sha256tree
+                            (c STATUTES_STRUCT (c LAUNCHER_ID (c delta_sum baseline_amount)))
+                          )
+                        )
+                        next_coin_id
+                      )
+                      ; announce current amount
+                      (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT current_amount))))
+                      ; assert max and min balances in ring
+                      (list ASSERT_COIN_ANNOUNCEMENT (sha256 max_coin_id (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT max_amount)))))
+                      (list ASSERT_COIN_ANNOUNCEMENT (sha256 min_coin_id (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT min_amount)))))
+                      (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID)
+                      (assert-statute statutes_puzzle_hash STATUTE_TREASURY_REBALANCE_RATIO_PCT rebalance_ratio_pct)
+                      &rest
+                      conditions
+                    )
+                  )
+                )
+                (if (all (l args) lineage_proof)
+                  ; change balance
                   (assign
+                    ; require approval mod
                     (
-                      prev_coin_info
-                      next_coin_info
-                      min_coin_info
-                      max_coin_info
-                      rebalance_ratio_pct
-                      prev_delta_sum
-                      baseline_amount
-                    ) rebalance_args
-                    delta (- new_amount current_amount)
-                    delta_sum (+ delta prev_delta_sum)
-                    (
-                      prev_parent_id
-                      prev_curried_args_hash
-                      prev_amount
-                    ) prev_coin_info
-                    (
-                      next_parent_id
-                      next_curried_args_hash
-                      next_amount
-                    ) next_coin_info
-                    (
-                      min_parent_id
-                      min_curried_args_hash
-                      min_amount
-                    ) min_coin_info
-                    (
-                      max_parent_id
-                      max_curried_args_hash
-                      max_amount
-                    ) max_coin_info
-                    prev_coin_id (coinid
-                      prev_parent_id
-                      (curry_hashes CAT_MOD_HASH
-                        (sha256 ONE CAT_MOD_HASH)
-                        (sha256 ONE byc_tail_hash)
-                        (tree_hash_of_apply MOD_HASH prev_curried_args_hash)
-                      )
-                      prev_amount
-                    )
-                    next_coin_id (coinid
-                      next_parent_id
-                      (curry_hashes CAT_MOD_HASH
-                        (sha256 ONE CAT_MOD_HASH)
-                        (sha256 ONE byc_tail_hash)
-                        (tree_hash_of_apply MOD_HASH next_curried_args_hash)
-                      )
-                      next_amount
-                    )
-                    min_coin_id (coinid
-                      min_parent_id
-                      (curry_hashes CAT_MOD_HASH
-                        (sha256 ONE CAT_MOD_HASH)
-                        (sha256 ONE byc_tail_hash)
-                        (tree_hash_of_apply MOD_HASH min_curried_args_hash)
-                      )
-                      min_amount
-                    )
-                    max_coin_id (coinid
-                      max_parent_id
-                      (curry_hashes CAT_MOD_HASH
-                        (sha256 ONE CAT_MOD_HASH)
-                        (sha256 ONE byc_tail_hash)
-                        (tree_hash_of_apply MOD_HASH max_curried_args_hash)
-                      )
-                      max_amount
-                    )
-                    (assert
-                      ; new_amount must be at or near baseline
-                      (> new_amount (- baseline_amount 1))
-                      (> (+ baseline_amount 2) new_amount)
-                      ; percentage delta between min and max treasury coin amount must exceed threshold
-                      (> (* (- max_amount min_amount) PRECISION_PCT) (* min_amount rebalance_ratio_pct))
-                      (li
-                        ; receive message from predecessor coin
-                        (list RECEIVE_MESSAGE 0x3f
-                          (concat
-                            PROTOCOL_PREFIX
-                            (sha256tree
-                              (c STATUTES_STRUCT (c RING_PREV_LAUNCHER_ID (c prev_delta_sum baseline_amount)))
+                      approver_parent_id
+                      approver_mod_hash
+                      approver_mod_curried_args_hash
+                      approver_amount
+                      approval_mod_hashes
+                      _ ; new_amount extracted above
+                      run_tail_mod_hash
+                    ) args
+                    approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
+                    approver_coin_id (coinid
+                      approver_parent_id
+                      ; we want to ensure that the approver puzzle is using the correct mod
+                      (if (all
+                            approver_cat_tail_hash
+                            (any ; verify tail
+                              ; surplus auction
+                              (all (= (f (r approval_mod_hashes)) approver_mod_hash) (= approver_cat_tail_hash crt_tail_hash))
+                              (all
+                                (any
+                                  (= (f (r (r approval_mod_hashes))) approver_mod_hash) ; recharge auction
+                                  (= (f (r (r (r approval_mod_hashes)))) approver_mod_hash) ; savings_vault
+                                )
+                                (= approver_cat_tail_hash byc_tail_hash) ; byc tail hash
+                              )
                             )
                           )
-                          prev_coin_id
+                        ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
+                        (curry_hashes CAT_MOD_HASH
+                          (sha256 ONE CAT_MOD_HASH)
+                          (sha256 ONE approver_cat_tail_hash)
+                          (tree_hash_of_apply approver_mod_hash (r approver_mod_curried_args_hash))
                         )
-                        ; send message to successor coin
-                        (list SEND_MESSAGE 0x3f
-                          (concat
-                            PROTOCOL_PREFIX
-                            (sha256tree
-                              (c STATUTES_STRUCT (c LAUNCHER_ID (c delta_sum baseline_amount)))
-                            )
-                          )
-                          next_coin_id
+                        ; ELSE puzzle is not wrapped
+                        (assert
+                          (= approver_mod_hash (f approval_mod_hashes)) ; collateral vault
+                          (tree_hash_of_apply approver_mod_hash approver_mod_curried_args_hash)
                         )
-                        ; announce current amount
-                        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT current_amount))))
-                        ; assert max and min balances in ring
-                        (list ASSERT_COIN_ANNOUNCEMENT (sha256 max_coin_id (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT max_amount)))))
-                        (list ASSERT_COIN_ANNOUNCEMENT (sha256 min_coin_id (concat PROTOCOL_PREFIX (sha256tree (c STATUTES_STRUCT min_amount)))))
-                        (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID)
-                        (assert-statute statutes_puzzle_hash STATUTE_TREASURY_REBALANCE_RATIO_PCT rebalance_ratio_pct)
-                        &rest
+                      )
+                      approver_amount
+                    )
+                    (li
+                      ; assert approver coin message is valid
+                      (list RECEIVE_MESSAGE 0x3f
+                        (concat
+                          PROTOCOL_PREFIX
+                          (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c (- new_amount current_amount) (concat new_amount run_tail_mod_hash)))))
+                        )
+                        approver_coin_id
+                      )
+                      ; assert that approval mod hashes are valid
+                      (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+                      ;  my new balance so someone can check whole ring balance
+                      (list CREATE_COIN_ANNOUNCEMENT
+                        (concat
+                          PROTOCOL_PREFIX
+                          (sha256tree (c STATUTES_STRUCT (c new_amount LAUNCHER_ID)))
+                        )
+                      )
+                      (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID) ; for driver code
+                      &rest
+                      (if run_tail_mod_hash
+                        ; withdraw to a run tail coin
+                        (c (list CREATE_COIN run_tail_mod_hash withdraw_amount)
+                          conditions
+                        )
                         conditions
                       )
                     )
                   )
-                  (if (all (l args) lineage_proof)
-                    ; change balance
-                    (assign
-                      ; require approval mod
-                      (
-                        approver_parent_id
-                        approver_mod_hash
-                        approver_mod_curried_args_hash
-                        approver_amount
-                        approval_mod_hashes
-                        _ ; new_amount extracted above
-                        run_tail_mod_hash
-                      ) args
-                      approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
-                      approver_coin_id (coinid
-                        approver_parent_id
-                        ; we want to ensure that the approver puzzle is using the correct mod
-                        (if (all
-                              approver_cat_tail_hash
-                              (any ; verify tail
-                                ; surplus auction
-                                (all (= (f (r approval_mod_hashes)) approver_mod_hash) (= approver_cat_tail_hash crt_tail_hash))
-                                (all
-                                  (any
-                                    (= (f (r (r approval_mod_hashes))) approver_mod_hash) ; recharge auction
-                                    (= (f (r (r (r approval_mod_hashes)))) approver_mod_hash) ; savings_vault
-                                  )
-                                  (= approver_cat_tail_hash byc_tail_hash) ; byc tail hash
-                                )
-                              )
-                            )
-                          ; this puzzle is wrapped inside a CAT puzzle, it'll provide a tail too
-                          (curry_hashes CAT_MOD_HASH
-                            (sha256 ONE CAT_MOD_HASH)
-                            (sha256 ONE approver_cat_tail_hash)
-                            (tree_hash_of_apply approver_mod_hash (r approver_mod_curried_args_hash))
+                  ; change ring ordering
+                  ; require approval from statutes custom condition
+                  (li
+                    (list RECEIVE_MESSAGE 0x12
+                      (concat
+                        PROTOCOL_PREFIX
+                        CUSTOM_CONDITION_PREFIX
+                        (sha256tree
+                          (c LAUNCHER_ID
+                            args ; new ring_prev_launcher_id
                           )
-                          ; ELSE puzzle is not wrapped
-                          (assert
-                            (= approver_mod_hash (f approval_mod_hashes)) ; collateral vault
-                            (tree_hash_of_apply approver_mod_hash approver_mod_curried_args_hash)
-                          )
-                        )
-                        approver_amount
-                      )
-                      (li
-                        ; assert approver coin message is valid
-                        (list RECEIVE_MESSAGE 0x3f
-                          (concat
-                            PROTOCOL_PREFIX
-                            (sha256tree (c STATUTES_STRUCT (c (- new_amount current_amount) (concat new_amount run_tail_mod_hash))))
-                          )
-                          approver_coin_id
-                        )
-                        ; assert that approval mod hashes are valid
-                        (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
-                        ;  my new balance so someone can check whole ring balance
-                        (list CREATE_COIN_ANNOUNCEMENT
-                          (concat
-                            PROTOCOL_PREFIX
-                            (sha256tree (c STATUTES_STRUCT (c new_amount LAUNCHER_ID)))
-                          )
-                        )
-                        (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID) ; for driver code
-                        &rest
-                        (if run_tail_mod_hash
-                          ; withdraw to a run tail coin
-                          (c (list CREATE_COIN run_tail_mod_hash withdraw_amount)
-                            conditions
-                          )
-                          conditions
                         )
                       )
+                      statutes_puzzle_hash
                     )
-                    ; change ring ordering
-                    ; require approval from statutes custom condition
-                    (li
-                      (list RECEIVE_MESSAGE 0x12
-                        (concat
-                          PROTOCOL_PREFIX
-                          CUSTOM_CONDITION_PREFIX
-                          (sha256tree
-                            (c LAUNCHER_ID
-                              args ; new ring_prev_launcher_id
-                            )
-                          )
-                        )
-                        statutes_puzzle_hash
-                      )
-                      (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID args) ; for driver code
-                      &rest
-                      conditions
-                    )
+                    (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID args) ; for driver code
+                    &rest
+                    conditions
                   )
                 )
               )
@@ -357,5 +359,4 @@
       )
     )
   )
-
 )

@@ -3,7 +3,7 @@
     (
       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
-      statutes_puzzle_hash
+      statutes_puzzle_hash inner_puzzle_hash
     )
   )
   (@ args

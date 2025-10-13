@@ -36,6 +36,7 @@
       )
       CAT_MOD_HASH (cat_mod_hash_truth Truths)
       CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
+      inner_puzzle_hash (my_inner_puzzle_hash_cat_truth Truths)
       byc_tail_hash (cat_tail_program_hash_truth Truths)
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
@@ -66,11 +67,13 @@
             (concat
               PROTOCOL_PREFIX
               (sha256tree
-                (c
-                  STATUTES_STRUCT ; need to tie it to statutes struct
+                (c inner_puzzle_hash
                   (c
-                    (if (> 0 delta) "x" "i")
-                    (if (> 0 delta) delta current_coin_amount)
+                    STATUTES_STRUCT ; need to tie it to statutes struct
+                    (c
+                      (if (> 0 delta) "x" "i")
+                      (if (> 0 delta) delta current_coin_amount)
+                    )
                   )
                 )
               )

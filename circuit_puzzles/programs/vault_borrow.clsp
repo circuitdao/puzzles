@@ -6,7 +6,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
       )
     )
     (@ args
@@ -84,7 +84,7 @@
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat PROTOCOL_PREFIX
-              (sha256tree (c STATUTES_STRUCT (c "i" borrow_amount)))
+              (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c "i" borrow_amount))))
             )
             byc_issuing_coin_id
           )
