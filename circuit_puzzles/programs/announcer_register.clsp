@@ -20,7 +20,7 @@
   (assign
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (assert
+    (assert_debug
       inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)
@@ -31,10 +31,12 @@
           (concat
             PROTOCOL_PREFIX
             (sha256tree
-              (c STATUTES_STRUCT
-                (c target_puzzle_hash
-                  (c APPROVED
-                     registry_claim_counter
+              (c inner_puzzle_hash
+                (c STATUTES_STRUCT
+                  (c target_puzzle_hash
+                    (c APPROVED
+                       registry_claim_counter
+                    )
                   )
                 )
               )

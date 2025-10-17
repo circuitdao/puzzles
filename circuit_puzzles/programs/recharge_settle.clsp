@@ -8,7 +8,7 @@
     CRT_TAIL_MOD_HASH
     TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    lineage_proof input_conditions
+    lineage_proof input_conditions inner_puzzle_hash
     (
       treasury_coins
       funding_coin_info
@@ -40,6 +40,8 @@
       (r funding_coin_info)
     )
     (assert
+      ; prove spender owns target puzzle hash
+      (= inner_puzzle_hash target_puzzle_hash)
       ; must provide at least one treasury coin to deposit to
       (> treasury_coins_count 0)
       ; there must be a bid to settle
@@ -74,8 +76,10 @@
           (concat
             PROTOCOL_PREFIX
             (sha256tree
-              (c STATUTES_STRUCT
-                (c target_puzzle_hash winning_crt_bid_amount)
+              (c inner_puzzle_hash
+                (c STATUTES_STRUCT
+                  (c target_puzzle_hash winning_crt_bid_amount)
+                )
               )
             )
           )
@@ -115,6 +119,7 @@
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT
+          inner_puzzle_hash
           0 ; treasury minimum, pass 0 as unused
           treasury_deposit_per_coin
           remainder

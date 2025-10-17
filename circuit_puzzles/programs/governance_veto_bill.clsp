@@ -1,7 +1,7 @@
 (mod
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-     statutes_puzzle_hash)
+     statutes_puzzle_hash inner_puzzle_hash)
     (
       amount
       parent_veto_id
@@ -22,7 +22,7 @@
 
   (assign
     (
-      (veto_period_expiry implemenation_delay_expiry . implementation_interval_expiry)
+      (veto_period_expiry implementation_delay_expiry . implementation_interval_expiry)
       new_statute_index
       new_statute_value
       new_threshold_amount_to_propose
@@ -43,7 +43,7 @@
           (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_VETOED)))
           ; assert announcement from another CRT coin with higher amount than this one
           (list RECEIVE_MESSAGE 0x3f
-            (concat PROTOCOL_PREFIX (sha256tree BILL))
+            (concat PROTOCOL_PREFIX (sha256tree inner_puzzle_hash (sha256tree BILL)))
             (coinid
               parent_veto_id
               ; governance coin puzzle hash

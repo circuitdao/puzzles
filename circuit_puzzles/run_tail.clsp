@@ -1,14 +1,26 @@
 ; this puzzles ensures tail is run
-(mod (tail_reveal limitations_solution conditions)
+(mod (tail_reveal limitations_solution inner_puzzle inner_solution)
   (include condition_codes.clib)
-  (c
-    (list ; condition to run the tail
-      CREATE_COIN
-      0
-      -113
-      tail_reveal
-      limitations_solution
+  (include sha256tree.clib)
+  (if inner_puzzle
+    (c
+      (list ; condition to run the tail
+        CREATE_COIN
+        0
+        -113
+        tail_reveal
+        limitations_solution
+      )
+      (c
+        ; adding this condition so we can pass the inner_puzzle hash to the tail
+        (list
+          REMARK
+          (sha256tree inner_puzzle)
+        )
+        (a inner_puzzle inner_solution)
+      )
     )
-    conditions
+    ; puzzle must not be empty
+    (x)
   )
 )

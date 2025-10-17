@@ -183,7 +183,7 @@
                 (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (sha256tree (c STATUTES_STRUCT (c (* MINUS_ONE interest_payment) new_treasury_coin_amount)))
+                    (sha256tree (c (sha256tree INNER_PUZZLE) (c STATUTES_STRUCT (c (* MINUS_ONE interest_payment) new_treasury_coin_amount))))
                   )
                   treasury_coin_id
                 )

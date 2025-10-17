@@ -26,7 +26,6 @@
         ; - (re-)start auction
         ; - bid
         ; - recover bad debt
-        keeper_operation_info
       )
      )
 
@@ -57,12 +56,12 @@
             )
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (assert
+            (assert_debug
               (is-valid-msg-cond condition_body)
               (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
             )
             (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-              (assert
+              (assert_debug
                 (is-valid-ann-cond condition_body)
                 (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
               )
@@ -72,7 +71,7 @@
           )
         )
       )
-      (assert
+      (assert_debug
         found_remark
         (list found_remark filtered_conditions)
       )
@@ -87,7 +86,6 @@
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     conditions (a inner_puzzle solution)
     inner_puzzle_hash (sha256tree inner_puzzle)
-    keeper_operation_info (if (= inner_puzzle_hash INNER_PUZZLE_HASH) () conditions)
     (vault_operation_condition filtered_conditions) (filter-and-extract-unique-protocol-remark conditions () ())
     (statutes_inner_puzzle_hash vault_operation . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash
@@ -116,21 +114,20 @@
     ;### MAIN EXPRESSION ###
     (assert
       (size_b32 final_inner_puzzle_hash)
-      (if keeper_operation_info
-        ; keeper mode
-        (contains KEEPER_OPERATIONS vault_operation_hash)
+      (if (contains OWNER_OPERATIONS vault_operation_hash)
         ; owner mode
         (all
           (not AUCTION_STATE)
           (= inner_puzzle_hash INNER_PUZZLE_HASH)
-          (contains OWNER_OPERATIONS vault_operation_hash)
         )
+        ; keeper mode
+        (contains KEEPER_OPERATIONS vault_operation_hash)
       )
       (c
         (list CREATE_COIN_ANNOUNCEMENT
           (concat
             PROTOCOL_PREFIX
-            (sha256tree (list STATUTES_STRUCT inner_puzzle_hash))
+            (sha256tree (list statutes_struct_hash inner_puzzle_hash))
           )
         ) ; for fee coin
         (c

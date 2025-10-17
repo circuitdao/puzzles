@@ -7,6 +7,7 @@
         operation
         input_conditions
         op_args
+        inner_puzzle
       )
     )
 
@@ -20,20 +21,26 @@
 
   (assign
     operation_hash (sha256tree operation)
+    inner_puzzle_hash (sha256tree inner_puzzle)
     (c
-      (list SEND_MESSAGE 0x38 ; coin ID to none
-        (concat PROTOCOL_PREFIX (sha256tree (list operation_hash input_conditions op_args)))
-      ) ; secure solution
-      (if (= operation_hash MUTATION_PROGRAM_HASH)
+      (list CREATE_COIN_ANNOUNCEMENT
+        (concat PROTOCOL_PREFIX inner_puzzle_hash)
+      )
+      (if (all
+        (= operation_hash MUTATION_PROGRAM_HASH)
+        inner_puzzle
+        )
         ; update oracle price
-        (a
-          operation
-          (list
-            MOD_HASH
-            STATUTES_STRUCT
-            PRICE_INFOS
-            op_args
-            input_conditions
+        (a inner_puzzle
+          (a
+            operation
+            (list
+              MOD_HASH
+              STATUTES_STRUCT
+              PRICE_INFOS
+              op_args
+              input_conditions
+            )
           )
         )
         ; ELSE announce oracle price

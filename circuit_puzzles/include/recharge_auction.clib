@@ -4,7 +4,7 @@
 
   ; asserts post-deposit treasury ring amounts, ensuring intended amount has been deposited to treasury
   ; total deposited to treasury = no. treasury coins * deposit_amount_per_coin + remainder
-  (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
+  (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT inner_puzzle_hash
                               treasury_minimum
                               deposit_amount_per_coin ; amount being deposited into each treasury coin
                               remainder ; amount being deposited in addition to deposit_amount_per_coin into first of treasury_coins
@@ -59,7 +59,7 @@
           (list SEND_MESSAGE 0x3f
             (concat
               PROTOCOL_PREFIX
-              (sha256tree (c STATUTES_STRUCT (c delta new_amount)))
+              (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c delta new_amount))))
             )
             treasury_coin_id
           )
@@ -81,7 +81,7 @@
               )
             )
             (deposit-to-treasury
-              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
+              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT inner_puzzle_hash
               treasury_minimum
               deposit_amount_per_coin
               remainder

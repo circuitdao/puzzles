@@ -141,7 +141,7 @@
                 (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (sha256tree (c STATUTES_STRUCT (c sf_transfer_amount new_treasury_amount)))
+                    (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c sf_transfer_amount new_treasury_amount))))
                   )
                   treasury_coin_id
                 )

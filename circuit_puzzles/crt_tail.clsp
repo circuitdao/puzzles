@@ -37,6 +37,7 @@
         (fail-on-protocol-condition inner_conditions)
       )
     (assign  ; issuing by recharge auction, announcer registry or melting by surplus
+      inner_puzzle_hash (f (r (f (r (r inner_conditions)))))
       CAT_MOD_HASH (cat_mod_hash_truth Truths)
       CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)
       crt_tail_hash (cat_tail_program_hash_truth Truths)
@@ -111,8 +112,10 @@
           (concat
             PROTOCOL_PREFIX
             (sha256tree
-              (c STATUTES_STRUCT ; this binds us to the same protocol or statutes struct singleton
-                (c target_puzzle_hash delta_amount) ; get approval for target puzzle hash and amount from approver
+              (c inner_puzzle_hash
+                (c STATUTES_STRUCT ; this binds us to the same protocol or statutes struct singleton
+                  (c target_puzzle_hash delta_amount) ; get approval for target puzzle hash and amount from approver
+                )
               )
             )
           )

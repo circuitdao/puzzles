@@ -7,6 +7,7 @@
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
     lineage_proof ; -> (parent_parent_id parent_amount parent_cat_inner_puzzle_hash)
     input_conditions
+    inner_puzzle_hash
     (
       crt_bid_amount
       target_puzzle_hash
@@ -25,6 +26,8 @@
   (assign
     (last_target_puzzle_hash . last_bid_timestamp) (if LAST_BID LAST_BID (c 0 0))
     (assert
+      ; assert bidder owns target puzzle hash
+      (= inner_puzzle_hash target_puzzle_hash)
       (size_b32 target_puzzle_hash) ; must be a puzzle hash
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> crt_bid_amount 0)) (> crt_bid_amount my_amount))
