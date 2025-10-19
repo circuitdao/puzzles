@@ -75,7 +75,9 @@
         ; mutate statutes or update price info
         (assert
           (= PREV_ANNOUNCE ONE) ; previous spend must have been an announce
-          (any (= operation_mod_hash (f OPERATIONS)) (= operation_mod_hash (r OPERATIONS)))
+          (any  ; OPERATIONS -> (mutation, update_price)
+            (= operation_mod_hash (f OPERATIONS))
+            (= operation_mod_hash (r OPERATIONS)))
           (a
             operation_mod
             (list

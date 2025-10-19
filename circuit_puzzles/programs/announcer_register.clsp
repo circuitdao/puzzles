@@ -20,7 +20,7 @@
   (assign
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (assert_debug
+    (assert
       inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)

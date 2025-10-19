@@ -35,6 +35,17 @@
 
   (defmac or CLAUSES (if CLAUSES (or_ CLAUSES) ()))
 
+  (defun find-solution-remark-value (inner_conditions)
+    ;; find the first REMARK condition and return its value, no protocol prefix is needed as
+    ;; it's provided by spender and signed for
+    (if (= ONE (f (f inner_conditions)))
+      (f (r (f inner_conditions)))
+      (if (r inner_conditions)
+        (find-solution-remark-value (r inner_conditions))
+        (x)
+      )
+     )
+  )
 
   (defun cumulative-discount-factor-helper (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
     (if (> previous_timestamp current_timestamp)

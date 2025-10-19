@@ -23,10 +23,13 @@
     )
   )
 
+
   (assign
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     inner_puzzle_hash (sha256tree inner_puzzle)
+    inner_conditions (a inner_puzzle inner_solution)
+    solution (find-solution-remark-value inner_conditions)
     (
       ; lineage proof is:
       ; -> () at launch (enforced to be a change ring ordering spend)
@@ -48,8 +51,7 @@
       ;      approver_amount approval_mod_hashes new_amount run_tail_mod_hash) when spending. i.e. solution is a list.
       ; note: run_tail_mod_hash must be provided when recovering bad debt or else set to nil
       . args
-    ) inner_solution
-    inner_conditions (a inner_puzzle (c (list REMARK PROTOCOL_PREFIX inner_solution) input_conditions))
+    ) solution
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH statutes_struct_hash)
     new_puzzle_hash (curry_hashes MOD_HASH

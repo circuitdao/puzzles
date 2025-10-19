@@ -1,4 +1,4 @@
-; this puzzles ensures tail is run
+; this puzzles ensures tail is run via specified inner puzzle
 (mod (tail_reveal limitations_solution inner_puzzle inner_solution)
   (include condition_codes.clib)
   (include sha256tree.clib)

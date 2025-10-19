@@ -2,13 +2,8 @@
       MUTATION_PROGRAM_HASH MOD_HASH
       STATUTES_STRUCT
       PRICE_INFOS
-      ; solution
-      (
-        operation
-        input_conditions
-        op_args
-        inner_puzzle
-      )
+      inner_puzzle
+      inner_solution
     )
 
   (include *standard-cl-23.1*)
@@ -20,6 +15,11 @@
 
 
   (assign
+    input_conditions (a inner_puzzle inner_solution)
+    (
+      operation
+      op_args
+    ) (find-solution-remark-value input_conditions)
     operation_hash (sha256tree operation)
     inner_puzzle_hash (sha256tree inner_puzzle)
     (c
@@ -28,19 +28,16 @@
       )
       (if (all
         (= operation_hash MUTATION_PROGRAM_HASH)
-        inner_puzzle
         )
         ; update oracle price
-        (a inner_puzzle
-          (a
-            operation
-            (list
-              MOD_HASH
-              STATUTES_STRUCT
-              PRICE_INFOS
-              op_args
-              input_conditions
-            )
+        (a
+          operation
+          (list
+            MOD_HASH
+            STATUTES_STRUCT
+            PRICE_INFOS
+            op_args
+            input_conditions
           )
         )
         ; ELSE announce oracle price
@@ -85,5 +82,4 @@
       )
     )
   )
-
 )

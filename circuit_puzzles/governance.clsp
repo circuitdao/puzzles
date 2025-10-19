@@ -221,12 +221,7 @@
   ; ###################  MAIN ENTRY POINT  ########################
   (assign
     inner_puzzle_hash (sha256tree inner_puzzle)
-    raw_inner_conditions (assert_debug inner_puzzle inner_solution
-      (a
-         inner_puzzle
-         inner_solution
-      )
-    )
+    raw_inner_conditions (a inner_puzzle inner_solution)
     (
       (statutes_inner_puzzle_hash bill_operation . args) ; from first protocol REMARK encountered
       . new_coin_amount ; from first CREATE_COIN encountered
@@ -254,7 +249,7 @@
         )
       )
       ; no bill operation, this is a transfer or exit
-      (assert_debug
+      (assert
         (= inner_puzzle_hash INNER_PUZZLE_HASH) ; must be in owner mode
         (not BILL) ; can only transfer or exit when not in proposal mode
         (list () ())
@@ -276,7 +271,8 @@
         (list CREATE_COIN_ANNOUNCEMENT
           (concat
             PROTOCOL_PREFIX
-            ; ensures spenders can check that this is their spend
+            ; ensures spenders can check this is their spend since
+            ; it requires to solve given puzzle
             inner_puzzle_hash
           )
         )

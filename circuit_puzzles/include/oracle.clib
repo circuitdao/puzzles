@@ -32,9 +32,10 @@
     (if input_conditions
       (if
         (any
-          ; we only use puzzle announcements, so coin announcements are fine
+          ; we only use puzzle announcements, so coin announcements are fine (remarks too)
           (= (f (f input_conditions)) ASSERT_COIN_ANNOUNCEMENT)
           (= (f (f input_conditions)) CREATE_COIN_ANNOUNCEMENT)
+          (= (f (f input_conditions)) REMARK)
         )
         (fail-on-non-coin-announcement (r input_conditions) (c (f input_conditions) conditions))
         (x) ; no other conditions allowed

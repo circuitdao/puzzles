@@ -2,11 +2,7 @@
        CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
        MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY CLAIM_COUNTER REWARDS_CLAIMABLE_AT
        inner_puzzle
-       (@ solution (
-         lineage_proof
-         reward_or_register
-         args
-       ))
+       inner_solution
      )
 
   (include *standard-cl-23.1*)
@@ -46,7 +42,13 @@
   )
 
   (assign
-    inner_puzzle_hash (assert inner_puzzle (sha256tree inner_puzzle))
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    inner_conditions (a inner_puzzle inner_solution)
+    (
+         lineage_proof
+         reward_or_register
+         args
+    ) (find-solution-remark-value inner_conditions)
     (
       announcer_registry
       new_claim_counter
@@ -189,52 +191,50 @@
       )
     )
     ;### MAIN EXPRESSION ###
-    (a 1
-      (li
-        (list CREATE_COIN_ANNOUNCEMENT
-          (concat PROTOCOL_PREFIX inner_puzzle_hash)
-        )
-        (list ASSERT_MY_AMOUNT 0)
-        ; prove lineage
-        (if (l lineage_proof)
-          (list ASSERT_MY_PARENT_ID
-            (coinid
-              (f lineage_proof)
-              (tree_hash_of_apply MOD_HASH (r lineage_proof))
-              0
-            )
-          )
-          ; this is a launch
-          ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
-          (list RECEIVE_MESSAGE 0x04 lineage_proof)
-        )
-        (list ASSERT_MY_PUZZLEHASH
-          (curry_hashes MOD_HASH
-            (sha256 ONE MOD_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (sha256tree ANNOUNCER_REGISTRY)
-            (sha256 ONE CLAIM_COUNTER)
-            (sha256 ONE REWARDS_CLAIMABLE_AT)
-          )
-        )
-        (list CREATE_COIN
-          (curry_hashes MOD_HASH
-            (sha256 ONE MOD_HASH)
-            (sha256tree STATUTES_STRUCT)
-            (sha256tree announcer_registry)
-            (sha256 ONE new_claim_counter)
-            (sha256 ONE new_rewards_claimable_at)
-          )
-          0 ; registry coin amount is always zero
-        )
-        (list REMARK PROTOCOL_PREFIX
-           announcer_registry
-           new_claim_counter
-           new_rewards_claimable_at
-        )
-        &rest
-        operation_conditions
+    (li
+      (list CREATE_COIN_ANNOUNCEMENT
+        (concat PROTOCOL_PREFIX inner_puzzle_hash)
       )
+      (list ASSERT_MY_AMOUNT 0)
+      ; prove lineage
+      (if (l lineage_proof)
+        (list ASSERT_MY_PARENT_ID
+          (coinid
+            (f lineage_proof)
+            (tree_hash_of_apply MOD_HASH (r lineage_proof))
+            0
+          )
+        )
+        ; this is a launch
+        ; should be only allowed if it's been created by the same parent as it created statutes launcher coin
+        (list RECEIVE_MESSAGE 0x04 lineage_proof)
+      )
+      (list ASSERT_MY_PUZZLEHASH
+        (curry_hashes MOD_HASH
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256tree ANNOUNCER_REGISTRY)
+          (sha256 ONE CLAIM_COUNTER)
+          (sha256 ONE REWARDS_CLAIMABLE_AT)
+        )
+      )
+      (list CREATE_COIN
+        (curry_hashes MOD_HASH
+          (sha256 ONE MOD_HASH)
+          (sha256tree STATUTES_STRUCT)
+          (sha256tree announcer_registry)
+          (sha256 ONE new_claim_counter)
+          (sha256 ONE new_rewards_claimable_at)
+        )
+        0 ; registry coin amount is always zero
+      )
+      (list REMARK PROTOCOL_PREFIX
+         announcer_registry
+         new_claim_counter
+         new_rewards_claimable_at
+      )
+      &rest
+      operation_conditions
     )
   )
 )

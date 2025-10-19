@@ -13,33 +13,18 @@
   (include statutes_utils.clib)
 
   (assign
+    input_conditions (a inner_puzzle inner_solution)
     (
       lineage_proof
       operation
-      input_conditions
       op_args
-    ) inner_solution
+    ) (find-solution-remark-value input_conditions)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     operation_hash (sha256tree operation)
-    conditions (a inner_puzzle
-      (c
-        (list REMARK
-          (concat
-            PROTOCOL_PREFIX
-            (sha256tree
-              lineage_proof
-              operation_hash
-              op_args
-            )
-          )
-        )
-        input_conditions
-      )
-    )
     inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
       (contains OPERATIONS operation_hash)
-      (fail-on-protocol-condition-or-create-coin conditions)
+      (fail-on-protocol-condition-or-create-coin input_conditions)
       (c
         (list CREATE_COIN_ANNOUNCEMENT ; coin ID to none
           (concat PROTOCOL_PREFIX inner_puzzle_hash)
@@ -48,7 +33,7 @@
           operation
           (list
             (list MOD_HASH STATUTES_STRUCT byc_tail_hash LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-            lineage_proof conditions inner_puzzle_hash op_args
+            lineage_proof input_conditions inner_puzzle_hash op_args
           )
         )
       )
