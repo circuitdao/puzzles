@@ -38,7 +38,6 @@
       lineage_proof
       statutes_inner_puzzle_hash
       current_amount
-      input_conditions
       ; rebalance_args are:
       ; -> () if not rebalancing
       ; -> (prev_coin_info next_coin_info min_coin_info max_coin_info rebalance_ratio_pct prev_delta_sum baseline_amount new_amount)

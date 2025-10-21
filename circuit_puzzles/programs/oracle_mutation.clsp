@@ -19,6 +19,7 @@
   (include condition_codes.clib)
   (include statutes_utils.clib)
   (include utils.clib)
+  (include condition_filtering.clib)
   (include oracle.clib)
 
   (assign
@@ -29,10 +30,11 @@
     sorted_prices (mergesort price_announcers)
     ; get (upper) median price
     median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
-    announcer_conditions (generate-announcer-conditions
+    conditions (generate-announcer-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
       price_announcers
+      input_conditions
     )
     ; discard matured price infos other than most recent one, if any
     ; the Oracle Price is by definition the most recent matured price
@@ -45,7 +47,7 @@
     (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item PRICE_INFOS)
-    (assert
+    (assert_debug
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))
       ; check that no announcer is being used more than once
@@ -86,7 +88,7 @@
         )
         (list REMARK new_price_infos last_matured_price)
         &rest
-        (fail-on-non-coin-announcement input_conditions announcer_conditions)
+        conditions
       )
     )
   )

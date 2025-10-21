@@ -103,7 +103,7 @@
         ()
       )
       (list
-        (list CREATE_COIN_ANNOUNCEMENT "$") ; for protocol external coins to assert issuance
+        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX inner_puzzle_hash)) ; for protocol external coins to assert issuance
         (if curried_target_puzzle_hash
           (list CREATE_COIN curried_target_puzzle_hash delta_amount (list target_puzzle_hash))
           (list REMARK)

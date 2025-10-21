@@ -21,7 +21,7 @@
   )
 
   (if (any deposit input_conditions args rest_of_condition)
-    (x) ; ensures announce spend has unique solution
+    (x)  ; ensures announce spend has unique solution so we can run ISA spend
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat
@@ -84,5 +84,4 @@
       )
     )
   )
-
 )

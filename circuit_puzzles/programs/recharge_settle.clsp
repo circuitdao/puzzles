@@ -40,8 +40,6 @@
       (r funding_coin_info)
     )
     (assert
-      ; prove spender owns target puzzle hash
-      (= inner_puzzle_hash target_puzzle_hash)
       ; must provide at least one treasury coin to deposit to
       (> treasury_coins_count 0)
       ; there must be a bid to settle

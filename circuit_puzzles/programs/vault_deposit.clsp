@@ -39,7 +39,7 @@
      liquidation_ratio
      (f price_info)
    )
-   (assert
+   (assert_debug
      (> deposit_amount 0)
      (> new_collateral (- min_collateral_amount ONE))
      (list

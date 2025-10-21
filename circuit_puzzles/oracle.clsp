@@ -12,6 +12,7 @@
   (include statutes_utils.clib)
   (include utils.clib)
   (include oracle.clib)
+  (include condition_filtering.clib)
 
 
   (assign
@@ -19,7 +20,7 @@
     (
       operation
       op_args
-    ) (find-solution-remark-value input_conditions)
+    ) (find-solution-remark-value (assert (fail-on-protocol-condition input_conditions) input_conditions))
     operation_hash (sha256tree operation)
     inner_puzzle_hash (sha256tree inner_puzzle)
     (c
@@ -41,42 +42,41 @@
           )
         )
         ; ELSE announce oracle price
-        (fail-on-non-coin-announcement
-          input_conditions
-          (assign
-            (current_timestamp price_delay statutes_inner_puzzle_hash) op_args
-            cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
-            (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
-            (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
-            (list
-              ; can only announce the price if we're updating statutes
-              (if statutes_inner_puzzle_hash
-                ; normal price update for statutes
-                (list RECEIVE_MESSAGE 0x12 '*' (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash))
-                ; launch
-                (list RECEIVE_MESSAGE 0x3f '*' (f (r STATUTES_STRUCT)))
-              )
-              ; recreate self conserving price infos
-              (list CREATE_COIN
-                (curry_hashes MOD_HASH
-                  (sha256 ONE MOD_HASH)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256tree PRICE_INFOS)
-                )
-                ; min singleton amount, force it to be this
-                ONE
-              )
-              (if last_matured_price_updated
-                (list CREATE_PUZZLE_ANNOUNCEMENT
-                  (sha256tree (c last_matured_price (c last_matured_price_updated price_delay)))
-                )
-                (x)  ; no matured price infos available, fail. this can only occur during launch
-              )
-              (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
-              ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
-              (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
-              (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+        (assign
+          (current_timestamp price_delay statutes_inner_puzzle_hash) op_args
+          cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
+          (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
+          (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
+          (li
+            ; can only announce the price if we're updating statutes
+            (if statutes_inner_puzzle_hash
+              ; normal price update for statutes
+              (list RECEIVE_MESSAGE 0x12 '*' (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash))
+              ; launch
+              (list RECEIVE_MESSAGE 0x3f '*' (f (r STATUTES_STRUCT)))
             )
+            ; recreate self conserving price infos
+            (list CREATE_COIN
+              (curry_hashes MOD_HASH
+                (sha256 ONE MOD_HASH)
+                (sha256tree STATUTES_STRUCT)
+                (sha256tree PRICE_INFOS)
+              )
+              ; min singleton amount, force it to be this
+              ONE
+            )
+            (if last_matured_price_updated
+              (list CREATE_PUZZLE_ANNOUNCEMENT
+                (sha256tree (c last_matured_price (c last_matured_price_updated price_delay)))
+              )
+              (x)  ; no matured price infos available, fail. this can only occur during launch
+            )
+            (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
+            ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
+            (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
+            (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+            &rest
+            input_conditions
           )
         )
       )

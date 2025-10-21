@@ -19,14 +19,19 @@
 
 
   (assign
-    inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
-    raw_conditions (a inner_puzzle solution_or_conditions)
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    raw_conditions (if inner_puzzle (a inner_puzzle solution_or_conditions) solution_or_conditions)
     (
       (new_puzzle_hash deposit (operation . args) . rest_of_condition)
       input_conditions
     ) (filter-and-extract-unique-create-coin raw_conditions () ())
     operation_hash (sha256tree operation)
-    (assert_debug
+    (assert
+      (any
+        ; only announce doesn't require running inner puzzle
+        (all (not inner_puzzle) (= (f OPERATIONS) operation_hash))
+        inner_puzzle
+      )
       (any (not new_puzzle_hash) (size_b32 new_puzzle_hash))
       (contains OPERATIONS operation_hash)
       (c

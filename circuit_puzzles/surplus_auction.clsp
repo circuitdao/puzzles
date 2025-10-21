@@ -32,13 +32,13 @@
   (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    operation_hash (sha256tree operation)
     input_conditions (a inner_puzzle inner_solution)
     (
       lineage_proof ; -> (parent_id launcher_id amount last_bid)
       operation
       op_args
     ) (find-solution-remark-value input_conditions)
+    operation_hash (sha256tree operation)
     inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
       (is-valid-operation operation_hash OPERATIONS)

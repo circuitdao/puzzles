@@ -49,8 +49,6 @@
       my_amount
     )
     (assert
-      ; ensure winner owns the puzzle
-      (= target_puzzle_hash inner_puzzle_hash)
       ; must have a bid
       LAST_BID
       (li

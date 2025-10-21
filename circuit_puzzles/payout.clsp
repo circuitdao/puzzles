@@ -7,11 +7,8 @@
       CRT_TAIL_HASH
       SURPLUS_AUCTION_MOD_HASH
       SURPLUS_AUCTION_LAUNCHER_ID
-      surplus_auction_parent_id
-      surplus_auction_curried_args_hash
-      surplus_auction_amount
-      puzzle_hash
-      amount
+      inner_puzzle
+      inner_solution
     )
 
   (include *standard-cl-23.1*)
@@ -19,8 +16,17 @@
   (include condition_codes.clib)
   (include prefixes.clib)
   (include utils.clib)
+  (include condition_filtering.clib)
 
   (assign
+    conditions (a inner_puzzle inner_solution)
+    (
+      surplus_auction_parent_id
+      surplus_auction_curried_args_hash
+      surplus_auction_amount
+      puzzle_hash
+      amount
+    ) (find-solution-remark-value (assert (fail-on-protocol-condition-or-create-coin conditions) conditions))
     surplus_auction_coin_id (coinid
       surplus_auction_parent_id
       (curry_hashes CAT_MOD_HASH
@@ -33,7 +39,7 @@
     )
     (if (all (= surplus_auction_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
       ; first spend of the coin
-      (list  ; create / fill the coin from treasury
+      (li  ; create / fill the coin from treasury
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee we locked them delegating control to surplus auction coin id
         (list SEND_MESSAGE 0x3f
@@ -52,12 +58,14 @@
           amount
         )
         ; must be zero when locking the coin. also ensures this spend path can only be taken once
-        ;   since Surplus Auction Lot Amount > 0 (or ow/ there's no possibility of loss to protocol)
+        ; since Surplus Auction Lot Amount > 0 (or ow/ there's no possibility of loss to protocol)
         (list ASSERT_MY_AMOUNT 0)
+        &rest
+        conditions
       )
       ; we're transferring funds to surplus auction winner,
       ; we don't know if recent surplus coin contains our launcher id, but we're going to assert that with coin ann
-      (list
+      (li
         ; can only transfer full amount
         (list ASSERT_MY_AMOUNT amount)
         ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
@@ -71,6 +79,8 @@
         )
         ; transfer out
         (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
+        &rest
+        conditions
       )
     )
   )

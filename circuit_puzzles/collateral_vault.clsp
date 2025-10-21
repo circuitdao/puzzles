@@ -112,7 +112,7 @@
     )
     inner_conditions (merge-lists filtered_conditions operation_conditions)
     ;### MAIN EXPRESSION ###
-    (assert
+    (assert_debug
       (size_b32 final_inner_puzzle_hash)
       ; validate operation
       (if (contains OWNER_OPERATIONS vault_operation_hash)
@@ -128,7 +128,7 @@
         (list CREATE_COIN_ANNOUNCEMENT
           (concat
             PROTOCOL_PREFIX
-            (sha256tree (list statutes_struct_hash inner_puzzle_hash))
+            inner_puzzle_hash
           )
         ) ; for fee coin
         (c

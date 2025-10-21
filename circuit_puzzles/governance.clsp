@@ -39,7 +39,7 @@
           rest_of_conditions
           TRUE ; we found a create coin condition
           (assert
-            ; amount should be >= 0
+            ; amount should be >= 0 as coin amount can't be less
             (> (f (r condition_body)) MINUS_ONE)
             ; only one create coin allowed when in governance mode
             (= found_create_coin FALSE)
