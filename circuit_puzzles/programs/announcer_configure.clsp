@@ -38,8 +38,8 @@
           new_min_deposit
         ) args
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-        (approved . cooldown_start) (
-          assert
+        (approved . cooldown_start)
+          (assert
             (any
               (= input_toggle_activation FALSE)
               (all (= input_toggle_activation TRUE) APPROVED) ; cannot approve self

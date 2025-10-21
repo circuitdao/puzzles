@@ -113,7 +113,7 @@
     )
     inner_conditions (merge-lists filtered_conditions operation_conditions)
     ;### MAIN EXPRESSION ###
-    (assert_debug
+    (assert
       (= operation_hash vault_operation_hash)
       (size_b32 final_inner_puzzle_hash)
       ; validate operation

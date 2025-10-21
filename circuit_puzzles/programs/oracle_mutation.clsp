@@ -47,7 +47,7 @@
     (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item PRICE_INFOS)
-    (assert_debug
+    (assert
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))
       ; check that no announcer is being used more than once

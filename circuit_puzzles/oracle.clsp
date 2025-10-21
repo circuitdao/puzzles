@@ -4,6 +4,7 @@
       PRICE_INFOS
       inner_puzzle
       inner_solution
+      operation
     )
 
   (include *standard-cl-23.1*)
@@ -18,18 +19,16 @@
   (assign
     input_conditions (a inner_puzzle inner_solution)
     (
-      operation
+      signed_operation_hash
       op_args
     ) (find-solution-remark-value (assert (fail-on-protocol-condition input_conditions) input_conditions))
-    operation_hash (sha256tree operation)
+    operation_hash (if operation (sha256tree operation) ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     (c
       (list CREATE_COIN_ANNOUNCEMENT
         (concat PROTOCOL_PREFIX inner_puzzle_hash)
       )
-      (if (all
-        (= operation_hash MUTATION_PROGRAM_HASH)
-        )
+      (if (all (= operation_hash MUTATION_PROGRAM_HASH) (= signed_operation_hash operation_hash))
         ; update oracle price
         (a
           operation
