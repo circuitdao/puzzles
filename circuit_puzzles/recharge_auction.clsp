@@ -2,6 +2,7 @@
       MOD_HASH STATUTES_STRUCT LAUNCHER_ID AUCTION_PARAMS LAST_BID
       inner_puzzle
       inner_solution
+      operation
     )
 
   (include *standard-cl-23.1*)
@@ -16,13 +17,14 @@
     input_conditions (a inner_puzzle inner_solution)
     (
       lineage_proof
-      operation
+      signed_operation_hash
       op_args
     ) (find-solution-remark-value input_conditions)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     operation_hash (sha256tree operation)
     inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
+      (= signed_operation_hash operation_hash)
       (contains OPERATIONS operation_hash)
       (fail-on-protocol-condition-or-create-coin input_conditions)
       (c
