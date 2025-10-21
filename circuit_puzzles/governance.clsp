@@ -13,6 +13,7 @@
       lineage_proof
       inner_puzzle
       inner_solution
+      bill_operation
      )
 
   (include *standard-cl-23.1*)
@@ -223,13 +224,14 @@
     inner_puzzle_hash (sha256tree inner_puzzle)
     raw_inner_conditions (a inner_puzzle inner_solution)
     (
-      (statutes_inner_puzzle_hash bill_operation . args) ; from first protocol REMARK encountered
+      (statutes_inner_puzzle_hash signed_bill_operation_hash . args) ; from first protocol REMARK encountered
       . new_coin_amount ; from first CREATE_COIN encountered
     ) (find-bill-condition raw_inner_conditions () MINUS_ONE)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     bill_operation_hash (sha256tree bill_operation)
     (final_bill bill_conditions) (if bill_operation
       (assert
+        (= bill_operation_hash signed_bill_operation_hash)
         (if (= inner_puzzle_hash INNER_PUZZLE_HASH)
           ; owner operation
           (contains OPERATIONS bill_operation_hash)
