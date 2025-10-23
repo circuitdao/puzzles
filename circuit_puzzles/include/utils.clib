@@ -47,27 +47,35 @@
      )
   )
 
-  (defun cumulative-discount-factor-helper (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
-    (if (> previous_timestamp current_timestamp)
-      past_cumulative_discount_factor
-      (cumulative-discount-factor-helper
-        (/ (* past_cumulative_discount_factor current_discount_factor) PRECISION)
-        current_discount_factor
-        current_timestamp
-        (+ previous_timestamp ONE_MINUTE) ; per-minute compounding
+  (defun pow-discount (base exp)
+    ;; Exponentiation-by-squaring in fixed point.
+    ;; Each multiplication is followed immediately by `/ PRECISION`, preserving
+    ;; the same rounding behaviour as applying the factor minute-by-minute.
+    (if (= exp 0)
+      PRECISION
+      (assign
+        squared (/ (* base base) PRECISION)
+        recur (pow-discount squared (/ exp 2))
+        (if (= (% exp TWO) ONE)
+          (/ (* recur base) PRECISION)
+          recur
+        )
       )
     )
   )
 
-
-  (defun calculate-cumulative-discount-factor (past_cumulative_discount_factor current_discount_factor current_timestamp previous_timestamp)
+  (defun-inline calculate-cumulative-discount-factor (past current current_timestamp previous_timestamp)
+    ;; Computes: past * (current / PRECISION)^(minutes elapsed).
+    ;; Uses pow-discount to avoid per-minute recursion while keeping rounding consistent.
     (assign
       (quotient . remainder) (divmod previous_timestamp ONE_MINUTE)
       start_timestamp (+ previous_timestamp (- ONE_MINUTE remainder))
-      (cumulative-discount-factor-helper past_cumulative_discount_factor current_discount_factor current_timestamp start_timestamp)
+      raw_elapsed (- current_timestamp start_timestamp)
+      elapsed_minutes (if (> raw_elapsed MINUS_ONE) (+ (/ raw_elapsed ONE_MINUTE) ONE) 0)
+      multiplier (pow-discount current elapsed_minutes)
+      (/ (* past multiplier) PRECISION)
     )
   )
-
 
   (defun-inline is-approval-mod (approval_mod_hashes approval_mod)
     (any

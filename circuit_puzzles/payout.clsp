@@ -27,6 +27,7 @@
       puzzle_hash
       amount
     ) (find-solution-remark-value (assert (fail-on-protocol-condition-or-create-coin conditions) conditions))
+    inner_puzzle_hash (sha256tree inner_puzzle)
     surplus_auction_coin_id (coinid
       surplus_auction_parent_id
       (curry_hashes CAT_MOD_HASH
@@ -43,7 +44,7 @@
         ; surplus auction is being created and started, since we should have enough in treasury
         ; to fill this coin, let see. We also guarantee we locked them delegating control to surplus auction coin id
         (list SEND_MESSAGE 0x3f
-          (concat PROTOCOL_PREFIX (sha256tree amount))
+          (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash amount)))
           surplus_auction_coin_id
         )
         ; recreate ourselves with the surplus BYC lot amount
@@ -73,7 +74,7 @@
         (list RECEIVE_MESSAGE 0x3f
           (concat
             PROTOCOL_PREFIX
-            (sha256tree (c amount (c puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID)))
+            (sha256tree (c inner_puzzle_hash (c amount (c puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID))))
           )
           surplus_auction_coin_id
         )

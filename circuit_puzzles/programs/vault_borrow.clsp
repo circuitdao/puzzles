@@ -56,12 +56,11 @@
       )
     )
     ; multiply current_stability_fee_df six more times onto cumulative_stability_fee_df
-    cumulative_stability_fee_df_adjusted (
-      cumulative-discount-factor-helper
-        cumulative_stability_fee_df
-        current_stability_fee_df
-        (* 3 MAX_TX_BLOCK_TIME)
-        ONE
+    cumulative_stability_fee_df_adjusted (calculate-cumulative-discount-factor
+      cumulative_stability_fee_df
+      current_stability_fee_df
+      (* 3 MAX_TX_BLOCK_TIME)
+      ONE
     )
     new_undiscounted_principal (undiscount-principal new_discounted_principal cumulative_stability_fee_df_adjusted)
     min_collateral_amount (

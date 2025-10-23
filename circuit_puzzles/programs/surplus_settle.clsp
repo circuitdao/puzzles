@@ -96,7 +96,7 @@
         (list SEND_MESSAGE 0x3f
           (concat
             PROTOCOL_PREFIX
-            (sha256tree (c BYC_LOT_AMOUNT (c target_puzzle_hash LAUNCHER_ID)))
+            (sha256tree (c inner_puzzle_hash (c BYC_LOT_AMOUNT (c target_puzzle_hash LAUNCHER_ID))))
           )
           payout_coin_id
         )

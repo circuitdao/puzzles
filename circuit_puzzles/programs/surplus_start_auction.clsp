@@ -150,7 +150,7 @@
       (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
       ; assert payout coin received the lot amount
       (list RECEIVE_MESSAGE 0x3f
-        (concat PROTOCOL_PREFIX (sha256tree lot_amount))
+        (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash lot_amount)))
         payout_coin_id
       )
       (list
