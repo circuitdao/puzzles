@@ -23,28 +23,26 @@
     inner_puzzle_hash (sha256tree inner_puzzle)
     raw_conditions (if inner_puzzle (a inner_puzzle solution_or_conditions) solution_or_conditions)
     (
-      (new_puzzle_hash deposit (signed_operation_hash . args) . rest_of_conditions)
+      (new_puzzle_hash deposit (signed_operation_hash . args) . rest_of_condition)
       input_conditions
     ) (filter-and-extract-unique-create-coin raw_conditions () ())
     operation_hash (sha256tree operation)
     (assert
-      (not rest_of_conditions)  ; never allow extra conditions
+      (not rest_of_condition)  ; create coin memo field may not contain unnecessary info to keep announce operation ISA'able
       (= operation_hash signed_operation_hash)
-      (any
-        ; only announce doesn't require running inner puzzle
+      (if (= (f OPERATIONS) operation_hash)
+        ; if announce op, then must not specify inner puzzle
+        (not inner_puzzle)
+        ; if not announce op, then must specify inner puzzle
         (all
-          (not new_puzzle_hash)
-          (not inner_puzzle)
-          (= (f OPERATIONS) operation_hash)  ; announce op is first in the list
+          (contains (r OPERATIONS) operation_hash)
+          inner_puzzle
         )
-        ; else should provide inner puzzle
-        inner_puzzle
       )
       (any
-        (not new_puzzle_hash)
-        (size_b32 new_puzzle_hash)
+        (not new_puzzle_hash)  ; nil for announce op or if choosing not to update ownership
+        (size_b32 new_puzzle_hash) ; when updating ownership
       )
-      (contains OPERATIONS operation_hash)
       (c
         (list CREATE_COIN_ANNOUNCEMENT
           (concat PROTOCOL_PREFIX
@@ -103,9 +101,8 @@
                 (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED
                   DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
                 )
-                ; inner puzzle hash, used as ownership proof in operations (must be nil on announce to keep ISA happy)
+                ; inner puzzle hash, used as ownership proof in operations. must be nil on announce to keep it ISA'able
                 (if (= inner_puzzle_hash INNER_PUZZLE_HASH) inner_puzzle_hash ())
-                ; new_puzzle_hash, when updating ownership, nil for announce
                 new_puzzle_hash
                 deposit
                 input_conditions
