@@ -51,8 +51,6 @@
       (> auction_ttl (- current_timestamp start_time))
       ; bid hasn't timed out yet
       (any (= last_bid_timestamp 0) (> bid_ttl (- current_timestamp last_bid_timestamp)))
-      ; keeper must prove they own the target_puzzle_hash
-      (assert target_puzzle_hash inner_puzzle_hash)
       (li
         ; update LAST_BID
         (list
