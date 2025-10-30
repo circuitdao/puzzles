@@ -11,6 +11,7 @@
   (include prefixes.clib)
   (include utils.clib)
   (include statutes_utils.clib)
+  (include condition_filtering.clib)
 
   (defconst REGISTER_OPCODE "r")
   (defconst REWARD_OPCODE "m")
@@ -45,10 +46,10 @@
     inner_puzzle_hash (sha256tree inner_puzzle)
     inner_conditions (a inner_puzzle inner_solution)
     (
-         lineage_proof
-         reward_or_register
-         args
-    ) (find-solution-remark-value inner_conditions)
+      lineage_proof
+      reward_or_register
+      args
+    ) (find-solution-remark-value inner_conditions) ; we don't use inner_conditions after this line
     (
       announcer_registry
       new_claim_counter

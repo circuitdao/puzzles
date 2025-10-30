@@ -36,16 +36,19 @@
     crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH statutes_struct_hash)
     input_conditions (a inner_puzzle inner_solution)
     (
-      lineage_proof ; -> (parent_id launcher_id amount last_bid)
-      signed_operation_hash
-      op_args
-    ) (find-solution-remark-value input_conditions)
+      (
+        lineage_proof ; -> (parent_id launcher_id amount last_bid)
+        signed_operation_hash
+        op_args
+      )
+      inner_conditions
+    ) (filter-and-extract-remark-solution input_conditions () ())
     operation_hash (sha256tree operation)
     inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
       (= signed_operation_hash operation_hash)
       (is-valid-operation operation_hash OPERATIONS)
-      (fail-on-protocol-condition-or-create-coin input_conditions)
+      ;(fail-on-protocol-condition-or-create-coin input_conditions)
       (c
         (list CREATE_COIN_ANNOUNCEMENT
           (concat PROTOCOL_PREFIX inner_puzzle_hash)
@@ -54,7 +57,7 @@
           operation
           (list
             (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-            lineage_proof input_conditions inner_puzzle_hash op_args
+            lineage_proof inner_conditions inner_puzzle_hash op_args
           )
         )
       )

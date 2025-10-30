@@ -154,4 +154,54 @@
     )
   )
 
+  (defun find-solution-remark-value (inner_conditions)
+    ;; find the first REMARK condition and return its value, no protocol prefix is needed as
+    ;; it's provided by spender and signed for
+    (if (= ONE (f (f inner_conditions)))
+      (f (r (f inner_conditions)))
+      (if (r inner_conditions)
+        (find-solution-remark-value (r inner_conditions))
+        (x)
+      )
+    )
+  )
+
+  (defun filter-and-extract-remark-solution (
+        (@ conditions ((condition_code . condition_body) . rest_of_conditions))
+        found_solution
+        filtered_conditions
+      )
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (x) ; only one create coin condition allowed
+        (if (= condition_code REMARK)
+          (if found_solution
+            (x)
+            (filter-and-extract-remark-solution rest_of_conditions (f condition_body) filtered_conditions)
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+              )
+              ; all other conditions allowed
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            )
+          )
+        )
+      )
+      (assert
+        found_solution ; must have found a solution
+        (list found_solution filtered_conditions)
+      )
+    )
+  )
+
+
+
 )

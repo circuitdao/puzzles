@@ -143,7 +143,7 @@
         )
         0
       )
-      (list ASSERT_MY_AMOUNT 0) ; enforece eve amount
+      (list ASSERT_MY_AMOUNT 0) ; enforce eve amount
       (list ASSERT_MY_COIN_ID my_coin_id)
       (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL bid_ttl)
       (assert-statute statutes_puzzle_hash STATUTE_AUCTIONS_MINIMUM_PRICE_INCREASE_BPS min_price_increase_bps)

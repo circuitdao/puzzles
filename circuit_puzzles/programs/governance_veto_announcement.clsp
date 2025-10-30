@@ -18,7 +18,7 @@
   (list
     BILL
     (list
-      (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree inner_puzzle_hash target_bill_hash)) target_coin_id)
+      (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash target_bill_hash))) target_coin_id)
     )
   )
 

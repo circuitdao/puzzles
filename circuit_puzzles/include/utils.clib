@@ -11,7 +11,7 @@
   (defconst ONE_MINUTE 60)
   (defconst b32 32)
   (defconst TRUE 1)
-  (defconst FALSE 0)
+  (defconst FALSE ())
 
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
@@ -35,17 +35,6 @@
 
   (defmac or CLAUSES (if CLAUSES (or_ CLAUSES) ()))
 
-  (defun find-solution-remark-value (inner_conditions)
-    ;; find the first REMARK condition and return its value, no protocol prefix is needed as
-    ;; it's provided by spender and signed for
-    (if (= ONE (f (f inner_conditions)))
-      (f (r (f inner_conditions)))
-      (if (r inner_conditions)
-        (find-solution-remark-value (r inner_conditions))
-        (x)
-      )
-     )
-  )
 
   (defun pow-discount (base exp)
     ;; Exponentiation-by-squaring in fixed point.

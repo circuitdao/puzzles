@@ -19,9 +19,12 @@
   (assign
     input_conditions (a inner_puzzle inner_solution)
     (
-      signed_operation_hash
-      op_args
-    ) (find-solution-remark-value (assert (fail-on-protocol-condition input_conditions) input_conditions))
+      (
+        signed_operation_hash
+        op_args
+      )
+      inner_conditions
+    ) (filter-and-extract-remark-solution input_conditions () ())
     operation_hash (if operation (sha256tree operation) ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     (c
@@ -37,7 +40,7 @@
             STATUTES_STRUCT
             PRICE_INFOS
             op_args
-            input_conditions
+            inner_conditions
           )
         )
         ; ELSE announce oracle price
@@ -75,7 +78,7 @@
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             &rest
-            input_conditions
+            inner_conditions
           )
         )
       )

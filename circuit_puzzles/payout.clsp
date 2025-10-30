@@ -21,12 +21,15 @@
   (assign
     conditions (a inner_puzzle inner_solution)
     (
-      surplus_auction_parent_id
-      surplus_auction_curried_args_hash
-      surplus_auction_amount
-      puzzle_hash
-      amount
-    ) (find-solution-remark-value (assert (fail-on-protocol-condition-or-create-coin conditions) conditions))
+      (
+        surplus_auction_parent_id
+        surplus_auction_curried_args_hash
+        surplus_auction_amount
+        puzzle_hash
+        amount
+      )
+      inner_conditions
+    )(filter-and-extract-remark-solution conditions () ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     surplus_auction_coin_id (coinid
       surplus_auction_parent_id
@@ -62,7 +65,7 @@
         ; since Surplus Auction Lot Amount > 0 (or ow/ there's no possibility of loss to protocol)
         (list ASSERT_MY_AMOUNT 0)
         &rest
-        conditions
+        inner_conditions
       )
       ; we're transferring funds to surplus auction winner,
       ; we don't know if recent surplus coin contains our launcher id, but we're going to assert that with coin ann
@@ -81,7 +84,7 @@
         ; transfer out
         (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
         &rest
-        conditions
+        inner_conditions
       )
     )
   )

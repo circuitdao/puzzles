@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "circuit-puzzles"
 packages = [{include = "circuit_puzzles"}]
-version = "1.1.0"
-description = "Puzzles used in stablecoin protocol Circuit on Chia blockchain"
+version = "1.2.0"
+description = "Puzzles powering Circuit Protocol - a decentralized stablecoin and lending system on the Chia blockchain that enables permissionless borrowing of BYC against XCH collateral"
 authors = ["Sebastjan Trepca <set@circuitdao.com>", "Nic Niedermowwe <nin@circuitdao.com>"]
 exclude = [
     "circuit_puzzles/*.clsp",
