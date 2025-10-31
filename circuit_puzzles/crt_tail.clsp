@@ -37,6 +37,8 @@
         (fail-on-protocol-condition inner_conditions)
       )
     (assign  ; issuing by recharge auction, announcer registry or melting by surplus
+      ; remark condition of run_tail puzzle is fixed at position 3
+      ; of inner_conditions as CAT layer prepends two further conditions
       inner_puzzle_hash (f (r (f (r (r inner_conditions)))))
       CAT_MOD_HASH (cat_mod_hash_truth Truths)
       CAT_MOD_HASH_HASH (cat_mod_hash_hash_truth Truths)

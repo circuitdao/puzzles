@@ -11,10 +11,26 @@
   (include prefixes.clib)
   (include utils.clib)
   (include statutes_utils.clib)
-  (include condition_filtering.clib)
 
   (defconst REGISTER_OPCODE "r")
   (defconst REWARD_OPCODE "m")
+
+
+  ; fails if no solution REMARK condition encountered
+  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
+  ; returns third field from first solution REMARK condition encountered
+  (defun find-solution-remark-value (inner_conditions)
+    (if (and
+          (= REMARK (f (f inner_conditions)))
+          (= SOLUTION_PREFIX (f (r (f inner_conditions))))
+      )
+      (f (r (r (f inner_conditions))))
+      (if (r inner_conditions)
+        (find-solution-remark-value (r inner_conditions))
+        (x)
+      )
+    )
+  )
 
   ; generates notarized payments to target puzzle hashes as required by settlement payments puzzle
   (defun generate-offer-assert ((@ announcer_registry (target_puzzle_hash . rest_of_announcer_registry)) reward_per_announcer payments)

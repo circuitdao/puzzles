@@ -19,7 +19,7 @@
   (include condition_filtering.clib)
 
   (assign
-    conditions (a inner_puzzle inner_solution)
+    input_conditions (a inner_puzzle inner_solution)
     (
       (
         surplus_auction_parent_id
@@ -29,7 +29,7 @@
         amount
       )
       inner_conditions
-    )(filter-and-extract-remark-solution conditions () ())
+    ) (filter-and-extract-remark-solution input_conditions () ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     surplus_auction_coin_id (coinid
       surplus_auction_parent_id

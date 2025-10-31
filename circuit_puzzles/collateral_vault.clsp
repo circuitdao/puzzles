@@ -38,46 +38,6 @@
   (include prefixes.clib)
   (include statutes_utils.clib)
 
-  ; fails on create coin
-  ; fails on protocol conditions other than remark
-  ; fails if not exactly one protocol remark encountered
-  ; returns body of protocol remark condition and filtered conditions
-  (defun filter-and-extract-unique-protocol-remark ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) found_remark filtered_conditions)
-    (if conditions
-      (if (= condition_code CREATE_COIN)
-        (x) ; no CREATE_COIN allowed
-        (if (= condition_code REMARK)
-          (if (is-valid-rmk-cond condition_body)
-            ; non-protocol remarks are fine
-            (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
-            ; protocol remark
-            (if found_remark
-              (x) ; only one protocol remark allowed
-              (filter-and-extract-unique-protocol-remark rest_of_conditions (r condition_body) filtered_conditions)
-            )
-          )
-          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
-            (assert
-              (is-valid-msg-cond condition_body)
-              (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
-            )
-            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-              (assert
-                (is-valid-ann-cond condition_body)
-                (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
-              )
-              ; all other conditions allowed
-              (filter-and-extract-unique-protocol-remark rest_of_conditions found_remark (c (f conditions) filtered_conditions))
-            )
-          )
-        )
-      )
-      (assert
-        found_remark
-        (list found_remark filtered_conditions)
-      )
-    )
-  )
 
   (defun-inline operation-program (operation)
     (f (r operation))
@@ -85,9 +45,9 @@
 
   (assign
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    conditions (a inner_puzzle solution)
+    input_conditions (a inner_puzzle solution)
+    (vault_operation_condition filtered_conditions) (filter-and-extract-remark-solution input_conditions () ())
     inner_puzzle_hash (sha256tree inner_puzzle)
-    (vault_operation_condition filtered_conditions) (filter-and-extract-unique-protocol-remark conditions () ())
     (statutes_inner_puzzle_hash vault_operation_hash . args) vault_operation_condition
     statutes_puzzle_hash (calculate-statutes-puzzle-hash
       (c (f STATUTES_STRUCT) statutes_struct_hash)

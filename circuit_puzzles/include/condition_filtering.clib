@@ -155,22 +155,10 @@
   )
 
 
-  (defun find-solution-remark-value (inner_conditions)
-    ;; find the first REMARK condition and return its value, no protocol prefix is needed as
-    ;; it's provided by spender and signed for
-    (if (= ONE (f (f inner_conditions)))
-      (f (r (f inner_conditions)))
-      (if (r inner_conditions)
-        (find-solution-remark-value (r inner_conditions))
-        (x)
-      )
-    )
-  )
-
-
   ; fails if create coin or protocol condition encountered
-  ; fails if no non-protocol remark condition encountered
-  ; extracts first field from first non-protocol remark condition encountered
+  ; fails if no solution remark condition encountered
+  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
+  ; extracts third field from first solution remark condition encountered
   ; returns all other conditions
   (defun filter-and-extract-remark-solution (
         (@ conditions ((condition_code . condition_body) . rest_of_conditions))
@@ -182,10 +170,10 @@
         (x) ; no create coin condition allowed
         (if (= condition_code REMARK)
           (assert
-            (is-valid-rmk-cond condition_body)
-            (if found_solution
-              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; skip all but first remark
-              (filter-and-extract-remark-solution rest_of_conditions (f condition_body) filtered_conditions) ; found first remark
+            (is-valid-rmk-cond condition_body) ; must not be a protocol remark
+            (if (any found_solution (not (= (f condition_body) SOLUTION_PREFIX)))
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; let all but first solution remark pass
+              (filter-and-extract-remark-solution rest_of_conditions (f (r condition_body)) filtered_conditions) ; found first solution remark
             )
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))

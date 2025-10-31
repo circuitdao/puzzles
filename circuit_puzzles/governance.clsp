@@ -9,7 +9,7 @@
       CRT_TAIL_HASH
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle. saves costs in veto operation vs currying full puzzle
-      BILL ; -> (bill_expires statute_index statute) where bill_expires -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
+      BILL ; -> (bill_expiries statute_index statute) where bill_expiries -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
       lineage_proof
       inner_puzzle
       inner_solution
@@ -178,7 +178,7 @@
   )
 
   ; from conditions, extract and return:
-  ;   (statutes_inner_puzzle_hash bill_operation . args) from first protocol REMARK encountered
+  ;   (statutes_inner_puzzle_hash bill_operation . args) from first solution REMARK encountered
   ;   new (governance or plain) CRT coin amount from first CREATE_COIN encountered
   ; all other conditions are dropped.
   ; when transferring:
@@ -192,12 +192,9 @@
   ;   first of CREATE_COIN condition body must match GOVERNANCE_COOLDOWN_INTERVAL
   (defun find-bill-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) bill_operation create_coin_amount)
     (if conditions
-      (if (= condition_code REMARK)
-        ; found (first) protocol REMARK. extract bill operation
-        (if (= bill_operation ())
-          (find-bill-condition rest_of_conditions condition_body create_coin_amount)
-          (x)
-        )
+      (if (and (= condition_code REMARK) (= (f condition_body) SOLUTION_PREFIX) (not bill_operation))
+        ; found first solution REMARK. extract bill operation
+        (find-bill-condition rest_of_conditions (f (r condition_body)) create_coin_amount)
         (if (all (= condition_code CREATE_COIN) (= create_coin_amount MINUS_ONE))
           ; found first CREATE_COIN (may not be first one if first create coin has amount -1,
           ;   but that's fine and will fail later in filter-conditions)
@@ -215,7 +212,7 @@
     inner_puzzle_hash (sha256tree inner_puzzle)
     raw_inner_conditions (a inner_puzzle inner_solution)
     (
-      (statutes_inner_puzzle_hash signed_bill_operation_hash . args) ; from first protocol REMARK encountered
+      (statutes_inner_puzzle_hash signed_bill_operation_hash . args) ; from first solution REMARK encountered
       . new_coin_amount ; from first CREATE_COIN encountered
     ) (find-bill-condition
         raw_inner_conditions
@@ -228,9 +225,9 @@
       (assert
         (= bill_operation_hash signed_bill_operation_hash)
         (any
+          ; owner operation
           (all
             (= inner_puzzle_hash INNER_PUZZLE_HASH)
-            ; owner operation
             (contains OPERATIONS bill_operation_hash)
           )
           ; keeper operation. veto bill
