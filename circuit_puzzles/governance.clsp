@@ -25,7 +25,7 @@
 
   (defconst VETO_PROPOSED_BILL -1)
 
-  ; used to filter raw_inner_conditions
+  ; used to filter inner_conditions
   (defun filter-conditions (EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
                             STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
                             final_bill bill_operation
@@ -210,50 +210,52 @@
   ; ###################  MAIN ENTRY POINT  ########################
   (assign
     inner_puzzle_hash (sha256tree inner_puzzle)
-    raw_inner_conditions (a inner_puzzle inner_solution)
+    inner_conditions (a inner_puzzle inner_solution)
     (
-      (statutes_inner_puzzle_hash signed_bill_operation_hash . args) ; from first solution REMARK encountered
-      . new_coin_amount ; from first CREATE_COIN encountered
+      (statutes_inner_puzzle_hash signed_bill_operation_hash . args)  ; from first solution REMARK encountered
+      . new_coin_amount  ; from first CREATE_COIN encountered
     ) (find-bill-condition
-        raw_inner_conditions
-        ()   ; bill operation accumulator
-        MINUS_ONE ; found create coin
+        inner_conditions
+        ()  ; bill operation accumulator
+        MINUS_ONE  ; found create coin
       )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    bill_operation_hash (sha256tree bill_operation)
-    (final_bill bill_conditions) (if bill_operation
-      (assert
-        (= bill_operation_hash signed_bill_operation_hash)
-        (any
-          ; owner operation
-          (all
-            (= inner_puzzle_hash INNER_PUZZLE_HASH)
-            (contains OPERATIONS bill_operation_hash)
+    bill_operation_hash (if bill_operation (sha256tree bill_operation) ())
+    (final_bill bill_conditions) (assert
+      (= bill_operation_hash signed_bill_operation_hash)
+      (if bill_operation
+        (assert
+          (any
+            ; owner operation
+            (all
+              (= inner_puzzle_hash INNER_PUZZLE_HASH)
+              (contains OPERATIONS bill_operation_hash)
+            )
+            ; keeper operation. veto bill
+            (all
+              (= (f OPERATIONS) bill_operation_hash)
+              (validate-veto-conditions INNER_PUZZLE_HASH inner_conditions)
+            )
           )
-          ; keeper operation. veto bill
-          (all
-            (= (f OPERATIONS) bill_operation_hash)
-            (validate-veto-conditions INNER_PUZZLE_HASH raw_inner_conditions)
+          (a
+            bill_operation
+            (list
+              (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+                    statutes_puzzle_hash inner_puzzle_hash)
+              (c new_coin_amount args)
+            )
           )
         )
-        (a
-          bill_operation
-          (list
-            (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-                  statutes_puzzle_hash inner_puzzle_hash)
-            (c new_coin_amount args)
-          )
+        ; no bill operation, this is a transfer or exit
+        (assert
+          (> new_coin_amount MINUS_ONE)
+          (= inner_puzzle_hash INNER_PUZZLE_HASH)  ; must be in owner mode
+          (not BILL)  ; can only transfer or exit when not in proposal mode
+          (list () ())
         )
-      )
-      ; no bill operation, this is a transfer or exit
-      (assert
-        (> new_coin_amount MINUS_ONE)
-        (= inner_puzzle_hash INNER_PUZZLE_HASH) ; must be in owner mode
-        (not BILL) ; can only transfer or exit when not in proposal mode
-        (list () ())
       )
     )
-    ; filter raw_inner_conditions:
+    ; filter inner_conditions:
     ; discard any protocol REMARKs encountered
     ; fail on any non-REMARK protocol condition
     ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
@@ -263,7 +265,7 @@
       EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
       INNER_PUZZLE_HASH BILL statutes_puzzle_hash
       final_bill bill_operation
-      raw_inner_conditions FALSE
+      inner_conditions FALSE
       (c
           ; secure attached coins
         (list CREATE_COIN_ANNOUNCEMENT
