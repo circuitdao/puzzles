@@ -39,7 +39,7 @@
     (> new_implementation_delay 0)
     ; if we have a max_delta, make sure new value doesn't exceed it
     (if (= max_delta 0)
-      ONE
+      ONE  ; max_delta=0 disables the delta check entirely
       ; or new value must be within max_delta of current value
       (if (> new_statute_value statute_value)
         (> max_delta (- new_statute_value statute_value))

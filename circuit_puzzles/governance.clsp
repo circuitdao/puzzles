@@ -223,7 +223,7 @@
     bill_operation_hash (if bill_operation (sha256tree bill_operation) ())
     (final_bill bill_conditions) (assert
       (= bill_operation_hash signed_bill_operation_hash)
-      (if bill_operation
+      (if signed_bill_operation_hash
         (assert
           (any
             ; owner operation
