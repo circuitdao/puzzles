@@ -10,7 +10,7 @@ exclude = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.11,<3.14"
 chialisp = "^0.4.1"
 
 [build-system]

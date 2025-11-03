@@ -80,6 +80,7 @@
         (list COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
         ; additional conditions
         (list
+          (list ASSERT_HEIGHT_RELATIVE 0)
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat PROTOCOL_PREFIX

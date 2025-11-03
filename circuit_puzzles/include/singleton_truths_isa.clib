@@ -13,12 +13,7 @@
   (defun-inline singleton_launcher_puzzle_hash_truth (Truths) (f (r (r (singleton_struct_truth Truths)))))
 
   (defun-inline parent_info_for_lineage_proof (lineage_proof) (f lineage_proof))
-  ;(defun-inline puzzle_hash_for_lineage_proof (lineage_proof) (f (r lineage_proof))) ; REMOVED
-  (defun-inline puzzle_hash_for_lineage_proof (lineage_proof) (r lineage_proof)) ; NEW
-  ;(defun-inline amount_for_lineage_proof (lineage_proof) (f (r (r lineage_proof)))) ; REMOVED: always ONE
-  ;(defun-inline is_not_eve_proof (lineage_proof) (r (r lineage_proof))) ; REMOVED
-  (defun-inline is_not_eve_proof (lineage_proof) (l lineage_proof)) ; NEW
-  ;(defun-inline parent_info_for_eve_proof (lineage_proof) (f lineage_proof)) ; REMOVED
-  (defun-inline parent_info_for_eve_proof (lineage_proof) lineage_proof) ; NEW
-  ;(defun-inline amount_for_eve_proof (lineage_proof) (f (r lineage_proof))) ; REMOVED: always ONE
+  (defun-inline puzzle_hash_for_lineage_proof (lineage_proof) (r lineage_proof))
+  (defun-inline is_not_eve_proof (lineage_proof) (l lineage_proof))
+  (defun-inline parent_info_for_eve_proof (lineage_proof) lineage_proof)
 )

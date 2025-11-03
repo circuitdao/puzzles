@@ -20,7 +20,7 @@
         lineage_proof
         ; owner mode iff keeper_operation_info is nil
         inner_puzzle
-        solution ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
+        solution  ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition
         ; the following keeper operations can be performed:
         ; - transfer stability fees
         ; - (re-)start auction
