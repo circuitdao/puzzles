@@ -83,6 +83,11 @@
             vault_coin_id
           )
           (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+          (if (> delta 0)
+            ; we block issuance if statute is set
+            (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)
+            (list REMARK)
+          )
         )
       )
     )

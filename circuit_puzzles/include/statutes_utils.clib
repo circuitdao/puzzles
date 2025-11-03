@@ -49,8 +49,11 @@
   (defconst STATUTE_GOVERNANCE_BILL_PROPOSAL_FEE_MOJOS 40)
   (defconst STATUTE_GOVERNANCE_IMPLEMENTATION_INTERVAL 41)
   (defconst STATUTE_GOVERNANCE_COOLDOWN_INTERVAL 42)
+  ; block issuance and collateral vault operations
+  ; except for collateral withdrawal and debt repayment
+  (defconst STATUTE_BLOCK_ISSUANCE 43)
 
-  (defconst STATUTES_MAX_IDX 42) ; max Statutes index
+  (defconst STATUTES_MAX_IDX 43) ; max Statutes index
 
   (defconst STATUTE_PREFIX "s")
   (defconst STATUTE_FULL_PREFIX "S")

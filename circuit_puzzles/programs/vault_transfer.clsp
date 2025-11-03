@@ -43,6 +43,7 @@
       (list
         (list COLLATERAL PRINCIPAL AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)
         (list
+          (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (assert-price-info statutes_puzzle_hash price_info)

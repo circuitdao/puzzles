@@ -177,6 +177,7 @@
         )
         (assign
           conditions (list
+            (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             ; validate coin id
