@@ -1,9 +1,16 @@
-[tool.poetry]
+[project]
 name = "circuit-puzzles"
-packages = [{include = "circuit_puzzles"}]
 version = "1.3.0"
 description = "Puzzles powering Circuit Protocol - a decentralized stablecoin and lending system on the Chia blockchain that enables permissionless borrowing of BYC against XCH collateral"
-authors = ["Sebastjan Trepca <set@circuitdao.com>", "Nic Niedermowwe <nin@circuitdao.com>"]
+authors = [
+    {name = "Sebastjan Trepca", email = "set@circuitdao.com"},
+    {name = "Nic Niedermowwe", email = "nin@circuitdao.com"}
+]
+requires-python = ">=3.11,<3.14"
+dependencies = []
+
+[tool.poetry]
+packages = [{include = "circuit_puzzles"}]
 exclude = [
     "circuit_puzzles/*.clsp",
     "circuit_puzzles/*.clib"
