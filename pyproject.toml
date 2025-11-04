@@ -1,6 +1,6 @@
 [project]
 name = "circuit-puzzles"
-version = "2.0.7"
+version = "2.0.8"
 puzzle_checksum = "d7c22670404c51061761946c8e044c2be8028f524957b395dfa62d812ab5aa4a"
 description = "Puzzles powering Circuit Protocol - a decentralized stablecoin and lending system on the Chia blockchain that enables permissionless borrowing of BYC against XCH collateral"
 authors = [
