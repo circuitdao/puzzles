@@ -53,28 +53,17 @@ def compute_puzzles_checksum(package_path: Path) -> str:
     return hasher.hexdigest()
 
 
-def read_checksum_from_pyproject(package_path: Path) -> str | None:
-    """Read the puzzle_checksum from pyproject.toml.
+def read_checksum_from_package() -> str | None:
+    """Read the puzzle_checksum from the embedded _checksum module.
     
-    Args:
-        package_path: Path to the package directory
-        
     Returns:
         Checksum string if found, None otherwise
     """
-    # pyproject.toml is in the parent directory of the package
-    pyproject_path = package_path.parent / "pyproject.toml"
-    
-    if not pyproject_path.exists():
+    try:
+        from circuit_puzzles._checksum import PUZZLE_CHECKSUM
+        return PUZZLE_CHECKSUM
+    except ImportError:
         return None
-    
-    content = pyproject_path.read_text()
-    match = re.search(r'puzzle_checksum = "([a-f0-9]{64})"', content)
-    
-    if match:
-        return match.group(1)
-    
-    return None
 
 
 def verify_puzzle_checksum(package_path: Path, expected_checksum: str) -> None:
@@ -123,7 +112,7 @@ for puzzle_path in PUZZLE_PATHS:
 
 # Verify puzzle integrity after compilation
 package_dir = Path(str(files(__package__)))
-expected_checksum = read_checksum_from_pyproject(package_dir)
+expected_checksum = read_checksum_from_package()
 
 if expected_checksum:
     try:
