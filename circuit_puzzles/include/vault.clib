@@ -25,7 +25,6 @@
   (defun-inline calculate-byc-coin-id (CAT_MOD_HASH BYC_TAIL_HASH (parent_id amount inner_puzzle_hash))
     (assert
       (size_b32 inner_puzzle_hash)
-      (size_b32 parent_id)
       (> amount MINUS_ONE)
       (coinid
         parent_id

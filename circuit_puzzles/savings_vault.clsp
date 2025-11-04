@@ -2,7 +2,7 @@
 ;       collateral vaults and new treasury coin puzzle
 (mod (CAT_MOD_HASH BYC_TAIL_MOD_HASH TREASURY_MOD_HASH
       MOD_HASH STATUTES_STRUCT DISCOUNTED_BALANCE INNER_PUZZLE
-       inner_solution
+      inner_solution
     )
 
   (include *standard-cl-23.1*)
