@@ -184,13 +184,13 @@ commit_version_changes() {
     
     if [ "$DRY_RUN" = true ]; then
         print_info "[DRY RUN] Would commit version changes and puzzle checksum..."
-        print_info "[DRY RUN] Would run: git add pyproject.toml"
+        print_info "[DRY RUN] Would run: git add pyproject.toml circuit_puzzles/_checksum.py"
         print_info "[DRY RUN] Would run: git commit -m \"Bump version to $version and freeze puzzle checksum\""
         print_info "[DRY RUN] Would run: git push origin main"
         print_success "[DRY RUN] Skipped git commit and push"
     else
         print_info "Committing version changes and puzzle checksum..."
-        git add pyproject.toml
+        git add pyproject.toml circuit_puzzles/_checksum.py
         git commit -m "Bump version to $version and freeze puzzle checksum"
         git push origin main
         print_success "Version changes and puzzle checksum committed and pushed"
@@ -295,7 +295,8 @@ main() {
         print_info "To perform the actual deployment, run without --dry-run flag"
     else
         print_success "Deployment completed successfully!"
-        print_info "The GitHub Actions workflow will now build and attach the package to the release."
+        print_info "The GitHub Actions workflow will now build, attach the package to the release, and publish to PyPI."
+        print_info "Make sure the PYPI_TOKEN secret is configured in the repository settings."
         print_info "You can monitor the progress at: https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\/[^/]*\)\.git.*/\1/')/actions"
     fi
 }
@@ -319,7 +320,11 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     echo "  3. Build the package using Poetry"
     echo "  4. Commit and push the version changes and puzzle checksum"
     echo "  5. Create and push a Git tag"
-    echo "  6. Create a GitHub release (triggers automated packaging)"
+    echo "  6. Create a GitHub release (triggers automated packaging and PyPI publishing)"
+    echo ""
+    echo "Prerequisites:"
+    echo "  - PYPI_TOKEN secret must be configured in GitHub repository settings"
+    echo "  - GitHub CLI (gh) must be installed for automatic release creation"
     echo ""
     echo "Examples:"
     echo "  $0                # Bump patch version"

@@ -17,12 +17,11 @@ Example:
     >>> # Checksum verification happens automatically on import
     >>> puzzle = circuit_puzzles.load_puzzle('governance')
 """
-from pathlib import Path
-import re
 import hashlib
+from pathlib import Path
 
 from chia_rs import Program
-from chialisp import compile_clvm, compile
+from chialisp import compile_clvm
 
 PUZZLES = {}
 
@@ -89,7 +88,7 @@ def compile_module_with_symbols(include_paths, source):
     path_obj = Path(source)
     file_path = path_obj.parent
     file_stem = path_obj.stem
-    # match if source file modified time is newer than target file, in which case we compile, otherwise skip
+    # match if the source file modified time is newer than a target file, in which case we compile, otherwise skip
     target_file = file_path / (file_stem + ".hex")
     if target_file.exists() and target_file.stat().st_mtime > path_obj.stat().st_mtime:
         return
@@ -100,7 +99,7 @@ try:
     from importlib.resources import files
 except ImportError:
     # for py3.8
-    from importlib_resources import files
+    from importlib_resources import files  # noqa: F401
 PUZZLE_PATHS = [str(Path(x)) for x in Path(str(files(__package__))).rglob("*.clsp")]
 
 for puzzle_path in PUZZLE_PATHS:
@@ -117,9 +116,8 @@ expected_checksum = read_checksum_from_package()
 if expected_checksum:
     try:
         verify_puzzle_checksum(package_dir, expected_checksum)
-        # Count puzzles for informational message
+        # Count puzzles for an informational message
         puzzle_count = len(list(package_dir.rglob("*.hex")))
-        print(f"✓ Puzzle integrity verified: {puzzle_count} puzzles checked (checksum: {expected_checksum[:16]}...)")
     except PuzzleIntegrityError as e:
         print("ERROR: Puzzle integrity check failed!")
         print(f"  {e}")
