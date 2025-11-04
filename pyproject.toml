@@ -13,8 +13,9 @@ dependencies = []
 [tool.poetry]
 packages = [{include = "circuit_puzzles"}]
 exclude = [
-    "circuit_puzzles/*.clsp",
-    "circuit_puzzles/*.clib"
+    "circuit_puzzles/**/*.clsp",
+    "circuit_puzzles/**/*.clib",
+    "audits/**/*"
 ]
 
 [tool.poetry.dependencies]
