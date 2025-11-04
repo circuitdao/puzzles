@@ -145,7 +145,7 @@ freeze_puzzle_hashes() {
             exit 1
         fi
         
-        python freeze_puzzle_hashes.py
+        python3 freeze_puzzle_hashes.py
         
         # Verify that puzzle_checksum was added to pyproject.toml
         if ! grep -q "puzzle_checksum = " pyproject.toml; then
