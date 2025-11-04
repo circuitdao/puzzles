@@ -280,11 +280,11 @@ main() {
     # Freeze puzzle hashes
     freeze_puzzle_hashes
     
+    # Commit version changes (must be done before creating tag/release)
+    commit_version_changes "$new_version"
+    
     # Build package
     build_package
-    
-    # Commit version changes
-    commit_version_changes "$new_version"
     
     # Create GitHub release (this will trigger the existing GitHub Actions workflow)
     create_github_release "$new_version"
