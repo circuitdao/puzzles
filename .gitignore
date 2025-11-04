@@ -12,7 +12,7 @@ tmp/
 **/*~
 **/#*#
 **/.#*
-
+chialisp.json
 # Database
 nohup.out
 mongod.log*
