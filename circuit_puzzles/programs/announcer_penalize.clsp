@@ -5,7 +5,6 @@
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (penalty_per_interval_bps statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit max_value_ttl current_timestamp)
-      rest_of_condition
      )
 
   (include *standard-cl-23.1*)

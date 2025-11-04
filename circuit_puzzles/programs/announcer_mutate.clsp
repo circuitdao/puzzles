@@ -6,7 +6,6 @@
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
       (current_timestamp new_value)
-      rest_of_condition
      )
 
   ; not using cl-23 standard to save costs

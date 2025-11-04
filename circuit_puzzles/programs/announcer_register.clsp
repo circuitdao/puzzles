@@ -7,7 +7,6 @@
       (registry_mod_hash registry_args_hash registry_claim_counter
         target_puzzle_hash statutes_inner_puzzle_hash min_deposit
       )
-      rest_of_condition
      )
 
   (include *standard-cl-23.1*)
@@ -31,10 +30,12 @@
           (concat
             PROTOCOL_PREFIX
             (sha256tree
-              (c STATUTES_STRUCT
-                (c target_puzzle_hash
-                  (c APPROVED
-                     registry_claim_counter
+              (c inner_puzzle_hash
+                (c STATUTES_STRUCT
+                  (c target_puzzle_hash
+                    (c APPROVED
+                       registry_claim_counter
+                    )
                   )
                 )
               )

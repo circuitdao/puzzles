@@ -3,7 +3,7 @@
     (
       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
-      statutes_puzzle_hash
+      statutes_puzzle_hash inner_puzzle_hash
     )
   )
   (@ args
@@ -57,6 +57,7 @@
         (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
         (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
         (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
+        (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)
        )
      )
    )

@@ -10,7 +10,6 @@
         input_toggle_activation
         max_disapproval_penalty_factor_or_min_deposit ; penalty factor when disapproving, min deposit when approving
       )
-      rest_of_condition
     )
 
   (include *standard-cl-23.1*)

@@ -1,11 +1,8 @@
 (mod (OPERATIONS BYC_TAIL_MOD_HASH
       MOD_HASH STATUTES_STRUCT LAUNCHER_ID AUCTION_PARAMS LAST_BID
-      (
-        lineage_proof
-        operation
-        input_conditions
-        op_args
-      )
+      inner_puzzle
+      inner_solution
+      operation
     )
 
   (include *standard-cl-23.1*)
@@ -17,20 +14,30 @@
   (include statutes_utils.clib)
 
   (assign
+    input_conditions (a inner_puzzle inner_solution)
+    (
+      (
+        lineage_proof
+        signed_operation_hash
+        op_args
+      )
+      inner_conditions
+    ) (filter-and-extract-remark-solution input_conditions () ())
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     operation_hash (sha256tree operation)
+    inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
+      (= signed_operation_hash operation_hash)
       (contains OPERATIONS operation_hash)
-      (fail-on-protocol-condition-or-create-coin input_conditions)
       (c
-        (list SEND_MESSAGE 0x38 ; coin ID to none
-          (concat PROTOCOL_PREFIX (sha256tree (list lineage_proof operation_hash input_conditions op_args)))
-        ) ; secure solution
+        (list CREATE_COIN_ANNOUNCEMENT ; coin ID to none
+          (concat PROTOCOL_PREFIX inner_puzzle_hash)
+        ) ; secure attached coins
         (a
           operation
           (list
             (list MOD_HASH STATUTES_STRUCT byc_tail_hash LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-            lineage_proof input_conditions op_args
+            lineage_proof input_conditions inner_puzzle_hash op_args
           )
         )
       )

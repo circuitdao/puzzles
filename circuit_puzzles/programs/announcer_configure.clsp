@@ -11,7 +11,7 @@
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      args rest_of_condition
+      args
      )
 
   (include *standard-cl-23.1*)
@@ -38,8 +38,8 @@
           new_min_deposit
         ) args
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-        (approved . cooldown_start) (
-          assert
+        (approved . cooldown_start)
+          (assert
             (any
               (= input_toggle_activation FALSE)
               (all (= input_toggle_activation TRUE) APPROVED) ; cannot approve self

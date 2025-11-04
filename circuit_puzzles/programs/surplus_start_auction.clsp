@@ -1,7 +1,7 @@
 (mod
   (PAYOUT_MOD_HASH TREASURY_MOD_HASH
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-    lineage_proof input_conditions
+    lineage_proof input_conditions inner_puzzle_hash
     (
       statutes_inner_puzzle_hash
       payout_coin_parent_id
@@ -30,7 +30,9 @@
     )
   )
 
-  (defun assert-treasury-coins-withdrawal (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+  (defun assert-treasury-coins-withdrawal (
+        TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT
+        inner_puzzle_hash treasury_maximum statutes_puzzle_hash
         treasury_coins ; any subset of treasury coins -> ((parent_id launcher_id ring_prev_launcher_id current_amount withdraw_amount))
         lot_amount ; amount to withdraw from treasury coins
         sum_amounts_withdrawn ; amount withdrawn from treasury coins. must be passed 0 when function is called
@@ -63,12 +65,13 @@
             (list SEND_MESSAGE 0x3f
               (concat
                 PROTOCOL_PREFIX
-                (sha256tree (c STATUTES_STRUCT (c (* -1 withdraw_amount) (- current_amount withdraw_amount))))
+                (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c (* -1 withdraw_amount) (- current_amount withdraw_amount)))))
               )
               treasury_coin_id
             )
             (assert-treasury-coins-withdrawal
-              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT treasury_maximum statutes_puzzle_hash
+              TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT inner_puzzle_hash
+              treasury_maximum statutes_puzzle_hash
               (r treasury_coins)
               lot_amount
               (+ sum_amounts_withdrawn withdraw_amount)
@@ -140,14 +143,14 @@
         )
         0
       )
-      (list ASSERT_MY_AMOUNT 0) ; enforece eve amount
+      (list ASSERT_MY_AMOUNT 0) ; enforce eve amount
       (list ASSERT_MY_COIN_ID my_coin_id)
       (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_BID_TTL bid_ttl)
       (assert-statute statutes_puzzle_hash STATUTE_AUCTIONS_MINIMUM_PRICE_INCREASE_BPS min_price_increase_bps)
       (assert-statute statutes_puzzle_hash STATUTE_SURPLUS_AUCTION_LOT lot_amount)
       ; assert payout coin received the lot amount
       (list RECEIVE_MESSAGE 0x3f
-        (concat PROTOCOL_PREFIX (sha256tree lot_amount))
+        (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash lot_amount)))
         payout_coin_id
       )
       (list
@@ -166,6 +169,7 @@
         CAT_MOD_HASH
         BYC_TAIL_HASH
         STATUTES_STRUCT
+        inner_puzzle_hash
         treasury_maximum
         statutes_puzzle_hash
         treasury_coins

@@ -29,10 +29,11 @@
     sorted_prices (mergesort price_announcers)
     ; get (upper) median price
     median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
-    announcer_conditions (generate-announcer-conditions
+    conditions (generate-announcer-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
       price_announcers
+      input_conditions
     )
     ; discard matured price infos other than most recent one, if any
     ; the Oracle Price is by definition the most recent matured price
@@ -86,7 +87,7 @@
         )
         (list REMARK new_price_infos last_matured_price)
         &rest
-        (fail-on-non-coin-announcement input_conditions announcer_conditions)
+        conditions
       )
     )
   )

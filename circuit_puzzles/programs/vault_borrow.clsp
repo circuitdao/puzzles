@@ -6,7 +6,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
       )
     )
     (@ args
@@ -56,12 +56,11 @@
       )
     )
     ; multiply current_stability_fee_df six more times onto cumulative_stability_fee_df
-    cumulative_stability_fee_df_adjusted (
-      cumulative-discount-factor-helper
-        cumulative_stability_fee_df
-        current_stability_fee_df
-        (* 3 MAX_TX_BLOCK_TIME)
-        ONE
+    cumulative_stability_fee_df_adjusted (calculate-cumulative-discount-factor
+      cumulative_stability_fee_df
+      current_stability_fee_df
+      (* 3 MAX_TX_BLOCK_TIME)
+      ONE
     )
     new_undiscounted_principal (undiscount-principal new_discounted_principal cumulative_stability_fee_df_adjusted)
     min_collateral_amount (
@@ -84,7 +83,7 @@
           ; signal to tail that it can issue BYC with certain amount
           (list SEND_MESSAGE 0x3f
             (concat PROTOCOL_PREFIX
-              (sha256tree (c STATUTES_STRUCT (c "i" borrow_amount)))
+              (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c "i" borrow_amount))))
             )
             byc_issuing_coin_id
           )
@@ -96,6 +95,7 @@
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
+          (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)
         )
       )
     )

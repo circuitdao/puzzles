@@ -5,7 +5,7 @@
 (mod
   (PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-    lineage_proof input_conditions
+    lineage_proof input_conditions inner_puzzle_hash
     (
       statutes_inner_puzzle_hash
       payout_coin_parent_id
@@ -78,12 +78,14 @@
           (concat
             PROTOCOL_PREFIX
             (sha256tree
-              (c
-                STATUTES_STRUCT
+              (c inner_puzzle_hash
                 (c
-                  ()
-                  ; negative amount to signal melt
-                  (* -1 my_amount)
+                  STATUTES_STRUCT
+                  (c
+                    ()
+                    ; negative amount to signal melt
+                    (* -1 my_amount)
+                  )
                 )
               )
             )
@@ -94,7 +96,7 @@
         (list SEND_MESSAGE 0x3f
           (concat
             PROTOCOL_PREFIX
-            (sha256tree (c BYC_LOT_AMOUNT (c target_puzzle_hash LAUNCHER_ID)))
+            (sha256tree (c inner_puzzle_hash (c BYC_LOT_AMOUNT (c target_puzzle_hash LAUNCHER_ID))))
           )
           payout_coin_id
         )

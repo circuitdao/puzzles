@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Script to freeze puzzle checksum for a release.
+
+This script generates a single SHA256 checksum for all compiled .hex puzzle files
+and stores it in pyproject.toml for integrity verification at runtime.
+"""
+import hashlib
+import re
+from pathlib import Path
+
+def compute_puzzles_checksum(package_dir: Path) -> str:
+    """Compute a single SHA256 checksum for all puzzle .hex files.
+    
+    Args:
+        package_dir: Path to the package directory
+        
+    Returns:
+        Hexadecimal SHA256 checksum string
+    """
+    hasher = hashlib.sha256()
+    
+    # Process all .hex files recursively in sorted order for deterministic results
+    hex_files = sorted(package_dir.rglob("*.hex"))
+    
+    for hex_file in hex_files:
+        content = hex_file.read_text().strip()
+        hasher.update(content.encode())
+    
+    return hasher.hexdigest()
+
+def update_pyproject_checksum(pyproject_path: Path, checksum: str) -> None:
+    """Update the puzzle_checksum field in pyproject.toml.
+    
+    Args:
+        pyproject_path: Path to pyproject.toml
+        checksum: The checksum value to store
+    """
+    content = pyproject_path.read_text()
+    
+    # Check if puzzle_checksum already exists
+    if 'puzzle_checksum = ' in content:
+        # Update existing checksum
+        content = re.sub(
+            r'puzzle_checksum = "[^"]*"',
+            f'puzzle_checksum = "{checksum}"',
+            content
+        )
+    else:
+        # Add checksum after version line
+        content = re.sub(
+            r'(version = "[^"]*")',
+            rf'\1\npuzzle_checksum = "{checksum}"',
+            content
+        )
+    
+    pyproject_path.write_text(content)
+
+def main():
+    # Get the package directory
+    package_dir = Path(__file__).parent / "circuit_puzzles"
+    pyproject_path = Path(__file__).parent / "pyproject.toml"
+    
+    if not package_dir.exists():
+        print(f"ERROR: Package directory not found: {package_dir}")
+        return 1
+    
+    if not pyproject_path.exists():
+        print(f"ERROR: pyproject.toml not found: {pyproject_path}")
+        return 1
+    
+    print(f"Generating puzzle checksum from: {package_dir}")
+    
+    # Find all .hex files recursively
+    hex_files = sorted(package_dir.rglob("*.hex"))
+    
+    if not hex_files:
+        print("WARNING: No .hex files found!")
+        return 1
+    
+    print(f"Found {len(hex_files)} puzzles:")
+    for hex_file in hex_files:
+        print(f"  - {hex_file.stem}")
+    
+    # Compute single checksum for all puzzles
+    checksum = compute_puzzles_checksum(package_dir)
+    
+    print(f"\n✓ Computed checksum: {checksum}")
+    
+    # Update pyproject.toml
+    update_pyproject_checksum(pyproject_path, checksum)
+    
+    print(f"✓ Updated pyproject.toml with puzzle_checksum")
+    print(f"  This checksum will be used for integrity verification.")
+    
+    return 0
+
+if __name__ == "__main__":
+    exit(main())

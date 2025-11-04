@@ -28,18 +28,29 @@
     )
   )
 
-  (defun fail-on-non-coin-announcement (input_conditions conditions)
+  (defun return-non-protocol-conditions ((@ input_conditions ((condition_code . condition_body) . rest_of_conditions)) conditions)
     (if input_conditions
-      (if
-        (any
-          ; we only use puzzle announcements, so coin announcements are fine
-          (= (f (f input_conditions)) ASSERT_COIN_ANNOUNCEMENT)
-          (= (f (f input_conditions)) CREATE_COIN_ANNOUNCEMENT)
+      (if (= condition_code REMARK)
+        (assert
+          (is-valid-rmk-cond condition_body)
+          (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
         )
-        (fail-on-non-coin-announcement (r input_conditions) (c (f input_conditions) conditions))
-        (x) ; no other conditions allowed
+        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+          (assert
+            (is-valid-msg-cond condition_body)
+            (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
+          )
+          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+            (assert
+              (is-valid-ann-cond condition_body)
+            (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
+            )
+            ; all other conditions allowed
+            (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
+          )
+        )
       )
-      conditions
+      ()
     )
   )
 
@@ -61,6 +72,7 @@
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
       price_announcers ; -> ((launcher_id args_hash price))
+      list_to_append_to
     )
     (if price_announcers
       (assign
@@ -84,11 +96,12 @@
               STATUTES_STRUCT
               ATOM_ANNOUNCER_MOD_HASH
               (r price_announcers)
+              list_to_append_to
             )
           )
         )
       )
-      ()
+      list_to_append_to
     )
   )
 

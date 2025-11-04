@@ -6,12 +6,9 @@
       MIN_PRICE_INCREASE_BPS
       BYC_LOT_AMOUNT ; amount of BYC being actioned off
       LAST_BID ; holds bid data -> (target_puzzle_hash . timestamp). amount of CRT bid is surplus auction coin amount
-      (
-        lineage_proof ; -> (parent_id launcher_id amount last_bid)
-        operation
-        input_conditions
-        op_args
-      )
+      inner_puzzle
+      inner_solution
+      operation
     )
 
   (include *standard-cl-23.1*)
@@ -34,21 +31,33 @@
   )
 
   (assign
-    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    statutes_struct_hash (sha256tree STATUTES_STRUCT)
+    byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
+    crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH statutes_struct_hash)
+    input_conditions (a inner_puzzle inner_solution)
+    (
+      (
+        lineage_proof ; -> (parent_id launcher_id amount last_bid)
+        signed_operation_hash
+        op_args
+      )
+      inner_conditions
+    ) (filter-and-extract-remark-solution input_conditions () ())
     operation_hash (sha256tree operation)
+    inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
+      (= signed_operation_hash operation_hash)
       (is-valid-operation operation_hash OPERATIONS)
-      (fail-on-protocol-condition-or-create-coin input_conditions)
+      ;(fail-on-protocol-condition-or-create-coin input_conditions)
       (c
-        (list SEND_MESSAGE 0x38 ; coin ID to none
-          (concat PROTOCOL_PREFIX (sha256tree (list lineage_proof operation_hash input_conditions op_args)))
-        ) ; secure solution
+        (list CREATE_COIN_ANNOUNCEMENT
+          (concat PROTOCOL_PREFIX inner_puzzle_hash)
+        ) ; secure attached coins
         (a
           operation
           (list
             (list MOD_HASH CAT_MOD_HASH STATUTES_STRUCT byc_tail_hash crt_tail_hash LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-            lineage_proof input_conditions op_args
+            lineage_proof inner_conditions inner_puzzle_hash op_args
           )
         )
       )

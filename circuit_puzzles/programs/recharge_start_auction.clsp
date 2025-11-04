@@ -1,7 +1,7 @@
 (mod (
     CAT_MOD_HASH TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    lineage_proof input_conditions
+    lineage_proof input_conditions inner_puzzle_hash
     (
       statutes_inner_puzzle_hash
       current_time
@@ -112,6 +112,7 @@
           CAT_MOD_HASH
           BYC_TAIL_HASH
           STATUTES_STRUCT
+          inner_puzzle_hash
           treasury_minimum
           0 ; deposit per coin
           0 ; deposit remainder

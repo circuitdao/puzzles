@@ -1,7 +1,7 @@
 (mod (
     CAT_MOD_HASH OFFER_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    lineage_proof input_conditions
+    lineage_proof input_conditions inner_puzzle_hash
     (
       (byc_bid_amount . crt_bid_amount) ; new bid
       target_puzzle_hash

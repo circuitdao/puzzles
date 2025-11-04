@@ -154,4 +154,49 @@
     )
   )
 
+
+  ; fails if create coin or protocol condition encountered
+  ; fails if no solution remark condition encountered
+  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
+  ; extracts third field from first solution remark condition encountered
+  ; returns all other conditions
+  (defun filter-and-extract-remark-solution (
+        (@ conditions ((condition_code . condition_body) . rest_of_conditions))
+        found_solution
+        filtered_conditions
+      )
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (x) ; no create coin condition allowed
+        (if (= condition_code REMARK)
+          (assert
+            (is-valid-rmk-cond condition_body) ; must not be a protocol remark
+            (if (any found_solution (not (= (f condition_body) SOLUTION_PREFIX)))
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; let all but first solution remark pass
+              (filter-and-extract-remark-solution rest_of_conditions (f (r condition_body)) filtered_conditions) ; found first solution remark
+            )
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            )
+            (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
+              (assert
+                (is-valid-ann-cond condition_body)
+                (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+              )
+              ; all other conditions allowed
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            )
+          )
+        )
+      )
+      (assert
+        found_solution ; must have found a solution
+        (list found_solution filtered_conditions)
+      )
+    )
+  )
+
 )

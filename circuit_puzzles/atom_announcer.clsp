@@ -6,6 +6,7 @@
        ;;   (prev_parent_id prev_deposit . prev_puzzle_args_hash) for non-eve spends
        lineage_proof
        inner_puzzle
+       operation
        .
        solution_or_conditions
      )
@@ -19,45 +20,34 @@
 
 
   (assign
-    inner_puzzle_hash (if inner_puzzle (sha256tree inner_puzzle) ())
-    raw_conditions (if inner_puzzle_hash
-      ; owner spend
-      (assert (= inner_puzzle_hash INNER_PUZZLE_HASH)
-        (a inner_puzzle solution_or_conditions)
-      )
-      ; keeper/governance spend. solution_or_conditions is conditions
-      solution_or_conditions
-    )
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    raw_conditions (if inner_puzzle (a inner_puzzle solution_or_conditions) solution_or_conditions)
     (
-      (new_puzzle_hash deposit (operation . args) . rest_of_condition)
+      (new_puzzle_hash deposit (signed_operation_hash . args) . rest_of_condition)
       input_conditions
     ) (filter-and-extract-unique-create-coin raw_conditions () ())
     operation_hash (sha256tree operation)
     (assert
-      (any
-        (size_b32 new_puzzle_hash)
-        (not new_puzzle_hash)
-      )
-      (any
-        inner_puzzle_hash
+      (not rest_of_condition)  ; create coin memo field may not contain unnecessary info to keep announce operation ISA'able
+      (= operation_hash signed_operation_hash)
+      (if (= (f OPERATIONS) operation_hash)
+        ; if announce op, then must not specify inner puzzle
+        (not inner_puzzle)
+        ; if not announce op, then must specify inner puzzle
         (all
-          (not inner_puzzle_hash)
-          (= new_puzzle_hash INNER_PUZZLE_HASH)
+          (contains (r OPERATIONS) operation_hash)
+          inner_puzzle
         )
       )
-      (contains OPERATIONS operation_hash)
+      (any
+        (not new_puzzle_hash)  ; nil for announce op or if choosing not to update ownership
+        (size_b32 new_puzzle_hash) ; when updating ownership
+      )
       (c
-        (if (not inner_puzzle_hash)
-          (list SEND_MESSAGE 0x38 ; coin ID to none
-            (concat PROTOCOL_PREFIX
-              (sha256tree
-                ; no need to include lineage_proof, inner_puzzle and new_puzzle_hash
-                ; in message as all three are verified by puzzle
-                (list deposit operation_hash args rest_of_condition input_conditions)
-              )
-            )
-          ) ; secure solution of non-owner spends
-          (list REMARK)
+        (list CREATE_COIN_ANNOUNCEMENT
+          (concat PROTOCOL_PREFIX
+            inner_puzzle_hash
+          )
         )
         (c
           ; ensuring that parent was indeed spent with our puzzle and pubkey
@@ -111,8 +101,12 @@
                 (list MOD_HASH STATUTES_STRUCT LAUNCHER_ID PREV_ANNOUNCE INNER_PUZZLE_HASH APPROVED
                   DEPOSIT VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
                 )
-                inner_puzzle_hash new_puzzle_hash deposit input_conditions
-                args rest_of_condition
+                ; inner puzzle hash, used as ownership proof in operations. must be nil on announce to keep it ISA'able
+                (if (= inner_puzzle_hash INNER_PUZZLE_HASH) inner_puzzle_hash ())
+                new_puzzle_hash
+                deposit
+                input_conditions
+                args
               )
             )
           )
@@ -120,5 +114,4 @@
       )
     )
   )
-
 )

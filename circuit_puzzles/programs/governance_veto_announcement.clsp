@@ -1,7 +1,7 @@
 (mod
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-     statutes_puzzle_hash
+     statutes_puzzle_hash inner_puzzle_hash
     )
     (
       _ ; amount
@@ -13,12 +13,12 @@
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include prefixes.clib)
-
+  (include sha256tree.clib)
 
   (list
     BILL
     (list
-      (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX target_bill_hash) target_coin_id)
+      (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash target_bill_hash))) target_coin_id)
     )
   )
 

@@ -23,6 +23,7 @@
       0 ; found first create coin set to false
       ()
     )
+    inner_puzzle_hash (sha256tree INNER_PUZZLE)
     (
       lineage_proof
       statutes_inner_puzzle_hash
@@ -102,7 +103,7 @@
               (sha256 ONE MOD_HASH)
               statutes_struct_hash
               (sha256 ONE DISCOUNTED_BALANCE)
-              (sha256tree INNER_PUZZLE)
+              inner_puzzle_hash
             )
           )
         )
@@ -136,7 +137,7 @@
               (sha256 ONE MOD_HASH)
               statutes_struct_hash
               (sha256 ONE 0)
-              (sha256tree INNER_PUZZLE)
+              inner_puzzle_hash
             )
           )
         )
@@ -151,6 +152,7 @@
       (> interest_payment MINUS_ONE)
       (li
         (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount new_inner_puzzle_hash memos)
+        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX inner_puzzle_hash))
         (list ASSERT_MY_AMOUNT current_amount)
         (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_INTEREST_DF statutes_cumulative_interest_df)
         (assert-statute statutes_puzzle_hash STATUTE_INTEREST_DF current_interest_df)
@@ -183,7 +185,13 @@
                 (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (sha256tree (c STATUTES_STRUCT (c (* MINUS_ONE interest_payment) new_treasury_coin_amount)))
+                    (sha256tree
+                      (c inner_puzzle_hash
+                        (c STATUTES_STRUCT
+                          (c (* MINUS_ONE interest_payment) new_treasury_coin_amount)
+                        )
+                      )
+                    )
                   )
                   treasury_coin_id
                 )

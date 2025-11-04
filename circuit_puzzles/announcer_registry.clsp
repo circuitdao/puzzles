@@ -1,11 +1,8 @@
 (mod (MAXIMUM_REWARDS_PER_INTERVAL MINIMUM_REWARDS_INTERVAL ATOM_ANNOUNCER_MOD_HASH
        CAT_MOD_HASH CRT_TAIL_MOD_HASH RUN_TAIL_MOD_HASH OFFER_MOD_HASH
        MOD_HASH STATUTES_STRUCT ANNOUNCER_REGISTRY CLAIM_COUNTER REWARDS_CLAIMABLE_AT
-       (@ solution (
-         lineage_proof
-         reward_or_register
-         args
-       ))
+       inner_puzzle
+       inner_solution
      )
 
   (include *standard-cl-23.1*)
@@ -17,6 +14,23 @@
 
   (defconst REGISTER_OPCODE "r")
   (defconst REWARD_OPCODE "m")
+
+
+  ; fails if no solution REMARK condition encountered
+  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
+  ; returns third field from first solution REMARK condition encountered
+  (defun find-solution-remark-value (inner_conditions)
+    (if (and
+          (= REMARK (f (f inner_conditions)))
+          (= SOLUTION_PREFIX (f (r (f inner_conditions))))
+      )
+      (f (r (r (f inner_conditions))))
+      (if (r inner_conditions)
+        (find-solution-remark-value (r inner_conditions))
+        (x)
+      )
+    )
+  )
 
   ; generates notarized payments to target puzzle hashes as required by settlement payments puzzle
   (defun generate-offer-assert ((@ announcer_registry (target_puzzle_hash . rest_of_announcer_registry)) reward_per_announcer payments)
@@ -45,6 +59,13 @@
   )
 
   (assign
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    inner_conditions (a inner_puzzle inner_solution)
+    (
+      lineage_proof
+      reward_or_register
+      args
+    ) (find-solution-remark-value inner_conditions) ; we don't use inner_conditions after this line
     (
       announcer_registry
       new_claim_counter
@@ -67,10 +88,12 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c STATUTES_STRUCT ; must be on same protocol
-                      (c target_puzzle_hash
-                        (c ONE ; must be an approved announcer
-                          CLAIM_COUNTER
+                    (c inner_puzzle_hash
+                      (c STATUTES_STRUCT ; must be on same protocol
+                        (c target_puzzle_hash
+                          (c ONE ; must be an approved announcer
+                            CLAIM_COUNTER
+                          )
                         )
                       )
                     )
@@ -124,7 +147,7 @@
                   (list SEND_MESSAGE 0x3f
                     (concat
                       PROTOCOL_PREFIX
-                      (sha256tree (c STATUTES_STRUCT (c OFFER_MOD_HASH rewards_per_interval)))
+                      (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c OFFER_MOD_HASH rewards_per_interval))))
                     )
                     issuance_coin_id
                   )
@@ -186,14 +209,14 @@
     )
     ;### MAIN EXPRESSION ###
     (li
-      (list SEND_MESSAGE 0x38 ; coin ID to none
-        (concat PROTOCOL_PREFIX (sha256tree solution))
-      ) ; secure solution
+      (list CREATE_COIN_ANNOUNCEMENT
+        (concat PROTOCOL_PREFIX inner_puzzle_hash)
+      )
       (list ASSERT_MY_AMOUNT 0)
       ; prove lineage
       (if (l lineage_proof)
-        (list ASSERT_MY_PARENT_ID (
-          coinid
+        (list ASSERT_MY_PARENT_ID
+          (coinid
             (f lineage_proof)
             (tree_hash_of_apply MOD_HASH (r lineage_proof))
             0
@@ -231,5 +254,4 @@
       operation_conditions
     )
   )
-
 )

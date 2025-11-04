@@ -3,7 +3,7 @@
       )
       ; solution
       inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      args rest_of_condition
+      args
      )
 
   ; not using cl-23 standard to save costs
@@ -20,8 +20,8 @@
     )
   )
 
-  (if (any deposit input_conditions args rest_of_condition)
-    (x) ; ensures announce spend has unique solution
+  (if (any inner_puzzle_hash new_puzzle_hash deposit input_conditions args)
+    (x)  ; ensures announce spend has unique solution so we can run ISA spend
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT
         (concat
@@ -84,5 +84,4 @@
       )
     )
   )
-
 )

@@ -2,6 +2,7 @@
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     lineage_proof
     input_conditions
+    inner_puzzle_hash
     (
       statutes_inner_puzzle_hash
       my_coin_id

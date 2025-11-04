@@ -12,8 +12,8 @@
       BILL ; -> (bill_expiries statute_index statute) where bill_expiries -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
       lineage_proof
       inner_puzzle
-      inner_solution ; if provided, we're in owner mode, else keeper mode
-      veto_conditions
+      inner_solution
+      bill_operation
      )
 
   (include *standard-cl-23.1*)
@@ -25,7 +25,7 @@
 
   (defconst VETO_PROPOSED_BILL -1)
 
-  ; used to filter raw_inner_conditions
+  ; used to filter inner_conditions
   (defun filter-conditions (EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
                             STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
                             final_bill bill_operation
@@ -40,7 +40,7 @@
           rest_of_conditions
           TRUE ; we found a create coin condition
           (assert
-            ; amount should be >= 0
+            ; amount should be >= 0 as coin amount can't be less
             (> (f (r condition_body)) MINUS_ONE)
             ; only one create coin allowed when in governance mode
             (= found_create_coin FALSE)
@@ -110,7 +110,8 @@
           )
         )
         (if (= condition_code REMARK)
-          (if (is-valid-rmk-cond condition_body)
+          (assert
+            (is-valid-rmk-cond condition_body)
             (filter-conditions
               EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
               STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
@@ -118,15 +119,6 @@
               rest_of_conditions
               found_create_coin
               (c (f conditions) filtered_conditions)
-            )
-            ; discard protocol REMARK conditions
-            (filter-conditions
-              EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH
-              STATUTES_STRUCT INNER_PUZZLE_HASH BILL statutes_puzzle_hash
-              final_bill bill_operation
-              rest_of_conditions
-              found_create_coin
-              filtered_conditions
             )
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
@@ -186,7 +178,7 @@
   )
 
   ; from conditions, extract and return:
-  ;   (statutes_inner_puzzle_hash bill_operation . args) from first protocol REMARK encountered
+  ;   (statutes_inner_puzzle_hash bill_operation . args) from first solution REMARK encountered
   ;   new (governance or plain) CRT coin amount from first CREATE_COIN encountered
   ; all other conditions are dropped.
   ; when transferring:
@@ -200,18 +192,14 @@
   ;   first of CREATE_COIN condition body must match GOVERNANCE_COOLDOWN_INTERVAL
   (defun find-bill-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)) bill_operation create_coin_amount)
     (if conditions
-      (if (= condition_code REMARK)
-        ; found (first) protocol REMARK. extract bill operation
-        (if (all (= PROTOCOL_PREFIX (f condition_body)) (= bill_operation ()))
-          (find-bill-condition rest_of_conditions (r condition_body) create_coin_amount)
-          ; discard condition
-          (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
-        )
+      (if (and (= condition_code REMARK) (= (f condition_body) SOLUTION_PREFIX) (not bill_operation))
+        ; found first solution REMARK. extract bill operation
+        (find-bill-condition rest_of_conditions (f (r condition_body)) create_coin_amount)
         (if (all (= condition_code CREATE_COIN) (= create_coin_amount MINUS_ONE))
           ; found first CREATE_COIN (may not be first one if first create coin has amount -1,
           ;   but that's fine and will fail later in filter-conditions)
           (find-bill-condition rest_of_conditions bill_operation (f (r condition_body)))
-          ; discard all other conditions
+          ; continue to next condition
           (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
         )
       )
@@ -221,55 +209,53 @@
 
   ; ###################  MAIN ENTRY POINT  ########################
   (assign
-    raw_inner_conditions (if inner_solution
-      ; owner spend
-      (a (assert
-           (= (sha256tree inner_puzzle) INNER_PUZZLE_HASH)
-           (not veto_conditions) ; prevent veto_conditions from being used as unsecured
-           inner_puzzle
-         ) inner_solution
-      )
-      ; keeper spend. someone is trying to veto
-      ; create_coin condition must have same puzzle hash as curried in
-      ; non-protocol conditions are allowed too, as are protocol REMARKs,
-      ; the first of which bill_operation is extracted from (and rest of which are discarded)
-      (assert
-        (not inner_puzzle) ; cosmetics. don't allow gibberish to be passed in
-        (validate-veto-conditions INNER_PUZZLE_HASH veto_conditions)
-        veto_conditions
-      )
-    )
+    inner_puzzle_hash (sha256tree inner_puzzle)
+    inner_conditions (a inner_puzzle inner_solution)
     (
-      (statutes_inner_puzzle_hash bill_operation . args) ; from first protocol REMARK encountered
-      . new_coin_amount ; from first CREATE_COIN encountered
-    ) (find-bill-condition raw_inner_conditions () MINUS_ONE)
+      (statutes_inner_puzzle_hash signed_bill_operation_hash . args)  ; from first solution REMARK encountered
+      . new_coin_amount  ; from first CREATE_COIN encountered
+    ) (find-bill-condition
+        inner_conditions
+        ()  ; bill operation accumulator
+        MINUS_ONE  ; found create coin
+      )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    bill_operation_hash (sha256tree bill_operation)
-    (final_bill bill_conditions) (if bill_operation
-      (assert
-        (if inner_solution
-          ; owner operation
-          (contains OPERATIONS bill_operation_hash)
-          ; keeper operation. veto bill
-          (= (f OPERATIONS) bill_operation_hash)
-        )
-        (a
-          bill_operation
-          (list
-            (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
-                  statutes_puzzle_hash)
-            (c new_coin_amount args)
+    bill_operation_hash (if bill_operation (sha256tree bill_operation) ())
+    (final_bill bill_conditions) (assert
+      (= bill_operation_hash signed_bill_operation_hash)
+      (if signed_bill_operation_hash
+        (assert
+          (any
+            ; owner operation
+            (all
+              (= inner_puzzle_hash INNER_PUZZLE_HASH)
+              (contains OPERATIONS bill_operation_hash)
+            )
+            ; keeper operation. veto bill
+            (all
+              (= (f OPERATIONS) bill_operation_hash)
+              (validate-veto-conditions INNER_PUZZLE_HASH inner_conditions)
+            )
+          )
+          (a
+            bill_operation
+            (list
+              (list BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
+                    statutes_puzzle_hash inner_puzzle_hash)
+              (c new_coin_amount args)
+            )
           )
         )
-      )
-      ; no bill operation, this is a transfer or exit
-      (assert
-        inner_solution ; must be in owner mode
-        (not BILL) ; can only transfer or exit when not in proposal mode
-        (list () ())
+        ; no bill operation, this is a transfer or exit
+        (assert
+          (> new_coin_amount MINUS_ONE)
+          (= inner_puzzle_hash INNER_PUZZLE_HASH)  ; must be in owner mode
+          (not BILL)  ; can only transfer or exit when not in proposal mode
+          (list () ())
+        )
       )
     )
-    ; filter raw_inner_conditions:
+    ; filter inner_conditions:
     ; discard any protocol REMARKs encountered
     ; fail on any non-REMARK protocol condition
     ; wrap CREATE_COIN with our own puzzle unless user wants to remove governance layer
@@ -279,20 +265,16 @@
       EXIT_MOD_HASH MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
       INNER_PUZZLE_HASH BILL statutes_puzzle_hash
       final_bill bill_operation
-      raw_inner_conditions FALSE
+      inner_conditions FALSE
       (c
-        (if (not inner_solution)
-          ; keeper mode. secure solution
-          (list SEND_MESSAGE 0x38
-            (concat
-              PROTOCOL_PREFIX
-              ; lineage_proof, inner_puzzle and inner_solution enforced by puzzle,
-              ; so only need to verify veto_conditions
-              (sha256tree veto_conditions)
-            )
+          ; secure attached coins
+        (list CREATE_COIN_ANNOUNCEMENT
+          (concat
+            PROTOCOL_PREFIX
+            ; ensures spenders can check this is their spend since
+            ; it requires to solve given puzzle
+            inner_puzzle_hash
           )
-          ; owner mode
-          (list REMARK)
         )
         (c
           ; amount can't change while under governance mode
@@ -355,5 +337,4 @@
       )
     )
   )
-
 )

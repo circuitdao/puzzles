@@ -4,7 +4,7 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
       )
     )
     (@ args
@@ -177,6 +177,7 @@
         )
         (assign
           conditions (list
+            (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             ; validate coin id
@@ -187,8 +188,10 @@
                 (concat
                   PROTOCOL_PREFIX
                   (sha256tree
-                    (c STATUTES_STRUCT
-                      (c 'x' (* -1 byc_to_melt))
+                    (c inner_puzzle_hash
+                      (c STATUTES_STRUCT
+                        (c 'x' (* -1 byc_to_melt))
+                      )
                     )
                   )
                 )
@@ -248,7 +251,7 @@
                 (list SEND_MESSAGE 0x3f
                   (concat
                     PROTOCOL_PREFIX
-                    (sha256tree (c STATUTES_STRUCT (c byc_to_treasury new_treasury_amount)))
+                    (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c byc_to_treasury new_treasury_amount))))
                   )
                   treasury_coin_id
                 )
