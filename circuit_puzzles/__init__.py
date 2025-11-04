@@ -43,8 +43,8 @@ def compute_puzzles_checksum(package_path: Path) -> str:
     """
     hasher = hashlib.sha256()
     
-    # Process all .hex files in sorted order for deterministic results
-    hex_files = sorted(package_path.glob("*.hex"))
+    # Process all .hex files recursively in sorted order for deterministic results
+    hex_files = sorted(package_path.rglob("*.hex"))
     
     for hex_file in hex_files:
         content = hex_file.read_text().strip()
@@ -129,7 +129,7 @@ if expected_checksum:
     try:
         verify_puzzle_checksum(package_dir, expected_checksum)
         # Count puzzles for informational message
-        puzzle_count = len(list(package_dir.glob("*.hex")))
+        puzzle_count = len(list(package_dir.rglob("*.hex")))
         print(f"✓ Puzzle integrity verified: {puzzle_count} puzzles checked (checksum: {expected_checksum[:16]}...)")
     except PuzzleIntegrityError as e:
         print("ERROR: Puzzle integrity check failed!")
