@@ -10,7 +10,7 @@
     )
     (@ args
       (
-        byc_issuing_coin_info  ; -> (parent_id amount inner_puzzle_hash)
+        byc_issuing_coin_info  ; -> (parent_id . amount)
         statutes_cumulative_stability_fee_df
         treasury_coin_info
         min_treasury_delta
@@ -44,7 +44,7 @@
       (f price_info)
     )
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
-    (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
     new_treasury_amount (+ fees_to_treasury treasury_amount)
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
@@ -59,7 +59,7 @@
       CAT_MOD_HASH
       byc_tail_hash
       (list
-        treasury_parent
+        treasury_parent_id
         treasury_amount
         (curry_hashes
           TREASURY_MOD_HASH

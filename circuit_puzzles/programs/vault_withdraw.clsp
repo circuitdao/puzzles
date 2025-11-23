@@ -2,7 +2,7 @@
   (
     (@ VAULT_STATE
       (
-       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE
+       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
        STATUTES_STRUCT DISCOUNTED_PRINCIPAL
        statutes_puzzle_hash
       )
@@ -47,7 +47,7 @@
       (> COLLATERAL new_collateral)
       (> new_collateral (- min_collateral_amount ONE))
       (list
-        (list new_collateral PRINCIPAL AUCTION_STATE INNER_PUZZLE DISCOUNTED_PRINCIPAL)
+        (list new_collateral PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL)
         (list
           ; validate current timestamp is within bounds
           (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
