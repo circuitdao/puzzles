@@ -101,13 +101,13 @@
       )
       ()
     )
-    (treasury_parent treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
+    (treasury_parent_id treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
         CAT_MOD_HASH
         byc_tail_hash
         (list
-          treasury_parent
+          treasury_parent_id
           treasury_amount
           (curry_hashes
             TREASURY_MOD_HASH

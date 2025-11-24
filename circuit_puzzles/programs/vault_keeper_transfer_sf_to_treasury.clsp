@@ -12,7 +12,7 @@
       (
         byc_issuing_coin_info  ; -> (parent_id . amount)
         statutes_cumulative_stability_fee_df
-        treasury_coin_info
+        byc_treasury_coin_info
         min_treasury_delta
         current_timestamp
         current_stability_fee_df
@@ -44,7 +44,7 @@
       (f price_info)
     )
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
-    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) treasury_coin_info
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) byc_treasury_coin_info
     new_treasury_amount (+ fees_to_treasury treasury_amount)
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
