@@ -88,7 +88,7 @@
           )
         )
         (if (l (r lineage_proof))
-          current_amount
+          (f (r (r lineage_proof)))
           (r lineage_proof)
         ) ; parent amount
       )
