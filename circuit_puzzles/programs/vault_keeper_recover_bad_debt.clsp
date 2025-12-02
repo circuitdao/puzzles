@@ -11,7 +11,7 @@
       (
         recover_amount
         current_timestamp
-        treasury_coin_info
+        byc_treasury_coin_info
         min_treasury_delta
       )
     )
@@ -26,13 +26,13 @@
 
   (assign
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    (treasury_parent treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if treasury_coin_info treasury_coin_info (list 0 0 0 0))
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     new_treasury_amount (- treasury_amount recover_amount)
     treasury_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
       byc_tail_hash
       (list
-        treasury_parent
+        treasury_parent_id
         treasury_amount
         (curry_hashes
           TREASURY_MOD_HASH

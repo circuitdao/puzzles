@@ -75,7 +75,6 @@
     ;### MAIN EXPRESSION ###
     (assert
       (= operation_hash vault_operation_hash)
-      (size_b32 final_inner_puzzle_hash)
       ; validate operation
       (if (contains OWNER_OPERATIONS vault_operation_hash)
         ; owner mode

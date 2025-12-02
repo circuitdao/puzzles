@@ -17,6 +17,7 @@ Example:
     >>> # Checksum verification happens automatically on import
     >>> puzzle = circuit_puzzles.load_puzzle('governance')
 """
+
 import hashlib
 from pathlib import Path
 
@@ -28,38 +29,40 @@ PUZZLES = {}
 
 class PuzzleIntegrityError(Exception):
     """Raised when puzzle checksum verification fails."""
+
     pass
 
 
 def compute_puzzles_checksum(package_path: Path) -> str:
     """Compute a single SHA256 checksum for all puzzle .hex files.
-    
+
     Args:
         package_path: Path to the package directory
-        
+
     Returns:
         Hexadecimal SHA256 checksum string
     """
     hasher = hashlib.sha256()
-    
+
     # Process all .hex files recursively in sorted order for deterministic results
     hex_files = sorted(package_path.rglob("*.hex"))
-    
+
     for hex_file in hex_files:
         content = hex_file.read_text().strip()
         hasher.update(content.encode())
-    
+
     return hasher.hexdigest()
 
 
 def read_checksum_from_package() -> str | None:
     """Read the puzzle_checksum from the embedded _checksum module.
-    
+
     Returns:
         Checksum string if found, None otherwise
     """
     try:
         from circuit_puzzles._checksum import PUZZLE_CHECKSUM
+
         return PUZZLE_CHECKSUM
     except ImportError:
         return None
@@ -67,16 +70,16 @@ def read_checksum_from_package() -> str | None:
 
 def verify_puzzle_checksum(package_path: Path, expected_checksum: str) -> None:
     """Verify that all puzzles match the expected checksum.
-    
+
     Args:
         package_path: Path to the package directory
         expected_checksum: Expected SHA256 checksum
-        
+
     Raises:
         PuzzleIntegrityError: If checksum mismatch is detected
     """
     actual_checksum = compute_puzzles_checksum(package_path)
-    
+
     if actual_checksum != expected_checksum:
         raise PuzzleIntegrityError(
             f"Puzzle checksum mismatch: expected {expected_checksum}, got {actual_checksum}. "
@@ -94,6 +97,7 @@ def compile_module_with_symbols(include_paths, source):
         return
     target_file = file_path / (file_stem + ".hex")
     compile_clvm(source, str(target_file.absolute()), include_paths)
+
 
 try:
     from importlib.resources import files
@@ -129,7 +133,7 @@ else:
     print("WARNING: No puzzle_checksum found in pyproject.toml. Puzzle integrity verification skipped.")
     print("  To enable verification, run freeze_puzzle_hashes.py to generate the checksum.")
 
-    
+
 def load_puzzle(puzzle_name: str) -> Program:
     if puzzle_name in PUZZLES:
         return PUZZLES[puzzle_name]

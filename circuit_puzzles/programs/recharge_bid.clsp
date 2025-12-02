@@ -34,7 +34,8 @@
     crt_price (/ (* byc_bid_amount PRECISION) crt_bid_amount)
     last_crt_price (if last_byc_bid_amount (/ (* last_byc_bid_amount PRECISION) last_crt_bid_amount) 0)
     (assert
-      LAUNCHER_ID ; can't bid if auction hasn't started yet
+      LAUNCHER_ID
+      AUCTION_PARAMS  ; can't bid if auction hasn't started yet
       (size_b32 target_puzzle_hash) ; must be a puzzle hash
       (> byc_bid_amount 0)
       (> crt_bid_amount 0)

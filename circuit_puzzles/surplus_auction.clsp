@@ -48,7 +48,6 @@
     (assert
       (= signed_operation_hash operation_hash)
       (is-valid-operation operation_hash OPERATIONS)
-      ;(fail-on-protocol-condition-or-create-coin input_conditions)
       (c
         (list CREATE_COIN_ANNOUNCEMENT
           (concat PROTOCOL_PREFIX inner_puzzle_hash)

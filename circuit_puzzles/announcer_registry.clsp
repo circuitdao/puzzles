@@ -151,6 +151,7 @@
                     )
                     issuance_coin_id
                   )
+                  (list ASSERT_SECONDS_RELATIVE 180000) ; can distribute rewards at most once every 50 hours
                   (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
                   (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
                   (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_PER_INTERVAL rewards_per_interval)
