@@ -13,6 +13,10 @@
   (defconst TRUE 1)
   (defconst FALSE ())
 
+  (defun-inline is-atom (var)
+    (not (l var))
+  )
+
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
   )
