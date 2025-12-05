@@ -30,7 +30,7 @@
   (include utils.clib)
 
   (defconst ANN_PROPOSED '^')
-  (defconst INTERVAL_LOWER_HARD_LIMIT 1800) ; 7 days in seconds
+  (defconst INTERVAL_LOWER_HARD_LIMIT 1800) ; 30 mins in seconds
   (defconst INTERVAL_UPPER_HARD_LIMIT 604800) ; 7 days in seconds
 
   (assert

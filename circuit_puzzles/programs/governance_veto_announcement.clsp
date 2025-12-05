@@ -13,13 +13,16 @@
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
   (include prefixes.clib)
-  (include sha256tree.clib)
+  (include utils.clib)
 
-  (list
-    BILL
+  (assert
+    (size_b32 target_bill_hash)
+    (size_b32 target_coin_id)
     (list
-      (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash target_bill_hash))) target_coin_id)
+      BILL
+      (list
+        (list SEND_MESSAGE 0x3f (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash target_bill_hash))) target_coin_id)
+      )
     )
   )
-
 )

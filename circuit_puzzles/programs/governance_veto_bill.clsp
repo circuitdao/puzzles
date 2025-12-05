@@ -31,6 +31,13 @@
       new_max_delta
     ) BILL
     (assert
+      ; verify types
+      (is-atom amount)
+      (size_b32 parent_veto_id)
+      (is-atom veto_amount)
+      (size_b32 veto_inner_puzzle_hash)
+      (size_b32 veto_bill_hash)
+      (is-atom current_timestamp)
       ; can only veto if in proposal mode (BILL is not empty)
       BILL
       (> veto_amount amount)
