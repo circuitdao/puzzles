@@ -71,37 +71,29 @@
   (defun generate-announcer-conditions (
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
-      price_announcers ; -> ((launcher_id args_hash price))
+      ( (launcher_id args_hash price) . rest_price_announcers)
       list_to_append_to
     )
-    (if price_announcers
-      (assign
-        announcer (f price_announcers)
-        (launcher_id args_hash price) announcer
-        announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
-        ; we don't need to verify that announcer is not expired since it's already checked in announcer puzzle
-        (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT
-            (sha256
-              announcer_puzzle_hash
-              PROTOCOL_PREFIX
-              (sha256tree
-                (c STATUTES_STRUCT (c launcher_id (c ONE price))) ; ONE indicates that announcer is approved
-              )
-            )
-          )
-          (c
-            (list REMARK launcher_id price)
-            (generate-announcer-conditions
-              STATUTES_STRUCT
-              ATOM_ANNOUNCER_MOD_HASH
-              (r price_announcers)
-              list_to_append_to
-            )
+    ; we don't need to verify that announcer is not expired since it's already checked in announcer puzzle
+    (c
+      (list ASSERT_PUZZLE_ANNOUNCEMENT
+        (sha256
+          (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
+          PROTOCOL_PREFIX
+          (sha256tree
+            (c STATUTES_STRUCT (c launcher_id (c ONE price))) ; ONE indicates that announcer is approved
           )
         )
       )
-      list_to_append_to
+      (if rest_price_announcers
+        (generate-announcer-conditions
+          STATUTES_STRUCT
+          ATOM_ANNOUNCER_MOD_HASH
+          rest_price_announcers
+          list_to_append_to
+        )
+        list_to_append_to
+      )
     )
   )
 

@@ -1,14 +1,47 @@
 [project]
 name = "circuit-puzzles"
-version = "3.0.0"
-puzzle_checksum = "7c0aeb056f17ae23402a51acbbbe3195e433715159751c57c4c5e2eb56a1e217"
+version = "4.0.0"
 description = "Puzzles powering Circuit Protocol - a decentralized stablecoin and lending system on the Chia blockchain that enables permissionless borrowing of BYC against XCH collateral"
+readme = "README.md"
+license = {text = "All rights reserved"}
 authors = [
     {name = "Sebastjan Trepca", email = "set@circuitdao.com"},
     {name = "Nic Niedermowwe", email = "nin@circuitdao.com"}
 ]
+maintainers = [
+    {name = "Voltage Technologies Ltd", email = "info@circuitdao.com"}
+]
 requires-python = ">=3.11,<3.14"
-dependencies = []
+keywords = [
+    "chia",
+    "blockchain",
+    "chialisp",
+    "stablecoin",
+    "defi",
+    "smart-contracts",
+    "circuit-protocol"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed"
+]
+dependencies = [
+    "chialisp>=0.4.1",
+]
+
+[project.urls]
+Homepage = "https://circuitdao.com"
+Documentation = "https://docs.circuitdao.com"
+Repository = "https://github.com/circuitdao/puzzles"
+Changelog = "https://github.com/circuitdao/puzzles/releases"
 
 [tool.poetry]
 packages = [{include = "circuit_puzzles"}]
@@ -20,7 +53,54 @@ exclude = [
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.14"
-chialisp = "^0.4.1"
+chialisp = ">=0.4.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-cov = "^4.1"
+ruff = "^0.8"
+
+[tool.circuit]
+# SHA256 checksum of all compiled puzzle .hex files for integrity verification
+puzzle_checksum = "c50109375fa0600311a9ecc965d1eb7cf3b5e31f344c75d77ef23cdefa04d7e6"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["circuit_puzzles"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["circuit_puzzles"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError"
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
