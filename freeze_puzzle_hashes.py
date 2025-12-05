@@ -29,7 +29,7 @@ def compute_puzzles_checksum(package_dir: Path) -> str:
     return hasher.hexdigest()
 
 def update_pyproject_checksum(pyproject_path: Path, checksum: str) -> None:
-    """Update the puzzle_checksum field in pyproject.toml.
+    """Update the puzzle_checksum field in pyproject.toml under [tool.circuit].
     
     Args:
         pyproject_path: Path to pyproject.toml
@@ -37,7 +37,7 @@ def update_pyproject_checksum(pyproject_path: Path, checksum: str) -> None:
     """
     content = pyproject_path.read_text()
     
-    # Check if puzzle_checksum already exists
+    # Check if puzzle_checksum already exists anywhere in the file
     if 'puzzle_checksum = ' in content:
         # Update existing checksum
         content = re.sub(
@@ -45,11 +45,18 @@ def update_pyproject_checksum(pyproject_path: Path, checksum: str) -> None:
             f'puzzle_checksum = "{checksum}"',
             content
         )
-    else:
-        # Add checksum after version line
+    elif '[tool.circuit]' in content:
+        # Add checksum to existing [tool.circuit] section
         content = re.sub(
-            r'(version = "[^"]*")',
+            r'(\[tool\.circuit\])',
             rf'\1\npuzzle_checksum = "{checksum}"',
+            content
+        )
+    else:
+        # Create [tool.circuit] section before [build-system]
+        content = re.sub(
+            r'(\[build-system\])',
+            f'[tool.circuit]\npuzzle_checksum = "{checksum}"\n\n\\1',
             content
         )
     

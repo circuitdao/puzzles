@@ -28,6 +28,8 @@
         LAUNCHER_ID
         inner_puzzle_hash ; must be owner
         (> deposit (- MIN_DEPOSIT ONE)) ; deposit must be no less than min deposit to pay for fees and penalties
+        (not (l new_value))
+        (> 1024 (strlen new_value)) ; value must be less than 1024 bytes
       )
     (c
       (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
