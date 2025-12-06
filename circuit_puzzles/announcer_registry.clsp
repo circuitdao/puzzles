@@ -77,7 +77,9 @@
         (target_puzzle_hash announcer_curried_args_hash) args
         announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH announcer_curried_args_hash)
         (assert
+          ; verify types
           (size_b32 target_puzzle_hash) ; must be a puzzle hash
+          (size_b32 announcer_curried_args_hash)
           (list
             (c target_puzzle_hash ANNOUNCER_REGISTRY)
             CLAIM_COUNTER
@@ -110,76 +112,87 @@
         rewards_interval (f (r args))
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-        (if (= reward_or_register REWARD_OPCODE)
-          ; ### distribute rewards ###
-          (assign
-            (
-              _ ; statutes_inner_puzzle_hash
-              _ ; rewards interval
-              statutes_price_update_counter
-              rewards_per_interval
-              issuance_coin_info
-              change_receiver_hash
-              my_coin_id
-            ) args
-            announcers_count (list-length ANNOUNCER_REGISTRY 0)
-            change_amount (r (divmod rewards_per_interval announcers_count))
-            issuance_coin_id (coinid
-              (f issuance_coin_info)
-              (curry_hashes CAT_MOD_HASH
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE crt_tail_hash)
-                RUN_TAIL_MOD_HASH
+        (assert
+          ; verify types
+          (size_b32 statutes_inner_puzzle_hash)
+          (is-atom rewards_interval)
+          (if (= reward_or_register REWARD_OPCODE)
+            ; ### distribute rewards ###
+            (assign
+              (
+                _ ; statutes_inner_puzzle_hash
+                _ ; rewards interval
+                statutes_price_update_counter
+                rewards_per_interval
+                issuance_coin_info
+                change_receiver_hash
+                my_coin_id
+              ) args
+              announcers_count (list-length ANNOUNCER_REGISTRY 0)
+              change_amount (r (divmod rewards_per_interval announcers_count))
+              issuance_coin_id (coinid
+                (f issuance_coin_info)
+                (curry_hashes CAT_MOD_HASH
+                  (sha256 ONE CAT_MOD_HASH)
+                  (sha256 ONE crt_tail_hash)
+                  RUN_TAIL_MOD_HASH
+                )
+                (r issuance_coin_info)
               )
-              (r issuance_coin_info)
-            )
-            (assert
-              (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
-              (> rewards_interval MINIMUM_REWARDS_INTERVAL)
-              (> announcers_count 0)
-              ; we can't issue more than MAXIMUM_REWARDS_PER_INTERVAL which is immutable to stop governance from inflating CRTs
-              (> MAXIMUM_REWARDS_PER_INTERVAL rewards_per_interval)
-              (list
-                () ; clear the registry when claiming rewards
-                (+ CLAIM_COUNTER 1)
-                (+ statutes_price_update_counter rewards_interval)
+              (assert
+                ; verify types
+                (is-atom statutes_price_update_counter)
+                (is-atom rewards_per_interval)
+                ; don't verify issuance_coin_info
+                (size_b32 change_receiver_hash)
+                (size_b32 my_coin_id)
+                (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
+                (> rewards_interval MINIMUM_REWARDS_INTERVAL)
+                (> announcers_count 0)
+                ; we can't issue more than MAXIMUM_REWARDS_PER_INTERVAL which is immutable to stop governance from inflating CRTs
+                (> MAXIMUM_REWARDS_PER_INTERVAL rewards_per_interval)
                 (list
-                  (list SEND_MESSAGE 0x3f
-                    (concat
-                      PROTOCOL_PREFIX
-                      (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c OFFER_MOD_HASH rewards_per_interval))))
-                    )
-                    issuance_coin_id
-                  )
-                  (list ASSERT_SECONDS_RELATIVE 180000) ; can distribute rewards at most once every 50 hours
-                  (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_PER_INTERVAL rewards_per_interval)
-                  (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_update_counter)
-                  (list ASSERT_MY_COIN_ID my_coin_id)
-                  (list ASSERT_PUZZLE_ANNOUNCEMENT
-                    (sha256
-                      (curry_hashes CAT_MOD_HASH
-                          (sha256 ONE CAT_MOD_HASH)
-                          (sha256 ONE crt_tail_hash)
-                          OFFER_MOD_HASH
+                  () ; clear the registry when claiming rewards
+                  (+ CLAIM_COUNTER 1)
+                  (+ statutes_price_update_counter rewards_interval)
+                  (list
+                    (list SEND_MESSAGE 0x3f
+                      (concat
+                        PROTOCOL_PREFIX
+                        (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c OFFER_MOD_HASH rewards_per_interval))))
                       )
-                      (sha256tree
-                        (c
-                          my_coin_id ; nonce
-                          (generate-offer-assert
-                            ANNOUNCER_REGISTRY
-                            (/ rewards_per_interval announcers_count)
-                            (if (> change_amount 0)
-                              ; we reward the reward spender with remainder if any
-                              (list
+                      issuance_coin_id
+                    )
+                    (list ASSERT_SECONDS_RELATIVE 180000) ; can distribute rewards at most once every 50 hours
+                    (list CREATE_COIN_ANNOUNCEMENT '$') ; announcement to attach fee/funding coin to
+                    (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
+                    (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_PER_INTERVAL rewards_per_interval)
+                    (assert-statute statutes_puzzle_hash STATUTE_PRICE_UPDATE_COUNTER statutes_price_update_counter)
+                    (list ASSERT_MY_COIN_ID my_coin_id)
+                    (list ASSERT_PUZZLE_ANNOUNCEMENT
+                      (sha256
+                        (curry_hashes CAT_MOD_HASH
+                            (sha256 ONE CAT_MOD_HASH)
+                            (sha256 ONE crt_tail_hash)
+                            OFFER_MOD_HASH
+                        )
+                        (sha256tree
+                          (c
+                            my_coin_id ; nonce
+                            (generate-offer-assert
+                              ANNOUNCER_REGISTRY
+                              (/ rewards_per_interval announcers_count)
+                              (if (> change_amount 0)
+                                ; we reward the reward spender with remainder if any
                                 (list
-                                  change_receiver_hash
-                                  change_amount
-                                  (list change_receiver_hash)
+                                  (list
+                                    change_receiver_hash
+                                    change_amount
+                                    (list change_receiver_hash)
+                                  )
                                 )
+                                ()
                               )
-                              ()
                             )
                           )
                         )
@@ -189,19 +202,19 @@
                 )
               )
             )
-          )
-          ; ### launch ###
-          (list
-            ANNOUNCER_REGISTRY
-            1 ; claim counter
-            rewards_interval ; rewards claimable at
-            (assert
-              ; check that lineage_proof is parent of launcher
-              (= (f (r STATUTES_STRUCT)) (coinid lineage_proof (f (r (r args))) 1))
-              (list
-                (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
-                (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
-                (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
+            ; ### launch ###
+            (list
+              ANNOUNCER_REGISTRY
+              1 ; claim counter
+              rewards_interval ; rewards claimable at
+              (assert
+                ; check that lineage_proof is parent of launcher
+                (= (f (r STATUTES_STRUCT)) (coinid lineage_proof (f (r (r args))) 1))
+                (list
+                  (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)
+                  (list ASSERT_CONCURRENT_SPEND (f (r STATUTES_STRUCT)))
+                )
               )
             )
           )

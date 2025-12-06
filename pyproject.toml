@@ -62,7 +62,7 @@ ruff = "^0.8"
 
 [tool.circuit]
 # SHA256 checksum of all compiled puzzle .hex files for integrity verification
-puzzle_checksum = "c29ca88432768b4a9306ffa033558516085d61fb010e19aabd61c272ce2b714d"
+puzzle_checksum = "7c1b81d3bbd9965d6f628bd425e5ccf81ea20bf4497785fa1af97c3433aff658"
 
 [tool.ruff]
 target-version = "py311"
