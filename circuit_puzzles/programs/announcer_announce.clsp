@@ -20,7 +20,7 @@
     )
   )
 
-  (if (any inner_puzzle_hash new_puzzle_hash deposit input_conditions args)
+  (if (any inner_puzzle_hash new_puzzle_hash deposit input_conditions args) ; verify types
     (x)  ; ensures announce spend has unique solution so we can run ISA spend
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT
