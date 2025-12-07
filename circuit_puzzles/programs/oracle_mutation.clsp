@@ -4,11 +4,11 @@
       PRICE_INFOS
       (
         statutes_inner_puzzle_hash
-        m_of_n
-        price_updatable_after_seconds
-        price_updatable_threshold_bps
-        price_delay
-        current_timestamp
+        m_of_n_in
+        price_updatable_after_seconds_in
+        price_updatable_threshold_bps_in
+        price_delay_in
+        current_timestamp_in
         price_announcers ; -> ((launcher_id args_hash price))
       )
       input_conditions
@@ -22,13 +22,19 @@
   (include oracle.clib)
 
   (assign
+    ; convert int args to int
+    m_of_n (toint m_of_n_in)
+    price_updatable_after_seconds (toint price_updatable_after_seconds_in)
+    price_updatable_threshold_bps (toint price_updatable_threshold_bps_in)
+    price_delay (toint price_delay_in)
+    current_timestamp (toint current_timestamp_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     ; number of announcers being used in oracle price update
     price_announcers_length (list-length price_announcers 0)
     ; extract and sort announcer prices in ascending order
     sorted_prices (mergesort price_announcers)
     ; get (upper) median price
-    median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
+    median_price (toint (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
     conditions (generate-announcer-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
@@ -47,6 +53,9 @@
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item PRICE_INFOS)
     (assert
+      ; verify types
+      (size_b32 statutes_inner_puzzle_hash)
+      ; don't verify launcher_ids and args_hashes of price_announcers
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))
       ; check that no announcer is being used more than once

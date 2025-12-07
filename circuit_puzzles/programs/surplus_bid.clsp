@@ -9,10 +9,10 @@
     input_conditions
     inner_puzzle_hash
     (
-      crt_bid_amount
+      crt_bid_amount_in
       target_puzzle_hash
-      current_timestamp
-      my_amount
+      current_timestamp_in
+      my_amount_in
       my_coin_id
     )
   )
@@ -24,9 +24,14 @@
   (include utils.clib)
 
   (assign
+    crt_bid_amount (toint crt_bid_amount_in)
+    current_timestamp (toint current_timestamp_in)
+    my_amount (touint my_amount_in)
     (last_target_puzzle_hash . last_bid_timestamp) (if LAST_BID LAST_BID (c 0 0))
     (assert
-      (size_b32 target_puzzle_hash) ; must be a puzzle hash
+      ; verify types
+      (size_b32 target_puzzle_hash)
+      (size_b32 my_coin_id)
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> crt_bid_amount 0)) (> crt_bid_amount my_amount))
       ; TTL for bid hasn't expired yet

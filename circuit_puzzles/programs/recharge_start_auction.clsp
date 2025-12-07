@@ -4,14 +4,14 @@
     lineage_proof input_conditions inner_puzzle_hash
     (
       statutes_inner_puzzle_hash
-      current_time
-      auction_ttl
-      bid_ttl
-      min_crt_price
-      min_byc_bid_amount
-      min_price_increase_bps
-      max_byc_bid_amount
-      treasury_minimum
+      current_time_in
+      auction_ttl_in
+      bid_ttl_in
+      min_crt_price_in
+      min_byc_bid_amount_in
+      min_price_increase_bps_in
+      max_byc_bid_amount_in
+      treasury_minimum_in
       treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
     )
   )
@@ -24,6 +24,15 @@
   (include recharge_auction.clib)
 
   (assign
+    current_time (toint current_time_in)
+    auction_ttl (toint auction_ttl_in)
+    bid_ttl (toint bid_ttl_in)
+    min_crt_price (toint min_crt_price_in)
+    min_byc_bid_amount (toint min_byc_bid_amount_in)
+    min_price_increase_bps (toint min_price_increase_bps_in)
+    max_byc_bid_amount (toint max_byc_bid_amount_in)
+    treasury_minimum (toint treasury_minimum_in)
+    ; (partly) verify treasury coins in deposit-to-treasury
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     auction_params (list
       current_time
@@ -36,6 +45,8 @@
     )
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (assert
+      ; verify types
+      (size_b32 statutes_inner_puzzle_hash)
       (> treasury_coins_count 0)
       LAUNCHER_ID
       ; can't run if LAST_BID is set. must settle first

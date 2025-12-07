@@ -17,8 +17,29 @@
     (not (l var))
   )
 
+  ; return var converted to int if var is a positive int shorter than 10 bytes, else nil
+  (defun-inline toint (var)
+    (if (all (> (+ var 0) 0) (> 10 (strlen var)))
+      (+ var 0)
+      (x)
+    )
+  )
+
+  ; return var converted to int if var is a non-negative int shorter than 10 bytes, else nil
+  (defun-inline touint (var)
+    (if (all (> (+ var 0) MINUS_ONE) (> 10 (strlen var)))
+      (+ var 0)
+      (x)
+    )
+  )
+
+
   (defun-inline size_b32 (var)
     (= (strlen var) b32)
+  )
+
+  (defun-inline nilorb32 (var)
+    (any (= (strlen var) b32) (not var))
   )
 
   (defun and_ (CLAUSES)
