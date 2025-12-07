@@ -24,7 +24,7 @@
       ; custom conditions case
       STATUTES
       ; update statute corresp to given index
-      (mutate-list (+ mutation_index 0) mutation_value STATUTES 0)
+      (mutate-list (+ mutation_index) mutation_value STATUTES 0)
     )    ; price info stays the same
     PRICE_INFO
     ; discount factors stay the same

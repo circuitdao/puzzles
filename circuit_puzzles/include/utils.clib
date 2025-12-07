@@ -21,7 +21,7 @@
   (defun-inline to-int80 (var)
     (assert
       (> 10 (strlen var))
-      (+ var 0)
+      (+ var)
     )
   )
 
@@ -30,7 +30,7 @@
     (assert
       (> var MINUS_ONE) ; encodes into ints automatically
       (> 10 (strlen var))
-      (+ var 0)  ; encode to int
+      (+ var)  ; encode to int
     )
   )
 
