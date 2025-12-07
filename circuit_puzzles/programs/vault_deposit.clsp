@@ -3,17 +3,18 @@
     (
       COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
-      statutes_puzzle_hash inner_puzzle_hash
+      statutes_puzzle_hash ; verified in main puzzle
+      _ ; inner_puzzle_hash
     )
   )
   (@ args
     (
-      deposit_amount
-      current_timestamp
-      price_info
-      liquidation_ratio
-      statutes_cumulative_stability_fee_df
-      current_stability_fee_df
+      deposit_amount_in ; to int
+      current_timestamp_in ; to int
+      price_info ; statute
+      liquidation_ratio ; statute
+      statutes_cumulative_stability_fee_df ; statute
+      current_stability_fee_df ; statute
     )
   )
  )
@@ -26,6 +27,8 @@
 
 
  (assign
+   deposit_amount (to-int80 deposit_amount_in)
+   current_timestamp (to-int80 current_timestamp_in)
    new_collateral (+ COLLATERAL deposit_amount)
    cumulative_stability_fee_df (calculate-cumulative-discount-factor
      statutes_cumulative_stability_fee_df
@@ -40,11 +43,6 @@
      (f price_info)
    )
    (assert
-     (is-atom deposit_amount)
-     (is-atom current_timestamp)
-     (is-atom liquidation_ratio)
-     (is-atom statutes_cumulative_stability_fee_df)
-     (is-atom current_stability_fee_df)
      (> deposit_amount 0)
      (> new_collateral (- min_collateral_amount ONE))
      (list

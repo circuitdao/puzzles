@@ -5,19 +5,21 @@
       (
        COLLATERAL
        PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash ; verified in main puzzle
+       inner_puzzle_hash ; verified in main puzzle
       )
     )
     (@ args
       (
-        byc_issuing_coin_info  ; -> (parent_id . amount)
-        statutes_cumulative_stability_fee_df
-        byc_treasury_coin_info
-        min_treasury_delta
-        current_timestamp
-        current_stability_fee_df
-        price_info
-        liquidation_ratio
+        byc_issuing_coin_info  ; TODO: simplify -> (parent_id . amount)
+        statutes_cumulative_stability_fee_df ; statute
+        byc_treasury_coin_info ; see below
+        min_treasury_delta ; statute
+        current_timestamp_in ; to int
+        current_stability_fee_df ; statute
+        price_info ; statute
+        liquidation_ratio ; statute
       )
     )
   )
@@ -30,6 +32,7 @@
   (include curry.clib)
 
   (assign
+    current_timestamp (to-int80 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -44,7 +47,8 @@
       (f price_info)
     )
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
-    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) byc_treasury_coin_info
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) byc_treasury_coin_info
+    treasury_amount (to-uint80 treasury_amount_in)
     new_treasury_amount (+ fees_to_treasury treasury_amount)
     byc_issuing_coin_id (calculate-byc-coin-id
       CAT_MOD_HASH
@@ -71,10 +75,9 @@
       )
     )
     (assert
-      (is-atom current_timestamp)
-      (is-atom liquidation_ratio)
-      (is-atom current_stability_fee_df)
-      (is-atom min_treasury_delta)
+      (is-size-b32 treasury_parent_id)
+      (is-size-b32 treasury_launcher_id)
+      (is-size-b32 treasury_prev_launcher_id)
       ; only if there are fees to transfer
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins

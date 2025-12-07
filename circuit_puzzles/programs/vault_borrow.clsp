@@ -6,19 +6,21 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash ; verified in main puzzle
+       inner_puzzle_hash ; verified in main puzzle
       )
     )
     (@ args
       (
-        borrow_amount ; amount of byc to be issued to borrower
-        minimum_debt_amount
-        liquidation_ratio
-        price_info
-        byc_issuing_coin_info  ; -> (parent_id . amount)
-        statutes_cumulative_stability_fee_df
-        current_stability_fee_df
-        current_timestamp
+        borrow_amount_in ; to int. amount of byc to be issued to borrower
+        minimum_debt_amount ; statute
+        liquidation_ratio ; statute
+        price_info ; statute
+        byc_issuing_coin_info  ; TODO: simplify -> (parent_id . amount)
+        statutes_cumulative_stability_fee_df ; statute
+        current_stability_fee_df ; statute
+        current_timestamp_in ; to int
       )
     )
   )
@@ -31,6 +33,8 @@
   (include curry.clib)
 
   (assign
+    borrow_amount (to-int80 borrow_amount_in)
+    current_timestamp (to-int80 current_timestamp_in)
     ; we want cat puzzle to use the same statutes struct in the tail as this puzzle
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     ; calculate the latest cumulative stability fee discount factor

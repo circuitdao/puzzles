@@ -3,17 +3,19 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash ; verified in main puzzle
+       _ ; inner_puzzle_hash
       )
     )
     (@ args
       (
-         target_puzzle_hash
-         current_timestamp
-         price_info
-         liquidation_ratio
-         statutes_cumulative_stability_fee_df
-         current_stability_fee_df
+         target_puzzle_hash ; verify
+         current_timestamp_in ; to int
+         price_info ; statute
+         liquidation_ratio ; statute
+         statutes_cumulative_stability_fee_df ; statute
+         current_stability_fee_df ; statute
       )
     )
   )
@@ -25,6 +27,7 @@
   (include statutes_utils.clib)
 
   (assign
+    current_timestamp (to-int80 current_timestamp_in)
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
       current_stability_fee_df

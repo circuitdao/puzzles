@@ -3,22 +3,24 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash ; verified in main puzzle
+       inner_puzzle_hash ; verified in main puzzle
       )
     )
     (@ args
       (
-        start_only ; -> () or (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
-        current_timestamp
-        step_time_interval
-        step_price_decrease_factor
-        price_info
-        starting_price_factor_bps
-        initiator_puzzle_hash
-        auction_ttl
-        minimum_bid_amount_flat
-        minimum_bid_amount_bps
-        minimum_price_factor_bps
+        start_only ; see below -> () or (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
+        current_timestamp_in ; to int
+        step_time_interval ; statute
+        step_price_decrease_factor ; statute
+        price_info ; statute
+        starting_price_factor_bps ; statute
+        initiator_puzzle_hash ; verify
+        auction_ttl ; statute
+        minimum_bid_amount_flat ; statute
+        minimum_bid_amount_bps ; statute
+        minimum_price_factor_bps ; statute
       )
     )
   )
@@ -33,13 +35,14 @@
   ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
   ; that does not allow the lender to seize collateral)
   (assign
+    current_timestamp (to-int80 current_timestamp_in)
     (
-      initiator_incentive_flat_fee
-      initiator_incentive_relative_fee_bps
-      liquidation_ratio
-      statutes_cumulative_stability_fee_df
-      current_stability_fee_df
-      liquidation_penalty_bps
+      initiator_incentive_flat_fee ; statute
+      initiator_incentive_relative_fee_bps ; statute
+      liquidation_ratio ; statute
+      statutes_cumulative_stability_fee_df ; statute
+      current_stability_fee_df ; statute
+      liquidation_penalty_bps ; statute
     ) (if start_only (assert (not AUCTION_STATE) start_only) (assert AUCTION_STATE (list 0 0 1 1 1 0)))
     ; start only
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
@@ -94,7 +97,6 @@
       minimum_bid_amount_flat
     )
     auction_state (assert
-      (is-atom current_timestamp)
       (is-size-b32 initiator_puzzle_hash)
       (list
         current_timestamp

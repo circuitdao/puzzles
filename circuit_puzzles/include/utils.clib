@@ -34,9 +34,15 @@
     )
   )
 
-
   (defun-inline is-size-b32 (var)
     (= (strlen var) BYTES_32)
+  )
+
+  (defun-inline is-size-b32-or-nil (var)
+    (any
+      (= (strlen var) BYTES_32)
+      (not var)
+    )
   )
 
   (defun and_ (CLAUSES)

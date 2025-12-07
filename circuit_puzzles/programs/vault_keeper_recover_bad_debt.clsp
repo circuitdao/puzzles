@@ -4,15 +4,17 @@
     (@ VAULT_STATE
       (
        COLLATERAL PRINCIPAL AUCTION_STATE INNER_PUZZLE_HASH
-       STATUTES_STRUCT DISCOUNTED_PRINCIPAL statutes_puzzle_hash inner_puzzle_hash
+       STATUTES_STRUCT DISCOUNTED_PRINCIPAL
+       statutes_puzzle_hash ; verified in main puzzle
+       inner_puzzle_hash ; verified in main puzzle
       )
     )
     (@ args
       (
-        recover_amount
-        current_timestamp
-        byc_treasury_coin_info
-        min_treasury_delta
+        recover_amount_in ; to int
+        current_timestamp_in ; to int
+        byc_treasury_coin_info ; see below
+        min_treasury_delta ; statute
       )
     )
   )
@@ -25,21 +27,29 @@
   (include curry.clib)
 
   (assign
+    recover_amount (to-int80 recover_amount_in)
+    current_timestamp (to-int80 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
+    treasury_amount (to-int80 treasury_amount_in)
     new_treasury_amount (- treasury_amount recover_amount)
-    treasury_coin_id (calculate-byc-coin-id
-      CAT_MOD_HASH
-      byc_tail_hash
-      (list
-        treasury_parent_id
-        treasury_amount
-        (curry_hashes
-          TREASURY_MOD_HASH
-          (sha256 ONE TREASURY_MOD_HASH)
-          (sha256tree STATUTES_STRUCT)
-          (sha256 ONE treasury_launcher_id)
-          (sha256 ONE treasury_prev_launcher_id)
+    treasury_coin_id (assert
+      (is-size-b32 treasury_parent_id)
+      (is-size-b32 treasury_launcher_id)
+      (is-size-b32 treasury_prev_launcher_id)
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        (list
+          treasury_parent_id
+          treasury_amount
+          (curry_hashes
+            TREASURY_MOD_HASH
+            (sha256 ONE TREASURY_MOD_HASH)
+            (sha256tree STATUTES_STRUCT)
+            (sha256 ONE treasury_launcher_id)
+            (sha256 ONE treasury_prev_launcher_id)
+          )
         )
       )
     )
@@ -75,8 +85,6 @@
       )
     )
     (assert
-      (is-atom recover_amount)
-      (is-atom current_timestamp)
       ; check that there is no collateral left
       (= COLLATERAL 0)
       ; must recover debt fully or partially, but amount must be at least min treasury delta
