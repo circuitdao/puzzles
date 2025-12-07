@@ -16,8 +16,8 @@
   (include utils.clib)
 
   (assert
-    (size_b32 target_bill_hash)
-    (size_b32 target_coin_id)
+    (is-size-b32 target_bill_hash)
+    (is-size-b32 target_coin_id)
     (list
       BILL
       (list

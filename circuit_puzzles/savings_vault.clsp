@@ -148,7 +148,7 @@
     )
     new_inner_puzzle_hash (f create_coin_body)
     (assert
-      (size_b32 new_inner_puzzle_hash)
+      (is-size-b32 new_inner_puzzle_hash)
       (> interest_payment MINUS_ONE)
       (li
         (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount new_inner_puzzle_hash memos)

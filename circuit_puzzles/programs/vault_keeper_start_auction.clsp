@@ -95,7 +95,7 @@
     )
     auction_state (assert
       (is-atom current_timestamp)
-      (size_b32 initiator_puzzle_hash)
+      (is-size-b32 initiator_puzzle_hash)
       (list
         current_timestamp
         start_price

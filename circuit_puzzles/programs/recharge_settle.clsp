@@ -10,8 +10,8 @@
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     lineage_proof input_conditions inner_puzzle_hash
     (
-      treasury_coins
-      funding_coin_info
+      treasury_coins ; (partly) verified in deposit-to-treasury
+      funding_coin_info ; don't verify
     )
   )
 

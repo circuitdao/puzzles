@@ -3,8 +3,8 @@
       MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
        PRICE_UPDATE_COUNTER
       mutation_index
-      mutation_value
-      governance_curried_args_hash
+      mutation_value ; don't verify type
+      governance_curried_args_hash ; don't verify type
     )
 
   (include *standard-cl-23.1*)
@@ -34,7 +34,7 @@
     PRICE_UPDATE_COUNTER
     ; updating statutes
     (assert
-      (size_b32 governance_curried_args_hash)
+      (is-size-b32 governance_curried_args_hash)
       (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
       (> STATUTES_MAX_IDX (- mutation_index ONE))
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)

@@ -67,7 +67,7 @@
       (l new_statute_value)
       (if (= statute_index STATUTE_ORACLE_LAUNCHER_ID)
         ; oracle launcher id: must be 32 bytes
-        (size_b32 new_statute_value)
+        (is-size-b32 new_statute_value)
         ; standard statutes (index > 0)
         (all
           (is-atom new_statute_value)

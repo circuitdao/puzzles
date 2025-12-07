@@ -50,7 +50,7 @@
                 PROTOCOL_PREFIX
                 bill_operation
                 final_bill
-                (if (size_b32 (f condition_body))
+                (if (is-size-b32 (f condition_body))
                   (f condition_body) ; inner puzzle hash
                   (assert
                     (not BILL) ; exit only possible if no bill
@@ -62,7 +62,7 @@
                 (c
                   CREATE_COIN
                   (c
-                    (if (size_b32 (f condition_body))
+                    (if (is-size-b32 (f condition_body))
                       (curry_hashes MOD_HASH
                         (sha256 ONE MOD_HASH)
                         (sha256 ONE CRT_TAIL_HASH)
@@ -79,7 +79,7 @@
                     (r condition_body) ; amount + memos (if any)
                   )
                 )
-                (if (size_b32 (f condition_body))
+                (if (is-size-b32 (f condition_body))
                   filtered_conditions
                   (c
                     ; confirm spend of exit coin to break the lineage from governance coin

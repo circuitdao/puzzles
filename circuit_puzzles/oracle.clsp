@@ -20,7 +20,7 @@
     input_conditions (a inner_puzzle inner_solution)
     (
       (
-        signed_operation_hash
+        signed_operation_hash ; don't verify
         op_args
       )
       inner_conditions
@@ -45,7 +45,10 @@
         )
         ; ELSE announce oracle price
         (assign
-          (current_timestamp price_delay statutes_inner_puzzle_hash) op_args
+          (current_timestamp_in price_delay_in statutes_inner_puzzle_hash) op_args
+          current_timestamp (to-int80 current_timestamp_in)
+          price_delay (to-int80 price_delay_in)
+          ; don't verify statutes_inner_puzzle_hash
           cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
           (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
           (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))

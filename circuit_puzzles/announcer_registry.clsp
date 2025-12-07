@@ -78,8 +78,8 @@
         announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH announcer_curried_args_hash)
         (assert
           ; verify types
-          (size_b32 target_puzzle_hash) ; must be a puzzle hash
-          (size_b32 announcer_curried_args_hash)
+          (is-size-b32 target_puzzle_hash) ; must be a puzzle hash
+          (is-size-b32 announcer_curried_args_hash)
           (list
             (c target_puzzle_hash ANNOUNCER_REGISTRY)
             CLAIM_COUNTER
@@ -114,7 +114,7 @@
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
         (assert
           ; verify types
-          (size_b32 statutes_inner_puzzle_hash)
+          (is-size-b32 statutes_inner_puzzle_hash)
           (is-atom rewards_interval)
           (if (= reward_or_register REWARD_OPCODE)
             ; ### distribute rewards ###
@@ -144,8 +144,8 @@
                 (is-atom statutes_price_update_counter)
                 (is-atom rewards_per_interval)
                 ; don't verify issuance_coin_info
-                (size_b32 change_receiver_hash)
-                (size_b32 my_coin_id)
+                (is-size-b32 change_receiver_hash)
+                (is-size-b32 my_coin_id)
                 (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
                 (> rewards_interval MINIMUM_REWARDS_INTERVAL)
                 (> announcers_count 0)

@@ -26,7 +26,7 @@
     ; don't verify new_puzzle_hash
     (is-atom deposit)
     ; don't verify input_conditions
-    (size_b32 statutes_inner_puzzle_hash)
+    (is-size-b32 statutes_inner_puzzle_hash)
     (is-atom input_toggle_activation)
     (is-atom max_disapproval_penalty_factor_or_min_deposit)
     (assign

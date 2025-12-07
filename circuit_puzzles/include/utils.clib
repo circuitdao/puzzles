@@ -9,7 +9,7 @@
   (defconst MAX_TX_BLOCK_TIME 120)
   (defconst PRECISION 10000000000)
   (defconst ONE_MINUTE 60)
-  (defconst b32 32)
+  (defconst BYTES_32 32)
   (defconst TRUE 1)
   (defconst FALSE ())
 
@@ -17,8 +17,26 @@
     (not (l var))
   )
 
-  (defun-inline size_b32 (var)
-    (= (strlen var) b32)
+  ; return var converted to int if var is a positive int shorter than 10 bytes, else nil
+  (defun-inline to-int80 (var)
+    (assert
+      (> 10 (strlen var))
+      (+ var 0)
+    )
+  )
+
+  ; return var converted to int if var is a non-negative int shorter than 10 bytes, else nil
+  (defun-inline to-uint80 (var)
+    (assert
+      (> var MINUS_ONE) ; encodes into ints automatically
+      (> 10 (strlen var))
+      (+ var 0)  ; encode to int
+    )
+  )
+
+
+  (defun-inline is-size-b32 (var)
+    (= (strlen var) BYTES_32)
   )
 
   (defun and_ (CLAUSES)

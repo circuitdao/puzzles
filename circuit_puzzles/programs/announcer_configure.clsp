@@ -25,7 +25,7 @@
     ; verify types
     ; don't verify inner_puzzle_hash
     (if new_puzzle_hash
-      (size_b32 new_puzzle_hash)
+      (is-size-b32 new_puzzle_hash)
       ONE
     )
     (is-atom deposit)
@@ -48,7 +48,7 @@
         (assert
           ; verify types
           (is-atom current_timestamp)
-          (size_b32 statutes_inner_puzzle_hash)
+          (is-size-b32 statutes_inner_puzzle_hash)
           (is-atom input_toggle_activation)
           (is-atom deactivation_cooldown_interval)
           (is-atom min_deposit)

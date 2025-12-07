@@ -21,7 +21,7 @@
     (is-atom deposit)
     ; don't verify input_conditions
     (is-atom penalty_per_interval_bps)
-    (size_b32 statutes_inner_puzzle_hash)
+    (is-size-b32 statutes_inner_puzzle_hash)
     (is-atom penalty_interval_in_minutes)
     (is-atom min_deposit)
     (is-atom max_value_ttl)

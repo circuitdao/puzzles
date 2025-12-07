@@ -91,11 +91,31 @@ def compile_module_with_symbols(include_paths, source):
     path_obj = Path(source)
     file_path = path_obj.parent
     file_stem = path_obj.stem
-    # match if the source file modified time is newer than a target file, in which case we compile, otherwise skip
     target_file = file_path / (file_stem + ".hex")
-    if target_file.exists() and target_file.stat().st_mtime > path_obj.stat().st_mtime:
-        return
-    target_file = file_path / (file_stem + ".hex")
+    
+    # Check if we need to recompile
+    if target_file.exists():
+        target_mtime = target_file.stat().st_mtime
+        
+        # Check if source file is newer than target
+        if path_obj.stat().st_mtime > target_mtime:
+            needs_compile = True
+        else:
+            # Check if any include files are newer than target
+            needs_compile = False
+            for include_path in include_paths:
+                include_dir = Path(include_path)
+                if include_dir.exists():
+                    for include_file in include_dir.rglob("*.clib"):
+                        if include_file.stat().st_mtime > target_mtime:
+                            needs_compile = True
+                            break
+                if needs_compile:
+                    break
+        
+        if not needs_compile:
+            return
+    
     compile_clvm(source, str(target_file.absolute()), include_paths)
 
 
