@@ -2,7 +2,7 @@
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT statutes_puzzle_hash inner_puzzle_hash)
     (
-      amount
+      _ ; amount
     )
   )
 

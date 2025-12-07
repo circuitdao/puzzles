@@ -20,6 +20,17 @@
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (assert
+      ; verify types
+      ; don't verify inner_puzzle_hash
+      ; don't verify new_puzzle_hash
+      (is-atom deposit)
+      ; don't verify input_conditions
+      (size_b32 registry_mod_hash)
+      (size_b32 registry_args_hash)
+      (is-atom registry_claim_counter)
+      (size_b32 target_puzzle_hash)
+      (size_b32 statutes_inner_puzzle_hash)
+      (is-atom min_deposit)
       inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)

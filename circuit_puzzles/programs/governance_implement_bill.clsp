@@ -1,10 +1,12 @@
+;; NOTE: this puzzle is not permissionless so that a dishonest implementer could not waste a govern announcer
+;; custom condition bill by spending it without spending the corresp announcer
 (mod
   (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
      statutes_puzzle_hash
     )
     (
-      _ ; amount
+      amount
       current_timestamp
     )
   )
@@ -15,6 +17,9 @@
   (include utils.clib)
 
   (defconst ANN_IMPLEMENTED '$')
+
+  (defconst MAINTAINER_MIN_VOTE_AMOUNT 350000000000)  ; min 350BN mCRT in a single vote to enable override
+  (defconst MAINTAINER_END_PERIOD 1798761600) ; 2027-01-01
 
   (assign
     (
@@ -27,8 +32,14 @@
       new_max_delta
     ) BILL
     (assert
-      ; can only implement in implementation interval
-      (> current_timestamp implementation_delay_expiry)
+      ; verify types
+      (is-atom amount)
+      (is-atom current_timestamp)
+      (if (all (> amount MAINTAINER_MIN_VOTE_AMOUNT) (> MAINTAINER_END_PERIOD current_timestamp))
+        ONE ; maintainer can implement bills before veto period and/or implementation delay expired
+        ; o/w can only implement in implementation interval
+        (> current_timestamp implementation_delay_expiry)
+      )
       (> implementation_interval_expiry current_timestamp)
       (list
         ; if implementation succeeds, reset this coin's bill state

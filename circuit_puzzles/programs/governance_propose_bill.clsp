@@ -1,4 +1,4 @@
-(mod (INTERVAL_LOWER_HARD_LIMIT
+(mod (
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
      statutes_puzzle_hash)
     (
@@ -30,36 +30,58 @@
   (include utils.clib)
 
   (defconst ANN_PROPOSED '^')
-  (defconst MAINTAINER_MIN_VOTE_AMOUNT 35000000000000)  ; min 350BN in a single vote to enable override
-  (defconst MAINTAINER_END_PERIOD 1772534400) ; 2027-01-01
+  (defconst INTERVAL_LOWER_HARD_LIMIT 1800) ; 30 mins in seconds
   (defconst INTERVAL_UPPER_HARD_LIMIT 604800) ; 7 days in seconds
+  (defconst MAINTAINER_MIN_VOTE_AMOUNT 350000000000)  ; min 350BN mCRT in a single vote to enable override
 
-  (assert_debug
-    ; verify types
-    (is-atom amount) (is-atom bill_proposal_fee_mojos) (is-atom statute_index) (is-atom new_implementation_delay)
-    (is-atom new_max_delta) (is-atom current_timestamp) (is-atom implementation_interval)
-    (is-atom new_threshold_amount_to_propose) (is-atom new_veto_interval)
-    (if (> statute_index MINUS_ONE)
-      (is-atom new_statute_value)
-      ONE
-    )
-    (if (= statute_index 0)
-      (size_b32 new_statute_value) ; statute 0 should contain a byte32 since it's pointing to oracle
-      ONE
-    )
-    (if (all (> amount MAINTAINER_MIN_VOTE_AMOUNT) (> MAINTAINER_END_PERIOD current_timestamp))
-      ONE ; if voting amount is more than 35B and current time is before 2027-01-01, we allow it (to allow maintainer to override)
-      (all
-        (> INTERVAL_UPPER_HARD_LIMIT (- new_veto_interval ONE))
-        (> (+ new_veto_interval ONE) INTERVAL_LOWER_HARD_LIMIT)
-        (> INTERVAL_UPPER_HARD_LIMIT (- new_implementation_delay ONE))
-        (> (+ new_implementation_delay ONE) INTERVAL_LOWER_HARD_LIMIT)
+  (defun-inline validate-statute-value (statute_index new_statute_value)
+    (if (= statute_index STATUTE_GOVERNANCE_IMPLEMENTATION_INTERVAL)
+      (> new_statute_value INTERVAL_LOWER_HARD_LIMIT)
+      (if (any
+            (= statute_index STATUTE_STABILITY_FEE_DF)
+            (= statute_index STATUTE_INTEREST_DF)
+          )
+          ; must be at least PRECISION for non-negative rates
+          (> new_statute_value (- PRECISION ONE))
+          (if (any
+                (= statute_index STATUTE_ORACLE_M_OF_N)
+                (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
+                (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
+                (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
+                (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
+              )
+              (> new_statute_value 0) ; must be strictly positive
+              ONE ; allow 0 for other statutes
+          )
       )
     )
+  )
+
+  (assert
+    ; verify types
+    (is-atom amount) (is-atom bill_proposal_fee_mojos) (is-atom statute_index)
+    (is-atom new_threshold_amount_to_propose) (is-atom new_veto_interval) (is-atom new_implementation_delay)
+    (is-atom new_max_delta) (is-atom current_timestamp) (is-atom implementation_interval)
+    (if (= statute_index MINUS_ONE)
+      ; custom conditions: must be a list
+      (l new_statute_value)
+      (if (= statute_index STATUTE_ORACLE_LAUNCHER_ID)
+        ; oracle launcher id: must be 32 bytes
+        (size_b32 new_statute_value)
+        ; standard statutes (index > 0)
+        (all
+          (is-atom new_statute_value)
+          (validate-statute-value statute_index new_statute_value)
+        )
+      )
+    )
+    (> INTERVAL_UPPER_HARD_LIMIT (- new_veto_interval ONE))
+    (> (+ new_veto_interval ONE) INTERVAL_LOWER_HARD_LIMIT)
+    (> INTERVAL_UPPER_HARD_LIMIT (- new_implementation_delay ONE))
     ; may not overwrite an existing bill
-    (not BILL) 
+    (not BILL)
     (> amount threshold_amount_to_propose)
-    (> new_threshold_amount_to_propose 0)
+    (all (> new_threshold_amount_to_propose 0) (> MAINTAINER_MIN_VOTE_AMOUNT new_threshold_amount_to_propose))
     (> new_veto_interval 0)
     (> new_implementation_delay 0)
     ; if max_delta is set and applicable to statute, we enforce it

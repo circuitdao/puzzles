@@ -87,6 +87,10 @@
       )
     )
     (assert
+      (is-atom repay_amount)
+      (is-atom sf_transfer_amount)
+      (is-atom minimum_debt_amount)
+      (is-atom current_timestamp)
       (> repay_amount MINUS_ONE) ; repay amount must not be negative (but can be 0)
       (> undiscounted_principal (- repay_amount ONE)) ; cannot repay more than outstanding debt
       (> sf_transfer_amount MINUS_ONE) ; cannot transfer a negative amount

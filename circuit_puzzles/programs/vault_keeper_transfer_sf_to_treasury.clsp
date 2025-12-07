@@ -71,6 +71,10 @@
       )
     )
     (assert
+      (is-atom current_timestamp)
+      (is-atom liquidation_ratio)
+      (is-atom current_stability_fee_df)
+      (is-atom min_treasury_delta)
       ; only if there are fees to transfer
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins

@@ -17,54 +17,50 @@
 
   (defconst CUSTOM_CONDITIONS_MUTATION_INDEX -1)
 
-  (assign
-    governance_puzzle_hash (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
-    (list
-      () ; set PREV_ANNOUNCE to nil
-      ; update statutes unless we output custom conditions
+  (list
+    () ; set PREV_ANNOUNCE to nil
+    ; update statutes unless we output custom conditions
+    (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
+      ; custom conditions case
+      STATUTES
+      ; update statute corresp to given index
+      (mutate-list (+ mutation_index 0) mutation_value STATUTES 0)
+    )    ; price info stays the same
+    PRICE_INFO
+    ; discount factors stay the same
+    PAST_CUMULATIVE_STABILITY_FEE_DF
+    PAST_CUMULATIVE_INTEREST_DF
+    ; price update counter stays the same
+    PRICE_UPDATE_COUNTER
+    ; updating statutes
+    (assert
+      (size_b32 governance_curried_args_hash)
+      (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
+      (> STATUTES_MAX_IDX (- mutation_index ONE))
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-        ; custom conditions case
-        STATUTES
-        ; update statute corresp to given index
-        (mutate-list mutation_index mutation_value STATUTES 0)
+        ; voting for custom conditions. only need to check first element of mutation_value
+        (fail-on-protocol-condition-or-create-coin (f mutation_value))
+        ; should be  a list with 5 elements if mutating statutes
+        (not (r (r (r (r (r mutation_value))))))
       )
-      ; price info stays the same
-      PRICE_INFO
-      ; discount factors stay the same
-      PAST_CUMULATIVE_STABILITY_FEE_DF
-      PAST_CUMULATIVE_INTEREST_DF
-      ; price update counter stays the same
-      PRICE_UPDATE_COUNTER
-      ; updating statutes
-      (assert
-        (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
-        (> STATUTES_MAX_IDX (- mutation_index ONE))
-        (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-          ; voting for custom conditions. only need to check first element of mutation_value
-          (fail-on-protocol-condition-or-create-coin (f mutation_value))
-          ; should be  a list with 5 elements if mutating statutes
-          (not (r (r (r (r (r mutation_value))))))
+      (li
+        ; get confirmation from a CRT voting puzzle that mutation was applied
+        (list RECEIVE_MESSAGE 0x12
+          (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            (tree_hash_of_apply GOVERNANCE_MOD_HASH governance_curried_args_hash)
+          )
         )
-        (li
-          ; get confirmation from a CRT voting puzzle that mutation was applied
-          (list RECEIVE_MESSAGE 0x12
-            (concat PROTOCOL_PREFIX (sha256tree (c mutation_index mutation_value)))
-            (curry_hashes CAT_MOD_HASH
-              (sha256 ONE CAT_MOD_HASH)
-              (sha256 ONE CRT_TAIL_HASH)
-              governance_puzzle_hash
-            )
-          )
 
-          &rest
-          (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
-            ; return custom conditions
-            (f mutation_value)
-            ()
-          )
+        &rest
+        (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)
+          ; return custom conditions
+          (f mutation_value)
+          ()
         )
       )
     )
   )
-
 )

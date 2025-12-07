@@ -40,6 +40,11 @@
      (f price_info)
    )
    (assert
+     (is-atom deposit_amount)
+     (is-atom current_timestamp)
+     (is-atom liquidation_ratio)
+     (is-atom statutes_cumulative_stability_fee_df)
+     (is-atom current_stability_fee_df)
      (> deposit_amount 0)
      (> new_collateral (- min_collateral_amount ONE))
      (list

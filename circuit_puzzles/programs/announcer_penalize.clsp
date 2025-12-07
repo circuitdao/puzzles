@@ -14,59 +14,72 @@
   (include statutes_utils.clib)
   (include announcer.clib)
 
-  (assign
-    penalized_deposit
-      ; if not expired, we penalize per full deposit
-      (/
-        (*
-          DEPOSIT
-          (- PRECISION_BPS penalty_per_interval_bps)
+  (assert
+    ; verify types
+    ; don't verify new_puzzle_hash
+    ; don't verify new_puzzle_hash
+    (is-atom deposit)
+    ; don't verify input_conditions
+    (is-atom penalty_per_interval_bps)
+    (size_b32 statutes_inner_puzzle_hash)
+    (is-atom penalty_interval_in_minutes)
+    (is-atom min_deposit)
+    (is-atom max_value_ttl)
+    (is-atom current_timestamp)
+    (assign
+      penalized_deposit
+        ; if not expired, we penalize per full deposit
+        (/
+          (*
+            DEPOSIT
+            (- PRECISION_BPS penalty_per_interval_bps)
+          )
+          PRECISION_BPS
         )
-        PRECISION_BPS
-      )
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (assert
-      ; must be past penalty timestamp to penalize
-      (> current_timestamp PENALIZABLE_AT)
-      (any
-        ; penalize if expired
-        (> current_timestamp TIMESTAMP_EXPIRES)
-        ; penalize if deposit is less than announcer's min deposit
-        (> MIN_DEPOSIT DEPOSIT)
-        ; penalize if announcer's min deposit is less than Statues min deposit
-        (> min_deposit MIN_DEPOSIT)
-        ; penalize if announcer's value TTL is above expected value TTL
-        (> VALUE_TTL max_value_ttl)
-      )
-      APPROVED
-      LAUNCHER_ID
-      (> DEPOSIT penalized_deposit)
-      (> penalized_deposit MINUS_ONE)
-      (li
-        (list RESERVE_FEE (- DEPOSIT penalized_deposit))
-        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL_MINUTES penalty_interval_in_minutes)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_PER_INTERVAL_BPS penalty_per_interval_bps)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS min_deposit)
-        (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
-        &rest
-        (recreate-myself-condition MOD_HASH
-          STATUTES_STRUCT
-          LAUNCHER_ID
-          FALSE
-          INNER_PUZZLE_HASH
-          APPROVED
-          DEPOSIT
-          penalized_deposit
-          VALUE_TTL
-          VALUE
-          MIN_DEPOSIT
-          CLAIM_COUNTER
-          COOLDOWN_START
-          (+ current_timestamp (* 60 penalty_interval_in_minutes))
-          TIMESTAMP_EXPIRES
-          input_conditions
+      statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+      (assert
+        ; must be past penalty timestamp to penalize
+        (> current_timestamp PENALIZABLE_AT)
+        (any
+          ; penalize if expired
+          (> current_timestamp TIMESTAMP_EXPIRES)
+          ; penalize if deposit is less than announcer's min deposit
+          (> MIN_DEPOSIT DEPOSIT)
+          ; penalize if announcer's min deposit is less than Statues min deposit
+          (> min_deposit MIN_DEPOSIT)
+          ; penalize if announcer's value TTL is above expected value TTL
+          (> VALUE_TTL max_value_ttl)
+        )
+        APPROVED
+        LAUNCHER_ID
+        (> DEPOSIT penalized_deposit)
+        (> penalized_deposit MINUS_ONE)
+        (li
+          (list RESERVE_FEE (- DEPOSIT penalized_deposit))
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
+          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_INTERVAL_MINUTES penalty_interval_in_minutes)
+          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_PENALTY_PER_INTERVAL_BPS penalty_per_interval_bps)
+          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS min_deposit)
+          (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MAXIMUM_VALUE_TTL max_value_ttl)
+          &rest
+          (recreate-myself-condition MOD_HASH
+            STATUTES_STRUCT
+            LAUNCHER_ID
+            FALSE
+            INNER_PUZZLE_HASH
+            APPROVED
+            DEPOSIT
+            penalized_deposit
+            VALUE_TTL
+            VALUE
+            MIN_DEPOSIT
+            CLAIM_COUNTER
+            COOLDOWN_START
+            (+ current_timestamp (* 60 penalty_interval_in_minutes))
+            TIMESTAMP_EXPIRES
+            input_conditions
+          )
         )
       )
     )

@@ -93,21 +93,22 @@
       minimum_bid_amount_relative
       minimum_bid_amount_flat
     )
-    auction_state (list
-      current_timestamp
-      start_price
-      step_price_decrease_factor
-      step_time_interval
-      (assert
-        (size_b32 initiator_puzzle_hash) ; must be a puzzle hash
+    auction_state (assert
+      (is-atom current_timestamp)
+      (size_b32 initiator_puzzle_hash)
+      (list
+        current_timestamp
+        start_price
+        step_price_decrease_factor
+        step_time_interval
         initiator_puzzle_hash
+        new_initiator_incentive_balance
+        auction_ttl
+        new_byc_to_treasury_balance
+        new_byc_to_melt_balance
+        minimum_bid_amount
+        min_price
       )
-      new_initiator_incentive_balance
-      auction_ttl
-      new_byc_to_treasury_balance
-      new_byc_to_melt_balance
-      minimum_bid_amount
-      min_price
     )
     conditions (list
       (assert-statute statutes_puzzle_hash STATUTE_BLOCK_ISSUANCE FALSE)

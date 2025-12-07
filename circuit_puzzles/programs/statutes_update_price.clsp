@@ -1,5 +1,5 @@
 (mod ((SINGLETON_MOD_HASH . SINGLETON_LAUNCHER_HASH)
-       MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
+       MOD_HASH STATUTES (_ . PREV_PRICE_TIMESTAMP) PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
        PRICE_UPDATE_COUNTER
        _ ; mutation_index
        (@ mutation_value (oracle_inner_puz_hash oracle_price oracle_price_timestamp))
@@ -30,7 +30,8 @@
   (list
     () ; set PREV_ANNOUNCE to nil
     STATUTES ; no change to Statutes
-    (c oracle_price oracle_price_timestamp) ; new Statutes Price Info. This is the price info received from Oracle with cutoff according to Statutes Price Delay
+    ; new Statutes Price Info. This is the price info received from Oracle with cutoff according to Statutes Price Delay
+    (assert (> oracle_price MINUS_ONE) (c oracle_price oracle_price_timestamp))
     ; to calculate cumulative stability fee discount factor we need:
     ; - past cumulative stability fee discount factor
     ; - current stability fee discount factor
@@ -40,7 +41,7 @@
       PAST_CUMULATIVE_STABILITY_FEE_DF
       (f (f (r STATUTES))) ; current SF DF
       oracle_price_timestamp ; Oracle Price timestamp
-      (r PRICE_INFO) ; prev Statutes Price timestamp
+      PREV_PRICE_TIMESTAMP ; prev Statutes Price timestamp
     )
     ; to calculate current cumulative interest discount factor we need:
     ; - past cumulative interest discount factor
@@ -51,13 +52,13 @@
       PAST_CUMULATIVE_INTEREST_DF
       (f (f (r (r STATUTES)))) ; current IR DF
       oracle_price_timestamp ; Oracle Price timestamp
-      (r PRICE_INFO) ; prev Statutes Price timestamp
+      PREV_PRICE_TIMESTAMP ; prev Statutes Price timestamp
     )
     ; increment price updates counter
     (+ PRICE_UPDATE_COUNTER 1)
     (assert
       ; new price should be fresher than current one
-      (> oracle_price_timestamp (r PRICE_INFO))
+      (> oracle_price_timestamp PREV_PRICE_TIMESTAMP)
       (assign-inline
         ; generate oracle singleton puzzle hash
         oracle_puzzle_hash (curry_hashes

@@ -75,6 +75,8 @@
       )
     )
     (assert
+      (is-atom recover_amount)
+      (is-atom current_timestamp)
       ; check that there is no collateral left
       (= COLLATERAL 0)
       ; must recover debt fully or partially, but amount must be at least min treasury delta
