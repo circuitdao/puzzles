@@ -13,7 +13,7 @@
       (
         current_timestamp_in ; to int
         byc_bid_amount_in ; to int
-        byc_melting_coin_info ; TODO: simplify
+        byc_melting_coin_parent_id ; verify
         byc_treasury_coin_info ; see below
         min_treasury_delta ; statute
         target_puzzle_hash ; verify
@@ -93,14 +93,17 @@
         bid_xch_collateral_amount_pre
     )
     leftover_collateral (- COLLATERAL bid_xch_collateral_amount)
-    byc_coin_id_to_melt (if byc_melting_coin_info
-      (calculate-byc-coin-id
-        CAT_MOD_HASH
-        byc_tail_hash
-        (list
-          (f byc_melting_coin_info)
-          (r byc_melting_coin_info)
-          RUN_TAIL_MOD_HASH
+    byc_coin_id_to_melt (if byc_melting_coin_parent_id
+      (assert
+        (is-size-b32 byc_melting_coin_parent_id)
+        (calculate-byc-coin-id
+          CAT_MOD_HASH
+          byc_tail_hash
+          (list
+            byc_melting_coin_parent_id
+            byc_to_melt
+            RUN_TAIL_MOD_HASH
+          )
         )
       )
       ()

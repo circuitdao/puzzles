@@ -12,7 +12,7 @@
     )
     (@ args
       (
-        byc_issuing_coin_info  ; TODO: simplify -> (parent_id . amount)
+        byc_issuing_coin_parent_id ; verify
         statutes_cumulative_stability_fee_df ; statute
         byc_treasury_coin_info ; see below
         min_treasury_delta ; statute
@@ -50,13 +50,16 @@
     (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) byc_treasury_coin_info
     treasury_amount (to-uint80 treasury_amount_in)
     new_treasury_amount (+ fees_to_treasury treasury_amount)
-    byc_issuing_coin_id (calculate-byc-coin-id
-      CAT_MOD_HASH
-      byc_tail_hash
-      (list
-        (f byc_issuing_coin_info) ; parent_id
-        (r byc_issuing_coin_info) ; amount
-        RUN_TAIL_MOD_HASH
+    byc_issuing_coin_id (assert
+      (is-size-b32 byc_issuing_coin_parent_id)
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        (list
+          byc_issuing_coin_parent_id
+          fees_to_treasury
+          RUN_TAIL_MOD_HASH
+        )
       )
     )
     treasury_coin_id (calculate-byc-coin-id
@@ -86,8 +89,6 @@
       (not AUCTION_STATE)
       ; vault must not be liquidatable
       (> COLLATERAL (- min_collateral_amount ONE))
-      ; issuing coin must have the same as amount we're transferring
-      (= (r byc_issuing_coin_info) fees_to_treasury)
       (list
         (list
           COLLATERAL

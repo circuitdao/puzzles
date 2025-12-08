@@ -17,7 +17,7 @@
         minimum_debt_amount ; statute
         liquidation_ratio ; statute
         price_info ; statute
-        byc_issuing_coin_info  ; TODO: simplify -> (parent_id . amount)
+        byc_issuing_coin_parent_id ; verify
         statutes_cumulative_stability_fee_df ; statute
         current_stability_fee_df ; statute
         current_timestamp_in ; to int
@@ -50,13 +50,16 @@
     discounted_borrow_amount (* -1 (/ (* -1 borrow_amount PRECISION) cumulative_stability_fee_df))
     new_discounted_principal (+ DISCOUNTED_PRINCIPAL discounted_borrow_amount)
     ; calculate the coin id for the new BYC coin by enforcing the tail hash
-    byc_issuing_coin_id (calculate-byc-coin-id
-      CAT_MOD_HASH
-      byc_tail_hash
-      (list
-        (f byc_issuing_coin_info)  ; parent_id
-        (r byc_issuing_coin_info)  ; amount
-        RUN_TAIL_MOD_HASH
+    byc_issuing_coin_id (assert
+      (is-size-b32 byc_issuing_coin_parent_id)
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        (list
+          byc_issuing_coin_parent_id
+          borrow_amount
+          RUN_TAIL_MOD_HASH
+        )
       )
     )
     ; multiply current_stability_fee_df six more times onto cumulative_stability_fee_df
@@ -77,8 +80,6 @@
       (> borrow_amount 0)
       (> new_undiscounted_principal minimum_debt_amount)
       (> COLLATERAL (- min_collateral_amount ONE))
-      ; must issue exact borrow amount
-      (= (r byc_issuing_coin_info) borrow_amount)
       (list
         ; updated state
         (list COLLATERAL new_principal AUCTION_STATE INNER_PUZZLE_HASH new_discounted_principal)
@@ -91,13 +92,13 @@
             )
             byc_issuing_coin_id
           )
+          ; validate current timestamp is within bounds
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (assert-statute statutes_puzzle_hash STATUTE_CUMULATIVE_STABILITY_FEE_DF statutes_cumulative_stability_fee_df)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_LIQUIDATION_RATIO_PCT liquidation_ratio)
           (assert-statute statutes_puzzle_hash STATUTE_VAULT_MINIMUM_DEBT minimum_debt_amount)
           (assert-price-info statutes_puzzle_hash price_info)
-          ; validate current timestamp is within bounds
-          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
           (assert-statute statutes_puzzle_hash STATUTE_STABILITY_FEE_DF current_stability_fee_df)
         )
       )

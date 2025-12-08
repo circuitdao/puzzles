@@ -1,6 +1,4 @@
 (
-  ;(defun-inline truth_data_to_truth_struct (my_id full_puzhash innerpuzhash my_amount lineage_proof singleton_struct) (c (c my_id  full_puzhash) (c (c innerpuzhash my_amount) (c lineage_proof singleton_struct)))) ; REMOVED
-
   (defun-inline my_id_truth (Truths) (f (f Truths)))
   (defun-inline my_full_puzzle_hash_truth (Truths) (r (f Truths)))
   (defun-inline my_inner_puzzle_hash_truth (Truths) (f (f (r Truths))))

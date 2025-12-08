@@ -1,8 +1,7 @@
 (mod (SINGLETON_STRUCT INNER_PUZZLE
        ; solution
        lineage_proof
-       ;my_amount ; REMOVED: always 1
-       . ; NEW
+       .
        inner_solution
      )
 
@@ -45,7 +44,6 @@
   (defun-inline launcher_puzzle_hash_for_singleton_struct (SINGLETON_STRUCT) (r (r SINGLETON_STRUCT)))
 
   ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
-  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
   (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
     (curry_hashes (mod_hash_for_singleton_struct SINGLETON_STRUCT)
       (sha256tree SINGLETON_STRUCT)

@@ -14,7 +14,7 @@
          repay_amount_in ; to int. amount of byc to repay
          sf_transfer_amount_in ; to int. amount of accrued SFs to repay (part of repay_amount. gets transferred to treasury)
          statutes_cumulative_stability_fee_df ; statute
-         byc_melting_coin_info ; TODO: simplify
+         byc_melting_coin_parent_id ; verify
          minimum_debt_amount ; statute
          byc_treasury_coin_info ; verified below
          min_treasury_delta ; statute
@@ -47,8 +47,8 @@
     )
     undiscounted_principal (undiscount-principal DISCOUNTED_PRINCIPAL cumulative_stability_fee_df)
     accrued_sf (calculate-total-fees undiscounted_principal PRINCIPAL 0)
-    negative_principal_to_repay (- sf_transfer_amount repay_amount)
-    new_principal (+ PRINCIPAL negative_principal_to_repay)
+    principal_to_repay (- repay_amount sf_transfer_amount)
+    new_principal (- PRINCIPAL principal_to_repay)
     new_discounted_principal (if (= repay_amount undiscounted_principal)
       0
       (- DISCOUNTED_PRINCIPAL
@@ -83,13 +83,16 @@
       ()
     )
     new_treasury_amount (+ sf_transfer_amount treasury_amount)
-    byc_coin_id_to_melt (calculate-byc-coin-id
-      CAT_MOD_HASH
-      byc_tail_hash
-      (list
-        (f byc_melting_coin_info)
-        (r byc_melting_coin_info)
-        RUN_TAIL_MOD_HASH
+    byc_coin_id_to_melt (assert
+      (is-size-b32 byc_melting_coin_parent_id)
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        (list
+          byc_melting_coin_parent_id
+          principal_to_repay
+          RUN_TAIL_MOD_HASH
+        )
       )
     )
     (assert
@@ -120,8 +123,10 @@
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME))
             &rest
-            (if (> negative_principal_to_repay MINUS_ONE)
+            (if (> ONE principal_to_repay)
+              ; not repaying any principal
               (list )
+              ; repaying some principal
               (list
                 ; signal to tail that it can melt the BYC
                 (list SEND_MESSAGE 0x3f
@@ -131,7 +136,7 @@
                       (c  inner_puzzle_hash
                         (c STATUTES_STRUCT
                           (c 'x'
-                            negative_principal_to_repay
+                            (* -1 principal_to_repay)
                           )
                         )
                       )
