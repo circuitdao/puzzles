@@ -25,25 +25,34 @@
     )
     inner_puzzle_hash (sha256tree INNER_PUZZLE)
     (
-      lineage_proof
-      statutes_inner_puzzle_hash
-      current_amount
-      statutes_cumulative_interest_df
-      current_timestamp
-      current_interest_df
-      price_info
-      min_treasury_delta
+      lineage_proof ; don't verify
+      statutes_inner_puzzle_hash ; verify
+      current_amount_in
+      statutes_cumulative_interest_df ; statute
+      current_timestamp_in
+      current_interest_df ; statute
+      price_info ; statute
+      min_treasury_delta ; statute
       (@ treasury_coin_info
         (
           treasury_coin_parent_id treasury_coin_launcher_id
-          treasury_coin_prev_launcher_id treasury_coin_amount
-          treasury_withdraw_amount ; amount of interest to be paid
+          treasury_coin_prev_launcher_id treasury_coin_amount_in
+          treasury_withdraw_amount_in ; amount of interest to be paid
         )
-      )
-      memos ; memos for CREATE_COIN condition
+      ) ; see below
+      memos ; don't verify. memos for CREATE_COIN condition
     ) (f (r (r create_coin_body)))
+    (treasury_coin_amount . treasury_withdraw_amount) (if treasury_coin_info
+      (c (to-uint80 treasury_coin_amount_in) (to-uint80 treasury_withdraw_amount_in))
+      (c () ())
+    )
+    current_amount (to-uint80 current_amount_in)
+    current_timestamp (to-int80 current_timestamp_in)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
+    statutes_puzzle_hash (assert
+      (is-size-b32 statutes_inner_puzzle_hash)
+      (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
+    )
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_interest_df (calculate-cumulative-discount-factor
       statutes_cumulative_interest_df
@@ -52,18 +61,23 @@
       (r price_info)
     )
     (accrued_interest . interest_payment) (if treasury_coin_info
-      (c
-        (calculate-interest
-          DISCOUNTED_BALANCE
-          current_amount
-          (calculate-cumulative-discount-factor ; cumulative withdrawal interest
-            statutes_cumulative_interest_df
-            current_interest_df
-            (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest
-            (r price_info)
+      (assert
+        (is-size-b32 treasury_coin_parent_id)
+        (is-size-b32 treasury_coin_launcher_id)
+        (is-size-b32 treasury_coin_prev_launcher_id)
+        (c
+          (calculate-interest
+            DISCOUNTED_BALANCE
+            current_amount
+            (calculate-cumulative-discount-factor ; cumulative withdrawal interest
+              statutes_cumulative_interest_df
+              current_interest_df
+              (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest
+              (r price_info)
+            )
           )
+          treasury_withdraw_amount
         )
-        treasury_withdraw_amount
       )
       (c 0 0)
     )
