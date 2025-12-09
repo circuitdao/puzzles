@@ -3,9 +3,9 @@
         VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
-      inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (registry_mod_hash registry_args_hash registry_claim_counter
-        target_puzzle_hash statutes_inner_puzzle_hash min_deposit
+      inner_puzzle_hash new_puzzle_hash deposit_in input_conditions
+      (registry_mod_hash registry_args_hash registry_claim_counter_in
+        target_puzzle_hash statutes_inner_puzzle_hash min_deposit_in
       )
      )
 
@@ -19,18 +19,19 @@
   (assign
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
+    (assign
+      ; validate and convert types
+      deposit (to-uint64 deposit_in)
+      registry_claim_counter (to-uint64 registry_claim_counter_in)
+      min_deposit (to-uint64 min_deposit_in)
     (assert
-      ; verify types
       ; don't verify inner_puzzle_hash
       ; don't verify new_puzzle_hash
-      (is-atom deposit)
       ; don't verify input_conditions
       (is-size-b32 registry_mod_hash)
       (is-size-b32 registry_args_hash)
-      (is-atom registry_claim_counter)
       (is-size-b32 target_puzzle_hash)
       (is-size-b32 statutes_inner_puzzle_hash)
-      (is-atom min_deposit)
       inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)
@@ -79,6 +80,6 @@
           )
         )
       )
-    )
+    ))
   )
 )

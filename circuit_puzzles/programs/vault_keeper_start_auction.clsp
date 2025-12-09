@@ -35,7 +35,7 @@
   ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
   ; that does not allow the lender to seize collateral)
   (assign
-    current_timestamp (to-int80 current_timestamp_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     (
       initiator_incentive_flat_fee ; statute
       initiator_incentive_relative_fee_bps ; statute

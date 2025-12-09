@@ -27,7 +27,7 @@
   (include statutes_utils.clib)
 
   (assign
-    current_timestamp (to-int80 current_timestamp_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
       current_stability_fee_df

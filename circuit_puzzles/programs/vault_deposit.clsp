@@ -27,8 +27,8 @@
 
 
  (assign
-   deposit_amount (to-int80 deposit_amount_in)
-   current_timestamp (to-int80 current_timestamp_in)
+   deposit_amount (to-uint64 deposit_amount_in)
+   current_timestamp (to-uint64 current_timestamp_in)
    new_collateral (+ COLLATERAL deposit_amount)
    cumulative_stability_fee_df (calculate-cumulative-discount-factor
      statutes_cumulative_stability_fee_df

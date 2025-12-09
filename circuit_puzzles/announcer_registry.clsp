@@ -109,25 +109,28 @@
       )
       (assign
         statutes_inner_puzzle_hash (f args)
-        rewards_interval (f (r args))
+        rewards_interval_in (f (r args))
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+        rewards_interval (to-uint64 rewards_interval_in)
         (assert
           ; verify types
           (is-size-b32 statutes_inner_puzzle_hash)
-          (is-atom rewards_interval)
           (if (= reward_or_register REWARD_OPCODE)
             ; ### distribute rewards ###
             (assign
               (
                 _ ; statutes_inner_puzzle_hash
                 _ ; rewards interval
-                statutes_price_update_counter
-                rewards_per_interval
+                statutes_price_update_counter_in
+                rewards_per_interval_in
                 issuance_coin_info
                 change_receiver_hash
                 my_coin_id
               ) args
+              ; validate and convert types
+              statutes_price_update_counter (to-uint64 statutes_price_update_counter_in)
+              rewards_per_interval (to-uint64 rewards_per_interval_in)
               announcers_count (list-length ANNOUNCER_REGISTRY 0)
               change_amount (r (divmod rewards_per_interval announcers_count))
               issuance_coin_id (coinid
@@ -140,9 +143,6 @@
                 (r issuance_coin_info)
               )
               (assert
-                ; verify types
-                (is-atom statutes_price_update_counter)
-                (is-atom rewards_per_interval)
                 ; don't verify issuance_coin_info
                 (is-size-b32 change_receiver_hash)
                 (is-size-b32 my_coin_id)

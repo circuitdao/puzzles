@@ -33,8 +33,8 @@
   (include curry.clib)
 
   (assign
-    borrow_amount (to-int80 borrow_amount_in)
-    current_timestamp (to-int80 current_timestamp_in)
+    borrow_amount (to-uint64 borrow_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     ; we want cat puzzle to use the same statutes struct in the tail as this puzzle
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     ; calculate the latest cumulative stability fee discount factor

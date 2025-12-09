@@ -17,19 +17,28 @@
     (not (l var))
   )
 
-  ; return var converted to int if var is a positive int shorter than 10 bytes, else nil
-  (defun-inline to-int80 (var)
+  ; Validate and convert var to signed 64-bit integer (range: -2^63 to 2^63-1).
+  ; 64 bits is sufficient because:
+  ; - Rarely used in practice (most values are non-negative)
+  ; - Protocol parameters (deltas, time differences) fit comfortably within signed 64-bit range
+  ; - Keeps atoms compact (8 bytes) for efficient serialization
+  (defun-inline to-int64 (var)
     (assert
-      (> 10 (strlen var))
+      (> 9 (strlen var))
       (+ var)
     )
   )
 
-  ; return var converted to int if var is a non-negative int shorter than 10 bytes, else nil
-  (defun-inline to-uint80 (var)
+  ; Validate and convert var to unsigned 64-bit integer (range: 0 to 2^64-1 = ~18.4 quintillion).
+  ; 64 bits is sufficient because:
+  ; - Coin amounts are capped at uint64 by Chia consensus (max ~18.4e18 mojos = ~18.4 million XCH)
+  ; - Timestamps fit well beyond year 2100+ (current Unix time ~1.7e9, 2^64 seconds = ~584 billion years)
+  ; - Prices, fees, BPS values, and other protocol parameters are well within this range
+  ; - Keeps atoms compact (8 bytes) for efficient serialization and validation
+  (defun-inline to-uint64 (var)
     (assert
       (> var MINUS_ONE) ; encodes into ints automatically
-      (> 10 (strlen var))
+      (> 9 (strlen var))
       (+ var)  ; encode to int
     )
   )

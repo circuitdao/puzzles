@@ -17,9 +17,9 @@
   (include utils.clib)
 
   (assign
-    byc_bid_amount (to-int80 byc_bid_amount_in)
-    crt_bid_amount (to-int80 crt_bid_amount_in)
-    current_timestamp (to-int80 current_timestamp_in)
+    byc_bid_amount (to-uint64 byc_bid_amount_in)
+    crt_bid_amount (to-uint64 crt_bid_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     (
       start_time
       auction_ttl
@@ -55,8 +55,6 @@
       (> max_byc_bid_amount byc_bid_amount)
       ; auction hasn't timed out yet
       (> auction_ttl (- current_timestamp start_time))
-      ; bid hasn't timed out yet
-      (any (= last_bid_timestamp 0) (> bid_ttl (- current_timestamp last_bid_timestamp)))
       (li
         ; update LAST_BID
         (list

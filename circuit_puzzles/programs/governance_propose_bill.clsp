@@ -2,15 +2,15 @@
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
      statutes_puzzle_hash)
     (
-      amount
-      bill_proposal_fee_mojos
+      amount_in
+      bill_proposal_fee_mojos_in
       (@ new_bill (
-        statute_index
+        statute_index_in
         new_statute_value
-        new_threshold_amount_to_propose
-        new_veto_interval
-        new_implementation_delay
-        new_max_delta
+        new_threshold_amount_to_propose_in
+        new_veto_interval_in
+        new_implementation_delay_in
+        new_max_delta_in
       ))
       (@ current_statute (
         statute_value
@@ -19,8 +19,8 @@
         implementation_delay
         max_delta
       ))
-      current_timestamp
-      implementation_interval
+      current_timestamp_in
+      implementation_interval_in
     )
   )
 
@@ -41,84 +41,95 @@
             (= statute_index STATUTE_STABILITY_FEE_DF)
             (= statute_index STATUTE_INTEREST_DF)
           )
-          ; must be at least PRECISION for non-negative rates
-          (> new_statute_value (- PRECISION ONE))
-          (if (any
-                (= statute_index STATUTE_ORACLE_M_OF_N)
-                (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
-                (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
-                (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
-                (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
-              )
-              (> new_statute_value 0) ; must be strictly positive
-              ONE ; allow 0 for other statutes
-          )
+        ; must be at least PRECISION for non-negative rates
+        (> new_statute_value (- PRECISION ONE))
+        (if (any
+              (= statute_index STATUTE_ORACLE_M_OF_N)
+              (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
+              (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
+              (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
+              (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
+            )
+          (> new_statute_value 0) ; must be strictly larger than 0
+          ONE ; allow 0 for other statutes
+        )
       )
     )
   )
 
-  (assert
-    ; verify types
-    (is-atom amount) (is-atom bill_proposal_fee_mojos) (is-atom statute_index)
-    (is-atom new_threshold_amount_to_propose) (is-atom new_veto_interval) (is-atom new_implementation_delay)
-    (is-atom new_max_delta) (is-atom current_timestamp) (is-atom implementation_interval)
-    (if (= statute_index MINUS_ONE)
-      ; custom conditions: must be a list
-      (l new_statute_value)
-      (if (= statute_index STATUTE_ORACLE_LAUNCHER_ID)
-        ; oracle launcher id: must be 32 bytes
-        (is-size-b32 new_statute_value)
-        ; standard statutes (index > 0)
-        (all
-          (is-atom new_statute_value)
-          (validate-statute-value statute_index new_statute_value)
-        )
-      )
-    )
-    (> INTERVAL_UPPER_HARD_LIMIT (- new_veto_interval ONE))
-    (> (+ new_veto_interval ONE) INTERVAL_LOWER_HARD_LIMIT)
-    (> INTERVAL_UPPER_HARD_LIMIT (- new_implementation_delay ONE))
-    ; may not overwrite an existing bill
-    (not BILL)
-    (> amount threshold_amount_to_propose)
-    (all (> new_threshold_amount_to_propose 0) (> MAINTAINER_MIN_VOTE_AMOUNT new_threshold_amount_to_propose))
-    (> new_veto_interval 0)
-    (> new_implementation_delay 0)
-    ; if max_delta is set and applicable to statute, we enforce it
-    (if (any (= max_delta 0) (> ONE statute_index))
-      ONE  ; max_delta=0 disables the delta check entirely
-      ; or new value must be within max_delta of current value
-      (if (> new_statute_value statute_value)
-        (> max_delta (- new_statute_value statute_value))
-        (> max_delta (- statute_value new_statute_value))
-      )
-    )
-    (list
-      (c
-        ; set proposal times
-        (c (+ current_timestamp veto_interval) ; veto_interval_expiry
-          (c (+ current_timestamp veto_interval implementation_delay) ; implementation_delay_expiry
-            (+ current_timestamp veto_interval implementation_delay implementation_interval) ; implementation_interval_expiry
+  (assign
+    ; validate and convert types
+    amount (to-uint64 amount_in)
+    bill_proposal_fee_mojos (to-uint64 bill_proposal_fee_mojos_in)
+    statute_index (to-int64 statute_index_in) ; can be -1 for custom conditions
+    new_threshold_amount_to_propose (to-uint64 new_threshold_amount_to_propose_in)
+    new_veto_interval (to-uint64 new_veto_interval_in)
+    new_implementation_delay (to-uint64 new_implementation_delay_in)
+    new_max_delta (to-uint64 new_max_delta_in)
+    current_timestamp (to-uint64 current_timestamp_in)
+    implementation_interval (to-uint64 implementation_interval_in)
+    (assert
+      (if (= statute_index MINUS_ONE)
+        ; custom conditions: must be a list
+        (l new_statute_value)
+        (if (= statute_index STATUTE_ORACLE_LAUNCHER_ID)
+          ; oracle launcher id: must be 32 bytes
+          (is-size-b32 new_statute_value)
+          ; standard statutes (index > 0)
+          (all
+            (is-atom new_statute_value)
+            (validate-statute-value
+              statute_index
+              new_statute_value
+            )
           )
         )
-        new_bill
+      )
+      (> INTERVAL_UPPER_HARD_LIMIT (- new_veto_interval ONE))
+      (> (+ new_veto_interval ONE) INTERVAL_LOWER_HARD_LIMIT)
+      (> INTERVAL_UPPER_HARD_LIMIT (- new_implementation_delay ONE))
+      ; may not overwrite an existing bill
+      (not BILL)
+      (> amount threshold_amount_to_propose)
+      (all (> new_threshold_amount_to_propose 0) (> MAINTAINER_MIN_VOTE_AMOUNT new_threshold_amount_to_propose))
+      (> new_veto_interval 0)
+      (> new_implementation_delay 0)
+      ; if max_delta is set and applicable to statute, we enforce it
+      (if (any (= max_delta 0) (> ONE statute_index))
+        ONE  ; max_delta=0 disables the delta check entirely
+        ; or new value must be within max_delta of current value
+        (if (> new_statute_value statute_value)
+          (> max_delta (- new_statute_value statute_value))
+          (> max_delta (- statute_value new_statute_value))
+        )
       )
       (list
-        ; to avoid the network being spammed with proposals, we require a fee to be paid
-        (list RESERVE_FEE bill_proposal_fee_mojos)
-        (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
-        ; assert that passed statute index corresponds to correct statute
-        ; and that passed statute values are correct
-        (assert-full-statute
-          statutes_puzzle_hash
-          ; we use special statute for custom conditions limits
-          (if (= statute_index MINUS_ONE) STATUTE_CUSTOM_CONDITIONS statute_index)
-          current_statute
+        (c
+          ; set proposal times
+          (c (+ current_timestamp veto_interval) ; veto_interval_expiry
+            (c (+ current_timestamp veto_interval implementation_delay) ; implementation_delay_expiry
+              (+ current_timestamp veto_interval implementation_delay implementation_interval) ; implementation_interval_expiry
+            )
+          )
+          new_bill
         )
-        (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-        (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
-        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_BILL_PROPOSAL_FEE_MOJOS bill_proposal_fee_mojos)
-        (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_IMPLEMENTATION_INTERVAL implementation_interval)
+        (list
+          ; to avoid the network being spammed with proposals, we require a fee to be paid
+          (list RESERVE_FEE bill_proposal_fee_mojos)
+          (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX (sha256tree ANN_PROPOSED)))
+          ; assert that passed statute index corresponds to correct statute
+          ; and that passed statute values are correct
+          (assert-full-statute
+            statutes_puzzle_hash
+            ; we use special statute for custom conditions limits
+            (if (= statute_index MINUS_ONE) STATUTE_CUSTOM_CONDITIONS statute_index)
+            current_statute
+          )
+          (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
+          (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
+          (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_BILL_PROPOSAL_FEE_MOJOS bill_proposal_fee_mojos)
+          (assert-statute statutes_puzzle_hash STATUTE_GOVERNANCE_IMPLEMENTATION_INTERVAL implementation_interval)
+        )
       )
     )
   )

@@ -20,15 +20,14 @@
   (include announcer.clib)
 
 
+  (assign
+    ; validate and convert types
+    validated_deposit (to-uint64 deposit)
+    validated_max_penalty_or_min (to-uint64 max_disapproval_penalty_factor_or_min_deposit)
+    ; input_toggle_activation is boolean (0/1), keep as is-atom check below
   (assert
-    ; verify types
-    ; don't verify inner_puzzle_hash
-    ; don't verify new_puzzle_hash
-    (is-atom deposit)
-    ; don't verify input_conditions
     (is-size-b32 statutes_inner_puzzle_hash)
-    (is-atom input_toggle_activation)
-    (is-atom max_disapproval_penalty_factor_or_min_deposit)
+    (not (l input_toggle_activation)) ; is-atom check for boolean
     (assign
       toggle_activation (assert
         (any
@@ -45,7 +44,7 @@
         INNER_PUZZLE_HASH
         toggle_activation
         DEPOSIT
-        deposit
+        validated_deposit
         VALUE_TTL
         VALUE
         MIN_DEPOSIT
@@ -56,14 +55,14 @@
         (if (= toggle_activation FALSE)
           ; we're disapproving. use deposit for fees
           (assign
-            min_penalized_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor_or_min_deposit) PRECISION) PRECISION_BPS))
+            min_penalized_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION validated_max_penalty_or_min) PRECISION) PRECISION_BPS))
             (assert
               ; can't deduct more for fees than penalty
-              (all (> (+ DEPOSIT ONE) deposit) (> deposit (- min_penalized_deposit ONE)))
+              (all (> (+ DEPOSIT ONE) validated_deposit) (> validated_deposit (- min_penalized_deposit ONE)))
               (c
-                (list RESERVE_FEE (- DEPOSIT deposit))
+                (list RESERVE_FEE (- DEPOSIT validated_deposit))
                 (c
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS max_disapproval_penalty_factor_or_min_deposit)
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS validated_max_penalty_or_min)
                   input_conditions
                 )
               )
@@ -74,12 +73,12 @@
             ; we're not requiring that VALUE_TTL <= Statutes max value TTL or that price is not expired in case an announcer has a
             ;  technical issue just when governance wants to implement approval bill. but we always want DEPOSIT and MIN_DEPOSIT
             ;  to be set properly so that announcer can be penalized
-            (= deposit DEPOSIT) ; can't steal deposit
+            (= validated_deposit DEPOSIT) ; can't steal deposit
             ; deposit must be no less than both announcer and statutes min deposit
-            (> deposit (- MIN_DEPOSIT ONE))
-            (> MIN_DEPOSIT (- max_disapproval_penalty_factor_or_min_deposit ONE))
+            (> validated_deposit (- MIN_DEPOSIT ONE))
+            (> MIN_DEPOSIT (- validated_max_penalty_or_min ONE))
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS max_disapproval_penalty_factor_or_min_deposit)
+              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS validated_max_penalty_or_min)
               input_conditions
             )
           )
@@ -98,5 +97,5 @@
         operation_conditions
       )
     )
-  )
+  ))
 )

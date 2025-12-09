@@ -3,8 +3,8 @@
        VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
-      inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (penalty_per_interval_bps statutes_inner_puzzle_hash penalty_interval_in_minutes min_deposit max_value_ttl current_timestamp)
+      inner_puzzle_hash new_puzzle_hash deposit_in input_conditions
+      (penalty_per_interval_bps_in statutes_inner_puzzle_hash penalty_interval_in_minutes_in min_deposit_in max_value_ttl_in current_timestamp_in)
      )
 
   (include *standard-cl-23.1*)
@@ -14,18 +14,16 @@
   (include statutes_utils.clib)
   (include announcer.clib)
 
+  (assign
+    ; validate and convert types
+    deposit (to-uint64 deposit_in)
+    penalty_per_interval_bps (to-uint64 penalty_per_interval_bps_in)
+    penalty_interval_in_minutes (to-uint64 penalty_interval_in_minutes_in)
+    min_deposit (to-uint64 min_deposit_in)
+    max_value_ttl (to-uint64 max_value_ttl_in)
+    current_timestamp (to-uint64 current_timestamp_in)
   (assert
-    ; verify types
-    ; don't verify new_puzzle_hash
-    ; don't verify new_puzzle_hash
-    (is-atom deposit)
-    ; don't verify input_conditions
-    (is-atom penalty_per_interval_bps)
     (is-size-b32 statutes_inner_puzzle_hash)
-    (is-atom penalty_interval_in_minutes)
-    (is-atom min_deposit)
-    (is-atom max_value_ttl)
-    (is-atom current_timestamp)
     (assign
       penalized_deposit
         ; if not expired, we penalize per full deposit
@@ -83,5 +81,5 @@
         )
       )
     )
-  )
+  ))
 )

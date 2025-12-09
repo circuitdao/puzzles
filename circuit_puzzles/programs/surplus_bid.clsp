@@ -24,9 +24,9 @@
   (include utils.clib)
 
   (assign
-    crt_bid_amount (to-int80 crt_bid_amount_in)
-    current_timestamp (to-int80 current_timestamp_in)
-    my_amount (to-uint80 my_amount_in)
+    crt_bid_amount (to-uint64 crt_bid_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
+    my_amount (to-uint64 my_amount_in)
     (last_target_puzzle_hash . last_bid_timestamp) (if LAST_BID LAST_BID (c 0 0))
     (assert
       ; verify types
@@ -34,8 +34,6 @@
       (is-size-b32 my_coin_id)
       ; must be higher than current bid (keepers are bidding for smallest amount of CRT per BYC lot)
       (any (all (= my_amount 0) (> crt_bid_amount 0)) (> crt_bid_amount my_amount))
-      ; TTL for bid hasn't expired yet
-      (any (not last_bid_timestamp) (> BID_TTL (- current_timestamp last_bid_timestamp)))
       ; crt_bid_amount is min_price_increase_bps higher than my_amount
       (> crt_bid_amount (/ (* my_amount (+ PRECISION_BPS MIN_PRICE_INCREASE_BPS)) PRECISION_BPS))
       (li

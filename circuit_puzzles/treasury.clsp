@@ -50,7 +50,7 @@
       ; note: run_tail_mod_hash must be provided when recovering bad debt or else set to nil
       . args
     ) solution
-    current_amount (to-uint80 current_amount_in)
+    current_amount (to-uint64 current_amount_in)
     statutes_puzzle_hash (assert
       (is-size-b32 statutes_inner_puzzle_hash)
       (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
@@ -99,7 +99,7 @@
       ; this is eve spend, assert launcher id
       LAUNCHER_ID
     )
-    new_amount (to-uint80
+    new_amount (to-uint64
       (if rebalance_args
         (f (r (r (r (r (r (r (r rebalance_args))))))))
         (if (l args)
@@ -164,36 +164,37 @@
                     min_coin_info ; see below
                     max_coin_info ; see below
                     rebalance_ratio_pct ; statute
-                    prev_delta_sum ; is atom
+                    prev_delta_sum_in
                     baseline_amount_in
                   ) rebalance_args
-                  baseline_amount (to-uint80 baseline_amount_in)
+                  baseline_amount (to-uint64 baseline_amount_in)
                   delta (- new_amount current_amount)
-                  delta_sum (+ delta (assert (is-atom prev_delta_sum) prev_delta_sum))
+                  prev_delta_sum (to-int64 prev_delta_sum_in) ; delta sum can be negative
+                  delta_sum (+ delta prev_delta_sum)
                   (
                     prev_parent_id
                     prev_curried_args_hash
                     prev_amount_in
                   ) prev_coin_info
-                  prev_amount (to-uint80 prev_amount_in)
+                  prev_amount (to-uint64 prev_amount_in)
                   (
                     next_parent_id
                     next_curried_args_hash
                     next_amount_in
                   ) next_coin_info
-                  next_amount (to-uint80 next_amount_in)
+                  next_amount (to-uint64 next_amount_in)
                   (
                     min_parent_id
                     min_curried_args_hash
                     min_amount_in
                   ) min_coin_info
-                  min_amount (to-uint80 min_amount_in)
+                  min_amount (to-uint64 min_amount_in)
                   (
                     max_parent_id
                     max_curried_args_hash
                     max_amount_in
                   ) max_coin_info
-                  max_amount (to-uint80 max_amount_in)
+                  max_amount (to-uint64 max_amount_in)
                   prev_coin_id (coinid
                     prev_parent_id
                     (curry_hashes CAT_MOD_HASH
@@ -235,6 +236,8 @@
                     (> new_amount (- baseline_amount 1))
                     (> (+ baseline_amount 2) new_amount)
                     ; percentage delta between min and max treasury coin amount must exceed threshold
+                    ; NOTE: min_amount must be > 0 to prevent threshold bypass (division by zero edge case)
+                    (> min_amount 0)
                     (> (* (- max_amount min_amount) PRECISION_PCT) (* min_amount rebalance_ratio_pct))
                     (li
                       ; receive message from predecessor coin
@@ -282,7 +285,7 @@
                       _ ; new_amount extracted above
                       run_tail_mod_hash
                     ) args
-                    approver_amount (to-uint80 approver_amount_in)
+                    approver_amount (to-uint64 approver_amount_in)
                     approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
                     approver_coin_id (coinid
                       approver_parent_id

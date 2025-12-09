@@ -43,11 +43,11 @@
       memos ; don't verify. memos for CREATE_COIN condition
     ) (f (r (r create_coin_body)))
     (treasury_coin_amount . treasury_withdraw_amount) (if treasury_coin_info
-      (c (to-uint80 treasury_coin_amount_in) (to-uint80 treasury_withdraw_amount_in))
+      (c (to-uint64 treasury_coin_amount_in) (to-uint64 treasury_withdraw_amount_in))
       (c () ())
     )
-    current_amount (to-uint80 current_amount_in)
-    current_timestamp (to-int80 current_timestamp_in)
+    current_amount (to-uint64 current_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     statutes_puzzle_hash (assert
       (is-size-b32 statutes_inner_puzzle_hash)

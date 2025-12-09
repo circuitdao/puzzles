@@ -28,8 +28,8 @@
 
 
   (assign
-    withdraw_amount (to-int80 withdraw_amount_in)
-    current_timestamp (to-int80 current_timestamp_in)
+    withdraw_amount (to-uint64 withdraw_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     new_collateral (- COLLATERAL withdraw_amount)
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df

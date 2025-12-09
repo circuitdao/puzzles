@@ -24,14 +24,14 @@
   (include recharge_auction.clib)
 
   (assign
-    current_time (to-int80 current_time_in)
-    auction_ttl (to-int80 auction_ttl_in)
-    bid_ttl (to-int80 bid_ttl_in)
-    min_crt_price (to-int80 min_crt_price_in)
-    min_byc_bid_amount (to-int80 min_byc_bid_amount_in)
-    min_price_increase_bps (to-int80 min_price_increase_bps_in)
-    max_byc_bid_amount (to-int80 max_byc_bid_amount_in)
-    treasury_minimum (to-int80 treasury_minimum_in)
+    current_time (to-uint64 current_time_in)
+    auction_ttl (to-uint64 auction_ttl_in)
+    bid_ttl (to-uint64 bid_ttl_in)
+    min_crt_price (to-uint64 min_crt_price_in)
+    min_byc_bid_amount (to-uint64 min_byc_bid_amount_in)
+    min_price_increase_bps (to-uint64 min_price_increase_bps_in)
+    max_byc_bid_amount (to-uint64 max_byc_bid_amount_in)
+    treasury_minimum (to-uint64 treasury_minimum_in)
     ; (partly) verify treasury coins in deposit-to-treasury
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     auction_params (list

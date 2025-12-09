@@ -7,6 +7,9 @@
   (defun-inline get-min-collateral-amount (debt liquidation_ratio_pct xch_price)
     ; returns min collateral value for given debt, liquidation ratio and XCH price. Multiplications by -1 to ceil the division
     ; used when withdrawing collateral and starting liquidation auctions
+    ; SECURITY NOTE: xch_price must be > 0 to avoid division by zero.
+    ; This is enforced by oracle_mutation.clsp line 67: (> median_price 0)
+    ; and governance_propose_bill.clsp validates STATUTE_ORACLE_M_OF_N > 0
     (* MINUS_ONE (/ (* MINUS_ONE debt PRICE_PRECISION liquidation_ratio_pct MOJOS) (* xch_price PRECISION_PCT 1000)))
   )
 

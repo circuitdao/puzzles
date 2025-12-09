@@ -30,8 +30,8 @@
   (include curry.clib)
 
   (assign
-    current_timestamp (to-int80 current_timestamp_in)
-    byc_bid_amount (to-int80 byc_bid_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
+    byc_bid_amount (to-uint64 byc_bid_amount_in)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     ; parse auction state as we'll need to verify it's still running and hasn't timed out
@@ -65,6 +65,8 @@
     debt (+ initiator_incentive_balance byc_to_treasury_balance byc_to_melt_balance)
     leftover_debt (- debt byc_bid_amount)
     ; calculate auction price
+    ; NOTE: step_time_interval > 0 is validated by governance (STATUTE_VAULT_AUCTION_PRICE_TTL)
+    ; NOTE: start_price derived from oracle price * starting_price_factor_bps, both validated > 0
     auction_price (-
       (* start_price PRECISION_BPS)
       (*
@@ -79,6 +81,7 @@
       ) ; total price decrease
     ) ; auction price
     ; use all byc provided by keeper to get a piece of collateral
+    ; NOTE: auction_price > min_price is validated below, which prevents division by zero/negative
     bid_xch_collateral_amount_pre (/
       (/
         (* byc_bid_amount PRECISION_BPS PRICE_PRECISION MOJOS)
@@ -109,7 +112,7 @@
       ()
     )
     (treasury_parent_id treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount_in) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
-    treasury_amount (to-uint80 treasury_amount_in)
+    treasury_amount (to-uint64 treasury_amount_in)
     treasury_coin_id (if byc_treasury_coin_info
       (assert
         (is-size-b32 treasury_parent_id)

@@ -6,8 +6,8 @@
      statutes_puzzle_hash
     )
     (
-      amount
-      current_timestamp
+      amount_in
+      current_timestamp_in
     )
   )
 
@@ -31,10 +31,11 @@
       new_delay_seconds
       new_max_delta
     ) BILL
+    (assign
+      ; validate and convert types
+      amount (to-uint64 amount_in)
+      current_timestamp (to-uint64 current_timestamp_in)
     (assert
-      ; verify types
-      (is-atom amount)
-      (is-atom current_timestamp)
       (if (all (> amount MAINTAINER_MIN_VOTE_AMOUNT) (> MAINTAINER_END_PERIOD current_timestamp))
         ONE ; maintainer can implement bills before veto period and/or implementation delay expired
         ; o/w can only implement in implementation interval
@@ -56,6 +57,6 @@
           (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp (* 5 MAX_TX_BLOCK_TIME)))
         )
       )
-    )
+    ))
   )
 )

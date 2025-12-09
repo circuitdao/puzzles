@@ -28,8 +28,8 @@
   ;   operation_conditions
   ; )
   (assign
-    oracle_price (to-uint80 oracle_price_in) ; we allow 0 in case a different oracle allows this
-    oracle_price_timestamp (to-int80 oracle_price_timestamp_in)
+    oracle_price (to-uint64 oracle_price_in) ; we allow 0 in case a different oracle allows this
+    oracle_price_timestamp (to-uint64 oracle_price_timestamp_in)
     (list
       () ; set PREV_ANNOUNCE to nil
       STATUTES ; no change to Statutes

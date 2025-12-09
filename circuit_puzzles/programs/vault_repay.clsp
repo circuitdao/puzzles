@@ -34,9 +34,9 @@
   (include vault.clib)
 
   (assign
-    repay_amount (to-int80 repay_amount_in)
-    sf_transfer_amount (to-int80 sf_transfer_amount_in)
-    current_timestamp (to-int80 current_timestamp_in)
+    repay_amount (to-uint64 repay_amount_in)
+    sf_transfer_amount (to-uint64 sf_transfer_amount_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -63,7 +63,7 @@
         (f price_info)
     )
     (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
-    treasury_amount (to-uint80 treasury_amount_in)
+    treasury_amount (to-uint64 treasury_amount_in)
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
         CAT_MOD_HASH

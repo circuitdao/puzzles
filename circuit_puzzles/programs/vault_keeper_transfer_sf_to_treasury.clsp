@@ -32,7 +32,7 @@
   (include curry.clib)
 
   (assign
-    current_timestamp (to-int80 current_timestamp_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -48,7 +48,7 @@
     )
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
     (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) byc_treasury_coin_info
-    treasury_amount (to-uint80 treasury_amount_in)
+    treasury_amount (to-uint64 treasury_amount_in)
     new_treasury_amount (+ fees_to_treasury treasury_amount)
     byc_issuing_coin_id (assert
       (is-size-b32 byc_issuing_coin_parent_id)

@@ -24,18 +24,18 @@
 
   (assign
     ; convert int args to int
-    m_of_n (to-int80 m_of_n_in)
-    price_updatable_after_seconds (to-int80 price_updatable_after_seconds_in)
-    price_updatable_threshold_bps (to-int80 price_updatable_threshold_bps_in)
-    price_delay (to-int80 price_delay_in)
-    current_timestamp (to-int80 current_timestamp_in)
+    m_of_n (to-uint64 m_of_n_in)
+    price_updatable_after_seconds (to-uint64 price_updatable_after_seconds_in)
+    price_updatable_threshold_bps (to-uint64 price_updatable_threshold_bps_in)
+    price_delay (to-uint64 price_delay_in)
+    current_timestamp (to-uint64 current_timestamp_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     ; number of announcers being used in oracle price update
     price_announcers_length (list-length price_announcers 0)
     ; extract and sort announcer prices in ascending order
     sorted_prices (mergesort price_announcers)
     ; get (upper) median price
-    median_price (to-int80 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
+    median_price (to-uint64 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
     conditions (generate-announcer-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
@@ -53,7 +53,7 @@
     (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item PRICE_INFOS)
-    (assert_debug
+    (assert
       (> median_price MINUS_ONE) (> MAX_ORACLE_PRICE median_price)
       ; verify types
       (is-size-b32 statutes_inner_puzzle_hash)
