@@ -83,17 +83,20 @@
       ()
     )
     new_treasury_amount (+ sf_transfer_amount treasury_amount)
-    byc_coin_id_to_melt (assert
-      (is-size-b32 byc_melting_coin_parent_id)
-      (calculate-byc-coin-id
-        CAT_MOD_HASH
-        byc_tail_hash
-        (list
-          byc_melting_coin_parent_id
-          principal_to_repay
-          RUN_TAIL_MOD_HASH
+    byc_coin_id_to_melt (if byc_melting_coin_parent_id
+      (assert
+        (is-size-b32 byc_melting_coin_parent_id)
+        (calculate-byc-coin-id
+          CAT_MOD_HASH
+          byc_tail_hash
+          (list
+            byc_melting_coin_parent_id
+            principal_to_repay
+            RUN_TAIL_MOD_HASH
+          )
         )
       )
+      ()
     )
     (assert
       (is-size-b32-or-nil treasury_parent_id)
