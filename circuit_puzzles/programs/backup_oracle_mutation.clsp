@@ -1,10 +1,12 @@
 (mod (ATOM_ANNOUNCER_MOD_HASH
+      M_OF_N ; overwrites m_of_n op arg
+      WHITELIST ; launcher IDs of whitelisted announcers
       MOD_HASH
       STATUTES_STRUCT
       PRICE_INFOS
       (
         statutes_inner_puzzle_hash
-        m_of_n_in
+        _ ; m_of_n not needed by backup oracle
         price_updatable_after_seconds_in
         price_updatable_threshold_bps_in
         price_delay_in
@@ -22,21 +24,59 @@
   (include oracle.clib)
   (defconst MAX_ORACLE_PRICE (* 1000000 PRICE_PRECISION))
 
+
+  (defun generate-whitelisted-announcer-conditions (
+      WHITELIST
+      STATUTES_STRUCT
+      ATOM_ANNOUNCER_MOD_HASH
+      ( (launcher_id args_hash price) . rest_price_announcers)
+      list_to_append_to
+    )
+    (assert
+      ; verify types
+      (is-size-b32 launcher_id)
+      (is-size-b32 args_hash)
+      (contains WHITELIST launcher_id)
+      ; we don't need to verify that announcer is not expired since it's already checked in announcer puzzle
+      (c
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
+            PROTOCOL_PREFIX
+            (sha256tree
+              (c STATUTES_STRUCT (c launcher_id (c ONE (to-uint80 price)))) ; ONE indicates that announcer is approved
+            )
+          )
+        )
+        (if rest_price_announcers
+          (generate-whitelisted-announcer-conditions
+            WHITELIST
+            STATUTES_STRUCT
+            ATOM_ANNOUNCER_MOD_HASH
+            rest_price_announcers
+            list_to_append_to
+          )
+          list_to_append_to
+        )
+      )
+    )
+  )
+
+
   (assign
-    ; convert int args to int
-    m_of_n (to-uint64 m_of_n_in)
-    price_updatable_after_seconds (to-uint64 price_updatable_after_seconds_in)
-    price_updatable_threshold_bps (to-uint64 price_updatable_threshold_bps_in)
-    price_delay (to-uint64 price_delay_in)
-    current_timestamp (to-uint64 current_timestamp_in)
+    price_updatable_after_seconds (to-uint80 price_updatable_after_seconds_in)
+    price_updatable_threshold_bps (to-uint80 price_updatable_threshold_bps_in)
+    price_delay (to-uint80 price_delay_in)
+    current_timestamp (to-uint80 current_timestamp_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     ; number of announcers being used in oracle price update
     price_announcers_length (list-length price_announcers 0)
     ; extract and sort announcer prices in ascending order
     sorted_prices (mergesort price_announcers)
     ; get (upper) median price
-    median_price (to-uint64 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
-    conditions (generate-announcer-conditions
+    median_price (to-uint80 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
+    conditions (generate-whitelisted-announcer-conditions
+      WHITELIST
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH
       price_announcers
@@ -53,13 +93,12 @@
     (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item PRICE_INFOS)
-    (assert
+    (assert_debug
       (> median_price MINUS_ONE) (> MAX_ORACLE_PRICE median_price)
       ; verify types
       (is-size-b32 statutes_inner_puzzle_hash)
-      ; don't verify launcher_ids and args_hashes of price_announcers
       ; oracle price update requires at least M-of-N announcers
-      (> price_announcers_length (- m_of_n ONE))
+      (> price_announcers_length (- M_OF_N ONE))
       ; check that no announcer is being used more than once
       (unique price_announcers)
       ; oracle price must be greater than 0
@@ -76,7 +115,6 @@
         ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
         (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
         (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
-        (assert-statute statutes_puzzle_hash STATUTE_ORACLE_M_OF_N m_of_n)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_DELAY price_updatable_after_seconds)
         (assert-statute statutes_puzzle_hash STATUTE_ORACLE_PRICE_UPDATE_RATIO_BPS price_updatable_threshold_bps)
         (assert-statute statutes_puzzle_hash STATUTE_PRICE_DELAY price_delay)
@@ -100,7 +138,7 @@
           ; min singleton amount, force it to be ONE
           ONE
         )
-        (list REMARK PROTOCOL_PREFIX new_price_infos last_matured_price)
+        (list REMARK new_price_infos last_matured_price)
         &rest
         conditions
       )
