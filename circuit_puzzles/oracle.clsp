@@ -51,7 +51,7 @@
           ; don't verify statutes_inner_puzzle_hash
           cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
           (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
-          (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
+          (last_matured_price . last_matured_price_timestamp) (if last_matured_price_info last_matured_price_info (c () ()))
           (li
             ; can only announce the price if we're updating statutes
             (if statutes_inner_puzzle_hash
@@ -70,13 +70,13 @@
               ; min singleton amount, force it to be this
               ONE
             )
-            (if last_matured_price_updated
+            (if last_matured_price_timestamp
               (list CREATE_PUZZLE_ANNOUNCEMENT
-                (sha256tree (c last_matured_price (c last_matured_price_updated price_delay)))
+                (sha256tree (c last_matured_price (c last_matured_price_timestamp price_delay)))
               )
               (x)  ; no matured price infos available, fail. this can only occur during launch
             )
-            (list REMARK last_matured_price last_matured_price_updated current_timestamp price_delay)
+            (list REMARK PROTOCOL_PREFIX last_matured_price last_matured_price_timestamp current_timestamp price_delay)
             ; ensure current timestamp is in range last_block > current_timestamp - 1 block < next block
             (list ASSERT_BEFORE_SECONDS_ABSOLUTE (+ current_timestamp MAX_TX_BLOCK_TIME ))
             (list ASSERT_SECONDS_ABSOLUTE (- current_timestamp MAX_TX_BLOCK_TIME))
