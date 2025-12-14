@@ -28,6 +28,7 @@
       ; don't verify inner_puzzle_hash
       ; don't verify new_puzzle_hash
       ; don't verify input_conditions
+      (not new_puzzle_hash)
       (is-size-b32 registry_mod_hash)
       (is-size-b32 registry_args_hash)
       (is-size-b32 target_puzzle_hash)

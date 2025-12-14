@@ -36,6 +36,7 @@
         )
       statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
       (assert
+        (not new_puzzle_hash)
         ; must be past penalty timestamp to penalize
         (> current_timestamp PENALIZABLE_AT)
         (any

@@ -25,12 +25,8 @@
   )
 
   (if (all
+        (not new_puzzle_hash)
         ; verify types
-        ; don't verify inner_puzzle_hash
-        (if new_puzzle_hash
-          (= (strlen new_puzzle_hash) 32)
-          ONE
-        )
         (not (l deposit))
         ; don't verify input_conditions
         (not (l current_timestamp))
@@ -52,7 +48,7 @@
               (sha256tree STATUTES_STRUCT)
               (sha256 ONE LAUNCHER_ID)
               (sha256 ONE FALSE)
-              (sha256 ONE (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
+              (sha256 ONE INNER_PUZZLE_HASH)
               (sha256 ONE APPROVED)
               (sha256 ONE DEPOSIT)
               (sha256 ONE deposit)
@@ -65,14 +61,14 @@
               (sha256 ONE (+ current_timestamp VALUE_TTL))
             )
             deposit
-            (list (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH))
+            (list INNER_PUZZLE_HASH)
           )
           (c
             (list REMARK
               PROTOCOL_PREFIX
               LAUNCHER_ID
               FALSE
-              (if new_puzzle_hash new_puzzle_hash INNER_PUZZLE_HASH)
+              INNER_PUZZLE_HASH
               DEPOSIT
               deposit
               APPROVED

@@ -37,8 +37,8 @@
   ; - Keeps atoms compact (8 bytes) for efficient serialization and validation
   (defun-inline to-uint64 (var)
     (assert
-      (> var MINUS_ONE) ; encodes into ints automatically
-      (> 9 (strlen var))
+      (> var MINUS_ONE) ; var >= 0
+      (> 0x10000000000000000 var) ; var <= 2^64 - 1 (max uint64)
       (+ var)  ; encode to int
     )
   )
@@ -48,9 +48,9 @@
   )
 
   (defun-inline is-size-b32-or-nil (var)
-    (any
-      (= (strlen var) BYTES_32)
+    (or
       (not var)
+      (= (strlen var) BYTES_32)
     )
   )
 

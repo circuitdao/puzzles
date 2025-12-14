@@ -26,6 +26,7 @@
     validated_max_penalty_or_min (to-uint64 max_disapproval_penalty_factor_or_min_deposit)
     ; input_toggle_activation is boolean (0/1), keep as is-atom check below
   (assert
+    (not new_puzzle_hash)
     (is-size-b32 statutes_inner_puzzle_hash)
     (not (l input_toggle_activation)) ; is-atom check for boolean
     (assign

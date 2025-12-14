@@ -39,10 +39,9 @@
           inner_puzzle
         )
       )
-      (any
-        (not new_puzzle_hash)  ; nil for announce op or if choosing not to update ownership
-        (is-size-b32 new_puzzle_hash) ; when updating ownership
-      )
+      ; nil for announce op or if choosing not to update ownership
+      ; when updating ownership
+      (is-size-b32-or-nil new_puzzle_hash)
       (c
         (list CREATE_COIN_ANNOUNCEMENT
           (concat PROTOCOL_PREFIX

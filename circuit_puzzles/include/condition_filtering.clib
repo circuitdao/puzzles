@@ -157,6 +157,7 @@
 
   ; fails if create coin or protocol condition encountered
   ; fails if no solution remark condition encountered
+  ; fails if more than one solution remark encountered (ambiguity / injection)
   ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
   ; extracts third field from first solution remark condition encountered
   ; returns all other conditions
@@ -171,9 +172,12 @@
         (if (= condition_code REMARK)
           (assert
             (is-valid-rmk-cond condition_body) ; must not be a protocol remark
-            (if (any found_solution (not (= (f condition_body) SOLUTION_PREFIX)))
-              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; let all but first solution remark pass
-              (filter-and-extract-remark-solution rest_of_conditions (f (r condition_body)) filtered_conditions) ; found first solution remark
+            (if (= (f condition_body) SOLUTION_PREFIX)
+              (if found_solution
+                (x) ; multiple solution remarks are not allowed
+                (filter-and-extract-remark-solution rest_of_conditions (f (r condition_body)) filtered_conditions) ; found solution remark
+              )
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; non-solution remark passes through
             )
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
