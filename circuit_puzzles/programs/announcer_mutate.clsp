@@ -4,9 +4,16 @@
         VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
-      inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      (current_timestamp new_value)
+      inner_puzzle_hash ; verified in main puzzle
+      new_puzzle_hash ; verify
+      deposit ; verify atom
+      input_conditions ; don't verify
+      (
+        current_timestamp ; verify atom
+        new_value ; verify atom and less than 1024 bytes
+      )
      )
+
 
   ; not using cl-23 standard to save costs
   (include condition_codes.clib)
@@ -25,10 +32,9 @@
   )
 
   (if (all
-        (not new_puzzle_hash)
         ; verify types
+        (not new_puzzle_hash)
         (not (l deposit))
-        ; don't verify input_conditions
         (not (l current_timestamp))
         (not (l new_value))
         (> 1024 (strlen new_value)) ; value must be less than 1024 bytes

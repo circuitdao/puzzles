@@ -2,8 +2,11 @@
         VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
-      inner_puzzle_hash new_puzzle_hash deposit input_conditions
-      args
+      inner_puzzle_hash ; verify to be nil
+      new_puzzle_hash ; verify to be nil
+      deposit ; verify to be nil
+      input_conditions ; verify to be nil
+      args ; verify to be nil
      )
 
   ; not using cl-23 standard to save costs
@@ -20,7 +23,7 @@
     )
   )
 
-  (if (any inner_puzzle_hash new_puzzle_hash deposit input_conditions args) ; verify types
+  (if (any inner_puzzle_hash new_puzzle_hash deposit input_conditions args)
     (x)  ; ensures announce spend has unique solution so we can run ISA spend
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT

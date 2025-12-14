@@ -75,31 +75,40 @@
       list_to_append_to
     )
     ; we don't need to verify that announcer is not expired since it's already checked in announcer puzzle
-    (c
-      (list ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256
-          (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
-          PROTOCOL_PREFIX
-          (sha256tree
-            (c STATUTES_STRUCT (c launcher_id (c ONE price))) ; ONE indicates that announcer is approved
+    (assert
+      ; verify types
+      (is-size-b32 launcher_id)
+      (is-size-b32 args_hash)
+      (c
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
+            PROTOCOL_PREFIX
+            (sha256tree
+              (c STATUTES_STRUCT (c launcher_id (c ONE (to-uint64 price)))) ; ONE indicates that announcer is approved
+            )
           )
         )
-      )
-      (if rest_price_announcers
-        (generate-announcer-conditions
-          STATUTES_STRUCT
-          ATOM_ANNOUNCER_MOD_HASH
-          rest_price_announcers
+        (if rest_price_announcers
+          (generate-announcer-conditions
+            STATUTES_STRUCT
+            ATOM_ANNOUNCER_MOD_HASH
+            rest_price_announcers
+            list_to_append_to
+          )
           list_to_append_to
         )
-        list_to_append_to
       )
     )
   )
 
-  (defun list-length (lst count)
+  (defun announcer-list-length (lst count)
     (if lst
-      (list-length (r lst) (+ count 1))
+      (assert
+        ; force announcer price to be given in canoncial int represenation
+        (= (+ (f (r (r (f lst)))) 0) (f (r (r (f lst)))))
+        (announcer-list-length (r lst) (+ count 1))
+      )
       count
     )
   )

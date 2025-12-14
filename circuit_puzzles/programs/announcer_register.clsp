@@ -3,11 +3,19 @@
         VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
-      inner_puzzle_hash new_puzzle_hash deposit_in input_conditions
-      (registry_mod_hash registry_args_hash registry_claim_counter_in
-        target_puzzle_hash statutes_inner_puzzle_hash min_deposit_in
+      inner_puzzle_hash ; verified in main puzzle
+      new_puzzle_hash ; verify
+      deposit_in ; to int
+      input_conditions ; don't verify
+      (
+        registry_mod_hash ; verify
+        registry_args_hash ; verify
+        registry_claim_counter_in ; to int
+        target_puzzle_hash ; verify
+        statutes_inner_puzzle_hash ; verify
+        min_deposit ; statute
       )
-     )
+    )
 
   (include *standard-cl-23.1*)
   (include condition_codes.clib)
@@ -17,23 +25,18 @@
   (include announcer.clib)
 
   (assign
+    ; validate and convert types
+    deposit (to-uint64 deposit_in)
+    registry_claim_counter (to-uint64 registry_claim_counter_in)
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
-    (assign
-      ; validate and convert types
-      deposit (to-uint64 deposit_in)
-      registry_claim_counter (to-uint64 registry_claim_counter_in)
-      min_deposit (to-uint64 min_deposit_in)
     (assert
-      ; don't verify inner_puzzle_hash
-      ; don't verify new_puzzle_hash
-      ; don't verify input_conditions
+      inner_puzzle_hash ; must be owner
       (not new_puzzle_hash)
       (is-size-b32 registry_mod_hash)
       (is-size-b32 registry_args_hash)
       (is-size-b32 target_puzzle_hash)
       (is-size-b32 statutes_inner_puzzle_hash)
-      inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)
       (> deposit (- MIN_DEPOSIT ONE)) ; must not be penalizable for deposit
@@ -81,6 +84,6 @@
           )
         )
       )
-    ))
+    )
   )
 )

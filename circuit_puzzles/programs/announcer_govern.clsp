@@ -4,11 +4,14 @@
        VALUE_TTL VALUE MIN_DEPOSIT CLAIM_COUNTER COOLDOWN_START PENALIZABLE_AT TIMESTAMP_EXPIRES
       )
       ; solution
-      inner_puzzle_hash new_puzzle_hash deposit input_conditions
+      inner_puzzle_hash ; validated in main puzzle
+      new_puzzle_hash ; verify
+      deposit_in ; to int
+      input_conditions ; don't verify
       (
-        statutes_inner_puzzle_hash
-        input_toggle_activation
-        max_disapproval_penalty_factor_or_min_deposit ; penalty factor when disapproving, min deposit when approving
+        statutes_inner_puzzle_hash ; verify
+        input_toggle_activation ; verify atom
+        max_disapproval_penalty_factor_or_min_deposit ; statute. penalty factor when disapproving, min deposit when approving
       )
     )
 
@@ -19,17 +22,13 @@
   (include statutes_utils.clib)
   (include announcer.clib)
 
-
-  (assign
-    ; validate and convert types
-    validated_deposit (to-uint64 deposit)
-    validated_max_penalty_or_min (to-uint64 max_disapproval_penalty_factor_or_min_deposit)
-    ; input_toggle_activation is boolean (0/1), keep as is-atom check below
   (assert
     (not new_puzzle_hash)
     (is-size-b32 statutes_inner_puzzle_hash)
-    (not (l input_toggle_activation)) ; is-atom check for boolean
+    (is-atom input_toggle_activation) ; is-atom check for boolean
     (assign
+      ; validate and convert types
+      deposit (to-uint64 deposit_in)
       toggle_activation (assert
         (any
           (all (= input_toggle_activation FALSE) APPROVED)
@@ -45,7 +44,7 @@
         INNER_PUZZLE_HASH
         toggle_activation
         DEPOSIT
-        validated_deposit
+        deposit
         VALUE_TTL
         VALUE
         MIN_DEPOSIT
@@ -56,14 +55,14 @@
         (if (= toggle_activation FALSE)
           ; we're disapproving. use deposit for fees
           (assign
-            min_penalized_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION validated_max_penalty_or_min) PRECISION) PRECISION_BPS))
+            min_penalized_deposit (- DEPOSIT (/ (/ (* DEPOSIT PRECISION max_disapproval_penalty_factor_or_min_deposit) PRECISION) PRECISION_BPS))
             (assert
               ; can't deduct more for fees than penalty
-              (all (> (+ DEPOSIT ONE) validated_deposit) (> validated_deposit (- min_penalized_deposit ONE)))
+              (all (> (+ DEPOSIT ONE) deposit) (> deposit (- min_penalized_deposit ONE)))
               (c
-                (list RESERVE_FEE (- DEPOSIT validated_deposit))
+                (list RESERVE_FEE (- DEPOSIT deposit))
                 (c
-                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS validated_max_penalty_or_min)
+                  (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_DISAPPROVAL_MAXIMUM_PENALTY_BPS max_disapproval_penalty_factor_or_min_deposit)
                   input_conditions
                 )
               )
@@ -74,12 +73,12 @@
             ; we're not requiring that VALUE_TTL <= Statutes max value TTL or that price is not expired in case an announcer has a
             ;  technical issue just when governance wants to implement approval bill. but we always want DEPOSIT and MIN_DEPOSIT
             ;  to be set properly so that announcer can be penalized
-            (= validated_deposit DEPOSIT) ; can't steal deposit
+            (= deposit DEPOSIT) ; can't steal deposit
             ; deposit must be no less than both announcer and statutes min deposit
-            (> validated_deposit (- MIN_DEPOSIT ONE))
-            (> MIN_DEPOSIT (- validated_max_penalty_or_min ONE))
+            (> deposit (- MIN_DEPOSIT ONE))
+            (> MIN_DEPOSIT (- max_disapproval_penalty_factor_or_min_deposit ONE))
             (c
-              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS validated_max_penalty_or_min)
+              (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_MINIMUM_DEPOSIT_MOJOS max_disapproval_penalty_factor_or_min_deposit)
               input_conditions
             )
           )
@@ -98,5 +97,5 @@
         operation_conditions
       )
     )
-  ))
+  )
 )

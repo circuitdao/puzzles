@@ -3,15 +3,15 @@
       STATUTES_STRUCT
       PRICE_INFOS
       (
-        statutes_inner_puzzle_hash
-        m_of_n_in
-        price_updatable_after_seconds_in
-        price_updatable_threshold_bps_in
-        price_delay_in
-        current_timestamp_in
-        price_announcers ; -> ((launcher_id args_hash price))
+        statutes_inner_puzzle_hash ; verify
+        m_of_n ; statute
+        price_updatable_after_seconds ; statute
+        price_updatable_threshold_bps ; statute
+        price_delay ; statute
+        current_timestamp_in ; to int
+        price_announcers ; verify. -> ((launcher_id args_hash price))
       )
-      input_conditions
+      input_conditions ; don't verify
     )
 
   (include *standard-cl-23.1*)
@@ -23,15 +23,10 @@
   (defconst MAX_ORACLE_PRICE (* 1000000 PRICE_PRECISION))
 
   (assign
-    ; convert int args to int
-    m_of_n (to-uint64 m_of_n_in)
-    price_updatable_after_seconds (to-uint64 price_updatable_after_seconds_in)
-    price_updatable_threshold_bps (to-uint64 price_updatable_threshold_bps_in)
-    price_delay (to-uint64 price_delay_in)
     current_timestamp (to-uint64 current_timestamp_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     ; number of announcers being used in oracle price update
-    price_announcers_length (list-length price_announcers 0)
+    price_announcers_length (announcer-list-length price_announcers 0) ; verifies price of price_announcers
     ; extract and sort announcer prices in ascending order
     sorted_prices (mergesort price_announcers) ; TODO: convert prices to uint80 before sorting
     ; get (upper) median price
@@ -41,7 +36,7 @@
       ATOM_ANNOUNCER_MOD_HASH
       price_announcers
       input_conditions
-    )
+    ) ; verifies launcher_id and args_hash of price_announcers
     ; discard matured price infos other than most recent one, if any
     ; the Oracle Price is by definition the most recent matured price
     (last_matured_price_info . cut_price_infos) (cut-price-infos PRICE_INFOS (- current_timestamp price_delay) ())
@@ -54,10 +49,7 @@
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item cut_price_infos) ; TODO: use cut_price_infos instead of PRICE_INFOS for efficiency?
     (assert
-      (> median_price MINUS_ONE) (> MAX_ORACLE_PRICE median_price)
-      ; verify types
       (is-size-b32 statutes_inner_puzzle_hash)
-      ; don't verify launcher_ids and args_hashes of price_announcers
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))
       ; check that no announcer is being used more than once
@@ -65,6 +57,8 @@
       ; oracle price must be greater than 0
       ; this is required for get-min-collateral-amount function, which divides by price
       (> median_price 0)
+      ; also enforce a max price
+      (> MAX_ORACLE_PRICE median_price)
       ; price info timestamps must increase strictly
       (> current_timestamp last_price_updated)
       ; oracle price update only allowed if enough time has passed or price change sufficiently large
