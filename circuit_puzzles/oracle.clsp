@@ -49,8 +49,8 @@
           ; ELSE announce oracle price
           (assign
             (current_timestamp_in price_delay_in statutes_inner_puzzle_hash) op_args
-            current_timestamp (to-uint80 current_timestamp_in)
-            price_delay (to-uint80 price_delay_in)
+            current_timestamp (to-uint64 current_timestamp_in)
+            price_delay (to-uint64 price_delay_in)
             cutoff (if (all current_timestamp price_delay) (- current_timestamp price_delay) 0)
             (last_matured_price_info . _) (cut-price-infos PRICE_INFOS cutoff ())
             (last_matured_price . last_matured_price_timestamp) (if last_matured_price_info last_matured_price_info (c () ()))
