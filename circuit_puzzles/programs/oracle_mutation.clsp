@@ -28,7 +28,7 @@
     ; number of announcers being used in oracle price update
     price_announcers_length (announcer-list-length price_announcers 0) ; verifies price of price_announcers
     ; extract and sort announcer prices in ascending order
-    sorted_prices (mergesort price_announcers) ; TODO: convert prices to uint80 before sorting
+    sorted_prices (mergesort price_announcers)
     ; get (upper) median price
     median_price (to-uint64 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
     conditions (generate-announcer-conditions
@@ -47,7 +47,7 @@
     )
     (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
-    (last_price . last_price_updated) (last-item cut_price_infos) ; TODO: use cut_price_infos instead of PRICE_INFOS for efficiency?
+    (last_price . last_price_updated) (last-item cut_price_infos)
     (assert
       (is-size-b32 statutes_inner_puzzle_hash)
       ; oracle price update requires at least M-of-N announcers
