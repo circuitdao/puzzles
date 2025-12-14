@@ -72,9 +72,9 @@
     ; number of announcers being used in oracle price update
     price_announcers_length (list-length price_announcers 0)
     ; extract and sort announcer prices in ascending order
-    sorted_prices (mergesort price_announcers)
+    sorted_prices (mergesort price_announcers) ; TODO: convert prices to uint80 before sorting
     ; get (upper) median price
-    median_price (to-uint80 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
+    median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     conditions (generate-whitelisted-announcer-conditions
       WHITELIST
       STATUTES_STRUCT
@@ -92,7 +92,7 @@
     )
     (last_matured_price . last_matured_price_updated) (if last_matured_price_info last_matured_price_info (c () ()))
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
-    (last_price . last_price_updated) (last-item PRICE_INFOS)
+    (last_price . last_price_updated) (last-item cut_price_infos) ; TODO: use cut_price_infos instead of PRICE_INFOS for efficiency?
     (assert_debug
       (> median_price MINUS_ONE) (> MAX_ORACLE_PRICE median_price)
       ; verify types
