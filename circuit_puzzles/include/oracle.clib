@@ -10,7 +10,10 @@
     ;; last_matured_price_info is the matured price_info with greatest (i.e. most recent) timestamp
     ;; and non_matured_price_infos is the list of non-matured price_infos.
     ;;
-    ;; if price_info_list is empty, then (() ()) is returned.
+    ;; if price_info_list is empty (and this is the initial call with last_matured_price_info = nil),
+    ;; then (() ()) is returned.
+    ;; if price_info_list was non-empty and all entries are matured, then
+    ;; (last_matured_price_info (list last_matured_price_info)) is returned.
     ;; if price_info_list is non-empty, then (r return_value) is not nil, i.e. cutting a
     ;; a non-empty price_info_list will leave at least one (matured or non-matured) price_info
     ;; in the list.
@@ -24,7 +27,12 @@
           )
         )
       )
-      (c last_matured_price_info (list last_matured_price_info))
+      (if last_matured_price_info
+        ; non-empty input with all entries matured
+        (c last_matured_price_info (list last_matured_price_info))
+        ; empty input
+        (c () ())
+      )
     )
   )
 
