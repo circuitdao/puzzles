@@ -60,7 +60,6 @@
             (last_matured_price . last_matured_price_timestamp) (if last_matured_price_info last_matured_price_info (c () ()))
             (assert
               (not operation_hash)
-              (is-size-b32-or-nil statutes_inner_puzzle_hash)
               (li
                 ; can only announce the price if we're updating statutes
                 (if statutes_inner_puzzle_hash

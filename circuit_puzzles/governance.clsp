@@ -206,7 +206,6 @@
       (c
         (if bill_operation
           (assert
-            (is-size-b32-or-nil (f bill_operation)) ; statutes_inner_puzzle_hash. allow nil for ops that don't require statutes spend
             (is-size-b32-or-nil (f (r bill_operation))) ; signed_bill_operation_hash
             bill_operation
           )
