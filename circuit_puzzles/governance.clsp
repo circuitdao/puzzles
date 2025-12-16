@@ -9,7 +9,7 @@
       CRT_TAIL_HASH
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle. saves costs in veto operation vs currying full puzzle
-      BILL ; -> (bill_expiries statute_index statute) where bill_expiries -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
+      BILL ; -> (bill_expires statute_index statute) where bill_expires -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
       lineage_proof ; no need to verify
       inner_puzzle
       inner_solution
