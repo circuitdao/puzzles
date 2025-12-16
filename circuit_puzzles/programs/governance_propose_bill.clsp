@@ -43,18 +43,15 @@
           )
         ; must be at least PRECISION for non-negative rates
         (> new_statute_value (- PRECISION ONE))
-        (if (= statute_index STATUTE_TREASURY_MAXIMUM)
-          (is-int64 new_statute_value)
-          (if (any
-                (= statute_index STATUTE_ORACLE_M_OF_N)
-                (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
-                (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
-                (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
-                (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
-              )
-            (> new_statute_value 0) ; must be strictly larger than 0
-            (> new_statute_value -1) ; ONE ; allow 0 for other statutes ;
-          )
+        (if (any
+              (= statute_index STATUTE_ORACLE_M_OF_N)
+              (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
+              (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
+              (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
+              (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
+            )
+          (> new_statute_value 0) ; must be strictly larger than 0
+          (> new_statute_value -1) ; allow 0 for other statutes
         )
       )
     )

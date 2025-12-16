@@ -99,7 +99,7 @@
       ; we need maximum + lot_amount
       (assert
         (= sum_amounts_withdrawn lot_amount)
-        (> new_treasury_coins_amount treasury_maximum)
+        (> new_treasury_coins_amount (- treasury_maximum ONE))
         (c
           (assert-statute statutes_puzzle_hash STATUTE_TREASURY_MAXIMUM treasury_maximum) ; end of recursion
           input_conditions

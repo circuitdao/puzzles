@@ -36,7 +36,7 @@
       ; -> (parent_parent_id . parent_amount) if balance change or rebalance
       lineage_proof
       statutes_inner_puzzle_hash ; verify
-      current_amount_in ; to int
+      current_amount ; is uint
       ; rebalance_args are:
       ; -> () if not rebalancing
       ; -> (prev_coin_info next_coin_info min_coin_info max_coin_info rebalance_ratio_pct prev_delta_sum baseline_amount new_amount)
@@ -50,7 +50,6 @@
       ; note: run_tail_mod_hash must be provided when recovering bad debt or else set to nil
       . args
     ) solution
-    current_amount (to-uint64 current_amount_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH statutes_struct_hash)
@@ -96,13 +95,11 @@
       ; this is eve spend, assert launcher id
       LAUNCHER_ID
     )
-    new_amount (to-uint64
-      (if rebalance_args
-        (f (r (r (r (r (r (r (r rebalance_args))))))))
-        (if (l args)
-          (f (r (r (r (r (r args))))))
-          current_amount
-        )
+    new_amount (if rebalance_args
+      (f (r (r (r (r (r (r (r rebalance_args))))))))
+      (if (l args)
+        (f (r (r (r (r (r args))))))
+        current_amount
       )
     )
     conditions (c
@@ -116,6 +113,8 @@
         0
     )
     (assert
+      (is-uint64 current_amount)
+      (is-uint64 new_amount)
       ; can't go into negative
       (> new_amount MINUS_ONE) (> withdraw_amount MINUS_ONE)
       (any
@@ -161,37 +160,32 @@
                     min_coin_info ; see below
                     max_coin_info ; see below
                     rebalance_ratio_pct ; statute
-                    prev_delta_sum_in
-                    baseline_amount_in
+                    prev_delta_sum ; is int. deltas can be negative
+                    baseline_amount ; is uint
+                    _ ; new_amount extracted and verified above
                   ) rebalance_args
-                  baseline_amount (to-uint64 baseline_amount_in)
                   delta (- new_amount current_amount)
-                  prev_delta_sum (to-int64 prev_delta_sum_in) ; delta sum can be negative
                   delta_sum (+ delta prev_delta_sum)
                   (
                     prev_parent_id
                     prev_curried_args_hash
-                    prev_amount_in
+                    prev_amount
                   ) prev_coin_info
-                  prev_amount (to-uint64 prev_amount_in)
                   (
                     next_parent_id
                     next_curried_args_hash
-                    next_amount_in
+                    next_amount
                   ) next_coin_info
-                  next_amount (to-uint64 next_amount_in)
                   (
                     min_parent_id
                     min_curried_args_hash
-                    min_amount_in
+                    min_amount
                   ) min_coin_info
-                  min_amount (to-uint64 min_amount_in)
                   (
                     max_parent_id
                     max_curried_args_hash
-                    max_amount_in
+                    max_amount
                   ) max_coin_info
-                  max_amount (to-uint64 max_amount_in)
                   prev_coin_id (coinid
                     prev_parent_id
                     (curry_hashes CAT_MOD_HASH
@@ -229,6 +223,20 @@
                     max_amount
                   )
                   (assert
+                    (is-uint64 baseline_amount)
+                    (is-int64 prev_delta_sum)
+                    (is-size-b32 prev_parent_id)
+                    (is-size-b32 prev_curried_args_hash)
+                    (is-uint64 prev_amount)
+                    (is-size-b32 next_parent_id)
+                    (is-size-b32 next_curried_args_hash)
+                    (is-uint64 next_amount)
+                    (is-size-b32 min_parent_id)
+                    (is-size-b32 min_curried_args_hash)
+                    (is-uint64 min_amount)
+                    (is-size-b32 max_parent_id)
+                    (is-size-b32 max_curried_args_hash)
+                    (is-uint64 max_amount)
                     ; new_amount must be at or near baseline
                     (> new_amount (- baseline_amount 1))
                     (> (+ baseline_amount 2) new_amount)
@@ -274,15 +282,14 @@
                   (assign
                     ; require approval mod
                     (
-                      approver_parent_id
-                      approver_mod_hash
-                      approver_mod_curried_args_hash
-                      approver_amount_in
-                      approval_mod_hashes
-                      _ ; new_amount extracted above
-                      run_tail_mod_hash
+                      approver_parent_id ; verify
+                      approver_mod_hash ; verify
+                      approver_mod_curried_args_hash ; destructure, then indirectly verified
+                      approver_amount ; is uint
+                      approval_mod_hashes ; treehash verified against statute
+                      _ ; new_amount extracted and verified above
+                      run_tail_mod_hash ; verify
                     ) args
-                    approver_amount (to-uint64 approver_amount_in)
                     approver_cat_tail_hash (if (l approver_mod_curried_args_hash) (f approver_mod_curried_args_hash) ())
                     approver_coin_id (coinid
                       approver_parent_id
@@ -315,32 +322,38 @@
                       )
                       approver_amount
                     )
-                    (li
-                      ; assert approver coin message is valid
-                      (list RECEIVE_MESSAGE 0x3f
-                        (concat
-                          PROTOCOL_PREFIX
-                          (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c (- new_amount current_amount) (concat new_amount run_tail_mod_hash)))))
+                    (assert
+                      (is-size-b32 approver_parent_id)
+                      (is-size-b32 approver_mod_hash)
+                      (is-uint64 approver_amount)
+                      (is-size-b32-or-nil run_tail_mod_hash)
+                      (li
+                        ; assert approver coin message is valid
+                        (list RECEIVE_MESSAGE 0x3f
+                          (concat
+                            PROTOCOL_PREFIX
+                            (sha256tree (c inner_puzzle_hash (c STATUTES_STRUCT (c (- new_amount current_amount) (concat new_amount run_tail_mod_hash)))))
+                          )
+                          approver_coin_id
                         )
-                        approver_coin_id
-                      )
-                      ; assert that approval mod hashes are valid
-                      (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
-                      ;  my new balance so someone can check whole ring balance
-                      (list CREATE_COIN_ANNOUNCEMENT
-                        (concat
-                          PROTOCOL_PREFIX
-                          (sha256tree (c STATUTES_STRUCT (c new_amount LAUNCHER_ID)))
+                        ; assert that approval mod hashes are valid
+                        (assert-statute statutes_puzzle_hash STATUTE_APPROVAL_MOD_HASHES_HASH (sha256tree approval_mod_hashes))
+                        ;  my new balance so someone can check whole ring balance
+                        (list CREATE_COIN_ANNOUNCEMENT
+                          (concat
+                            PROTOCOL_PREFIX
+                            (sha256tree (c STATUTES_STRUCT (c new_amount LAUNCHER_ID)))
+                          )
                         )
-                      )
-                      (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID) ; for driver code
-                      &rest
-                      (if run_tail_mod_hash
-                        ; withdraw to a run tail coin
-                        (c (list CREATE_COIN run_tail_mod_hash withdraw_amount)
+                        (list REMARK PROTOCOL_PREFIX new_amount LAUNCHER_ID RING_PREV_LAUNCHER_ID) ; for driver code
+                        &rest
+                        (if run_tail_mod_hash
+                          ; withdraw to a run tail coin
+                          (c (list CREATE_COIN run_tail_mod_hash withdraw_amount)
+                            conditions
+                          )
                           conditions
                         )
-                        conditions
                       )
                     )
                   )
