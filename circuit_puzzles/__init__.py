@@ -92,11 +92,11 @@ def compile_module_with_symbols(include_paths, source):
     file_path = path_obj.parent
     file_stem = path_obj.stem
     target_file = file_path / (file_stem + ".hex")
-    
+
     # Check if we need to recompile
     if target_file.exists():
         target_mtime = target_file.stat().st_mtime
-        
+
         # Check if source file is newer than target
         if path_obj.stat().st_mtime > target_mtime:
             needs_compile = True
@@ -112,10 +112,10 @@ def compile_module_with_symbols(include_paths, source):
                             break
                 if needs_compile:
                     break
-        
+
         if not needs_compile:
             return
-    
+
     compile_clvm(source, str(target_file.absolute()), include_paths)
 
 
@@ -137,22 +137,22 @@ for puzzle_path in PUZZLE_PATHS:
 package_dir = Path(str(files(__package__)))
 expected_checksum = read_checksum_from_package()
 
-# if expected_checksum:
-#     try:
-#         verify_puzzle_checksum(package_dir, expected_checksum)
-#         # Count puzzles for an informational message
-#         puzzle_count = len(list(package_dir.rglob("*.hex")))
-#     except PuzzleIntegrityError as e:
-#         print("ERROR: Puzzle integrity check failed!")
-#         print(f"  {e}")
-#         raise
-#     except Exception as e:
-#         print(f"WARNING: Failed to verify puzzle checksum: {e}")
-#         # Don't fail on unexpected errors during verification
-# else:
-#     print("WARNING: No puzzle_checksum found in pyproject.toml. Puzzle integrity verification skipped.")
-#     print("  To enable verification, run freeze_puzzle_hashes.py to generate the checksum.")
-#
+if expected_checksum:
+    try:
+        verify_puzzle_checksum(package_dir, expected_checksum)
+        # Count puzzles for an informational message
+        puzzle_count = len(list(package_dir.rglob("*.hex")))
+    except PuzzleIntegrityError as e:
+        print("ERROR: Puzzle integrity check failed!")
+        print(f"  {e}")
+        raise
+    except Exception as e:
+        print(f"WARNING: Failed to verify puzzle checksum: {e}")
+        # Don't fail on unexpected errors during verification
+else:
+    print("WARNING: No puzzle_checksum found in pyproject.toml. Puzzle integrity verification skipped.")
+    print("  To enable verification, run freeze_puzzle_hashes.py to generate the checksum.")
+
 
 def load_puzzle(puzzle_name: str) -> Program:
     if puzzle_name in PUZZLES:
