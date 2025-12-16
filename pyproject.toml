@@ -1,6 +1,6 @@
 [project]
 name = "circuit-puzzles"
-version = "4.2.0"
+version = "4.2.1"
 description = "Puzzles powering Circuit Protocol - a decentralized stablecoin and lending system on the Chia blockchain that enables permissionless borrowing of BYC against XCH collateral"
 readme = "README.md"
 license = {text = "All rights reserved"}
