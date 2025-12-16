@@ -6,7 +6,7 @@
       ; solution
       inner_puzzle_hash ; validated in main puzzle
       new_puzzle_hash ; verify
-      deposit_in ; to int
+      deposit ; is uint
       input_conditions ; don't verify
       (
         statutes_inner_puzzle_hash ; verify
@@ -23,11 +23,10 @@
   (include announcer.clib)
 
   (assert
+    (is-uint64 deposit)
     (not new_puzzle_hash)
     (is-atom input_toggle_activation) ; is-atom check for boolean
     (assign
-      ; validate and convert types
-      deposit (to-uint64 deposit_in)
       toggle_activation (assert
         (any
           (all (= input_toggle_activation FALSE) APPROVED)

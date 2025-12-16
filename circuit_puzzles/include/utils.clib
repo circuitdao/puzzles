@@ -17,18 +17,11 @@
     (not (l var))
   )
 
-  ; Validate and convert var to signed 64-bit integer (range: -2^63 to 2^63-1).
+  ; Validate that var is signed 64-bit integer (range: -2^63 to 2^63-1) in canonical representation.
   ; 64 bits is sufficient because:
   ; - Rarely used in practice (most values are non-negative)
   ; - Protocol parameters (deltas, time differences) fit comfortably within signed 64-bit range
   ; - Keeps atoms compact (8 bytes) for efficient serialization
-  (defun-inline to-int64 (var)
-    (assert
-      (> 9 (strlen var))
-      (+ var)  ; encode to int
-    )
-  )
-
   (defun-inline is-int64 (var)
     (assert
       (> 9 (strlen var))
@@ -37,20 +30,12 @@
     )
   )
 
-  ; Validate and convert var to unsigned 64-bit integer (range: 0 to 2^64-1 = ~18.4 quintillion).
+  ; Validate that var is unsigned 64-bit integer (range: 0 to 2^64-1 = ~18.4 quintillion) in canonical representation.
   ; 64 bits is sufficient because:
   ; - Coin amounts are capped at uint64 by Chia consensus (max ~18.4e18 mojos = ~18.4 million XCH)
   ; - Timestamps fit well beyond year 2100+ (current Unix time ~1.7e9, 2^64 seconds = ~584 billion years)
   ; - Prices, fees, BPS values, and other protocol parameters are well within this range
   ; - Keeps atoms compact (8 bytes) for efficient serialization and validation
-  (defun-inline to-uint64 (var)
-    (assert
-      (> var MINUS_ONE) ; var >= 0
-      (> 0x10000000000000000 var) ; var <= 2^64 - 1 (max uint64)
-      (+ var)  ; encode to int
-    )
-  )
-
   (defun-inline is-uint64 (var)
     (assert
       (> var MINUS_ONE) ; var >= 0
@@ -59,7 +44,6 @@
       ONE
     )
   )
-
 
   (defun-inline is-size-b32 (var)
     (= (strlen var) BYTES_32)

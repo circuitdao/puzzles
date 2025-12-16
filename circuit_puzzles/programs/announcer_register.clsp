@@ -5,12 +5,12 @@
       ; solution
       inner_puzzle_hash ; verified in main puzzle
       new_puzzle_hash ; verify
-      deposit_in ; to int
+      deposit ; is uint
       input_conditions ; don't verify
       (
         registry_mod_hash ; verify
         registry_args_hash ; verify
-        registry_claim_counter_in ; to int
+        registry_claim_counter ; is uint
         target_puzzle_hash ; verify
         statutes_inner_puzzle_hash ; verify
         min_deposit ; statute
@@ -25,17 +25,16 @@
   (include announcer.clib)
 
   (assign
-    ; validate and convert types
-    deposit (to-uint64 deposit_in)
-    registry_claim_counter (to-uint64 registry_claim_counter_in)
     announcer_registry_puzhash (tree_hash_of_apply registry_mod_hash registry_args_hash)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (assert
-      inner_puzzle_hash ; must be owner
       (not new_puzzle_hash)
+      (is-uint64 deposit)
       (is-size-b32 registry_mod_hash)
       (is-size-b32 registry_args_hash)
+      (is-uint64 registry_claim_counter)
       (is-size-b32 target_puzzle_hash)
+      inner_puzzle_hash ; must be owner
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)
       (> deposit (- MIN_DEPOSIT ONE)) ; must not be penalizable for deposit

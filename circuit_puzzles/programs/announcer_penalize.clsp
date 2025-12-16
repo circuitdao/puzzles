@@ -5,7 +5,7 @@
       ; solution
       inner_puzzle_hash ; verified in main puzzle
       new_puzzle_hash ; verify
-      deposit_in ; to int
+      deposit ; is uint
       input_conditions ; don't verify
       (
         penalty_per_interval_bps ; statute
@@ -13,7 +13,7 @@
         penalty_interval_in_minutes ; statute
         min_deposit ; statute
         max_value_ttl ; statute
-        current_timestamp_in ; to int
+        current_timestamp ; is uint
       )
      )
 
@@ -25,9 +25,6 @@
   (include announcer.clib)
 
   (assign
-    ; validate and convert types
-    deposit (to-uint64 deposit_in)
-    current_timestamp (to-uint64 current_timestamp_in)
     penalized_deposit
       ; if not expired, we penalize per full deposit
       (/
@@ -39,6 +36,8 @@
       )
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (assert
+      (is-uint64 deposit)
+      (is-uint64 current_timestamp)
       (not new_puzzle_hash)
       ; must be past penalty timestamp to penalize
       (> current_timestamp PENALIZABLE_AT)

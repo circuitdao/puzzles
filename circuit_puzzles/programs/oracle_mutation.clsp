@@ -9,7 +9,7 @@
         price_updatable_threshold_bps ; statute
         price_delay ; statute
         current_timestamp ; is uint
-        price_announcers ; verify. -> ((launcher_id args_hash price))
+        price_announcers ; verified in generate-announcer-conditions and announcer-list-length. -> ((launcher_id args_hash price))
       )
       input_conditions ; don't verify
     )
@@ -29,7 +29,7 @@
     ; extract and sort announcer prices in ascending order
     sorted_prices (mergesort price_announcers)
     ; get (upper) median price
-    median_price (to-uint64 (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0)))))
+    median_price (f (r (r (get-price sorted_prices (get-median-index price_announcers_length) 0))))
     conditions (generate-announcer-conditions
       STATUTES_STRUCT
       ATOM_ANNOUNCER_MOD_HASH

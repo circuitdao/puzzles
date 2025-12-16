@@ -12,7 +12,7 @@
       ; solution
       inner_puzzle_hash ; verified in main puzzle
       new_puzzle_hash ; verify
-      deposit_in ; to int
+      deposit ; is uint
       input_conditions ; don't verify
       args ; destructured below
      )
@@ -25,32 +25,26 @@
   (include announcer.clib)
 
   (assert
+    (is-uint64 deposit)
     (is-size-b32-or-nil new_puzzle_hash)
     inner_puzzle_hash ; must be owner
     (if args
       ; configure the announcer
       (assign
-        deposit (to-uint64 deposit_in)
         (
-          current_timestamp_in ; to int
+          current_timestamp ; is uint
           statutes_inner_puzzle_hash ; verify
           input_toggle_activation ; verify atom
           deactivation_cooldown_interval ; statute
           min_deposit ; statute
-          new_value_ttl_in ; to int
+          new_value_ttl ; is uint
           max_value_ttl ; statute
-          new_value_in ; to int
-          new_min_deposit_in ; to int
+          new_value ; is uint
+          new_min_deposit ; is uint
         ) args
-        ; verify types
-        current_timestamp (to-uint64 current_timestamp_in)
-        new_value_ttl (to-uint64 new_value_ttl_in)
-        new_value (to-uint64 new_value_in)
-        new_min_deposit (to-uint64 new_min_deposit_in)
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         (approved . cooldown_start)
           (assert
-            (is-atom input_toggle_activation)
             (any
               (= input_toggle_activation FALSE)
               (all (= input_toggle_activation TRUE) APPROVED) ; cannot approve self
@@ -104,6 +98,11 @@
             input_conditions
           )
         (assert
+          (is-uint64 current_timestamp)
+          (is-uint64 new_value_ttl)
+          (is-uint64 new_value)
+          (is-uint64 new_min_deposit)
+          (is-atom input_toggle_activation)
           ; new deposit must be no less than new min deposit
           (> deposit (- new_min_deposit ONE))
           ; new value TTL must be no greater than the maximum value TTL statute to enforce timely announcements

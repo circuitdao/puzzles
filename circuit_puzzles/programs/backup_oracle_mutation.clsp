@@ -10,8 +10,8 @@
         price_updatable_after_seconds ; statute
         price_updatable_threshold_bps ; statute
         price_delay ; statute
-        current_timestamp_in ; to int
-        price_announcers ; verify. -> ((launcher_id args_hash price))
+        current_timestamp ; is uint
+        price_announcers ; verified in generate-whitelisted-announcer-conditions. -> ((launcher_id args_hash price))
       )
       input_conditions ; don't verify
     )
@@ -33,9 +33,9 @@
       list_to_append_to
     )
     (assert
-      ; verify types
       (is-size-b32 launcher_id)
       (is-size-b32 args_hash)
+      (is-uint64 price)
       (contains WHITELIST launcher_id)
       ; we don't need to verify that announcer is not expired since it's already checked in announcer puzzle
       (c
@@ -44,7 +44,7 @@
             (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH args_hash)
             PROTOCOL_PREFIX
             (sha256tree
-              (c STATUTES_STRUCT (c launcher_id (c ONE (to-uint64 price)))) ; ONE indicates that announcer is approved
+              (c STATUTES_STRUCT (c launcher_id (c ONE price))) ; ONE indicates that announcer is approved
             )
           )
         )
@@ -64,7 +64,6 @@
 
 
   (assign
-    current_timestamp (to-uint64 current_timestamp_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     ; number of announcers being used in oracle price update
     price_announcers_length (announcer-list-length price_announcers 0) ; verifies price of price_announcers
@@ -91,6 +90,7 @@
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item cut_price_infos)
     (assert
+      (is-uint64 current_timestamp)
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- M_OF_N ONE))
       ; check that no announcer is being used more than once

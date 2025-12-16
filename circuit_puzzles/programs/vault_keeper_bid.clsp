@@ -11,10 +11,10 @@
     )
     (@ args
       (
-        current_timestamp_in ; to int
-        byc_bid_amount_in ; to int
-        byc_melting_coin_parent_id ; verify
-        byc_treasury_coin_info ; see below
+        current_timestamp ; is uint
+        byc_bid_amount ; is uint
+        byc_melting_coin_parent_id ; verify. can be nil
+        byc_treasury_coin_info ; destructure. can be nil
         min_treasury_delta ; statute
         target_puzzle_hash ; verify
         my_coin_id ; verify
@@ -30,8 +30,6 @@
   (include curry.clib)
 
   (assign
-    current_timestamp (to-uint64 current_timestamp_in)
-    byc_bid_amount (to-uint64 byc_bid_amount_in)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH statutes_struct_hash)
     ; parse auction state as we'll need to verify it's still running and hasn't timed out
@@ -97,27 +95,24 @@
     )
     leftover_collateral (- COLLATERAL bid_xch_collateral_amount)
     byc_coin_id_to_melt (if byc_melting_coin_parent_id
-      (assert
-        (is-size-b32 byc_melting_coin_parent_id)
-        (calculate-byc-coin-id
-          CAT_MOD_HASH
-          byc_tail_hash
-          (list
-            byc_melting_coin_parent_id
-            byc_to_melt
-            RUN_TAIL_MOD_HASH
-          )
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        (list
+          byc_melting_coin_parent_id
+          byc_to_melt
+          RUN_TAIL_MOD_HASH
         )
       )
       ()
     )
-    (treasury_parent_id treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount_in) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
-    treasury_amount (to-uint64 treasury_amount_in)
+    (treasury_parent_id treasury_launcher_id treasury_ring_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
       (assert
         (is-size-b32 treasury_parent_id)
         (is-size-b32 treasury_launcher_id)
         (is-size-b32 treasury_ring_prev_launcher_id)
+        (is-uint64 treasury_amount)
         (calculate-byc-coin-id
           CAT_MOD_HASH
           byc_tail_hash
@@ -157,7 +152,11 @@
         )
     )
     (assert
+      (is-uint64 current_timestamp)
+      (is-uint64 byc_bid_amount)
       (is-size-b32 target_puzzle_hash)
+      (is-size-b32-or-nil byc_melting_coin_parent_id)
+      (is-size-b32 my_coin_id)
       (> leftover_debt -1)
       (> byc_bid_amount 0)
       (any  ; either bid amount is higher than min amount or is equal to the debt or the bid consumes all remaining collateral
