@@ -43,8 +43,8 @@
           )
         ; must be at least PRECISION for non-negative rates
         (> new_statute_value (- PRECISION ONE))
-        (if (= statute_index STATUTE_TREASURY_MAXIMUM) ; NEW / TODO: keep this exception? don't need to if default is to allow negative statute values (see below)
-          (> new_statute_value (- MINUS_ONE ONE)) ; must be no less than -1 ; NEW
+        (if (= statute_index STATUTE_TREASURY_MAXIMUM)
+          (is-int64 new_statute_value)
           (if (any
                 (= statute_index STATUTE_ORACLE_M_OF_N)
                 (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
@@ -53,7 +53,7 @@
                 (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
               )
             (> new_statute_value 0) ; must be strictly larger than 0
-            (> new_statute_value -1) ; ONE ; allow 0 for other statutes ; NEW / TODO: allow negative values or not?
+            (> new_statute_value -1) ; ONE ; allow 0 for other statutes ;
           )
         )
       )
