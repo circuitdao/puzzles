@@ -8,7 +8,7 @@
         price_updatable_after_seconds ; statute
         price_updatable_threshold_bps ; statute
         price_delay ; statute
-        current_timestamp_in ; to int
+        current_timestamp ; is uint
         price_announcers ; verify. -> ((launcher_id args_hash price))
       )
       input_conditions ; don't verify
@@ -23,7 +23,6 @@
   (defconst MAX_ORACLE_PRICE (* 1000000 PRICE_PRECISION))
 
   (assign
-    current_timestamp (to-uint64 current_timestamp_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     ; number of announcers being used in oracle price update
     price_announcers_length (announcer-list-length price_announcers 0) ; verifies price of price_announcers
@@ -50,6 +49,7 @@
     (last_price . last_price_updated) (last-item cut_price_infos)
     (assert
       (is-size-b32 statutes_inner_puzzle_hash)
+      (is-uint64 current_timestamp)
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))
       ; check that no announcer is being used more than once

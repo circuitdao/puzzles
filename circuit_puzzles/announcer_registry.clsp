@@ -62,9 +62,9 @@
     inner_puzzle_hash (sha256tree inner_puzzle)
     inner_conditions (a inner_puzzle inner_solution)
     (
-      lineage_proof
-      reward_or_register
-      args
+      lineage_proof ; no need to verify
+      reward_or_register ; no need to verify
+      args ; verify in resp. operation
     ) (find-solution-remark-value inner_conditions) ; we don't use inner_conditions after this line
     (
       announcer_registry
@@ -77,7 +77,6 @@
         (target_puzzle_hash announcer_curried_args_hash) args
         announcer_puzzle_hash (tree_hash_of_apply ATOM_ANNOUNCER_MOD_HASH announcer_curried_args_hash)
         (assert
-          ; verify types
           (is-size-b32 target_puzzle_hash) ; must be a puzzle hash
           (is-size-b32 announcer_curried_args_hash)
           (list
@@ -109,32 +108,29 @@
       )
       (assign
         statutes_inner_puzzle_hash (f args)
-        rewards_interval_in (f (r args))
+        rewards_interval (f (r args))
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-        rewards_interval (to-uint64 rewards_interval_in)
         (assert
-          ; verify types
           (is-size-b32 statutes_inner_puzzle_hash)
+          (is-uint64 rewards_interval)
           (if (= reward_or_register REWARD_OPCODE)
             ; ### distribute rewards ###
             (assign
               (
-                _ ; statutes_inner_puzzle_hash
-                _ ; rewards interval
-                statutes_price_update_counter_in
-                rewards_per_interval_in
-                issuance_coin_info
-                change_receiver_hash
-                my_coin_id
+                _ ; statutes_inner_puzzle_hash ; already verified
+                _ ; rewards interval ; already verified
+                statutes_price_update_counter ; is uint
+                rewards_per_interval ; is uint
+                issuance_coin_info ; destructure
+                change_receiver_hash ; verify
+                my_coin_id ; verify
               ) args
               ; validate and convert types
-              statutes_price_update_counter (to-uint64 statutes_price_update_counter_in)
-              rewards_per_interval (to-uint64 rewards_per_interval_in)
               announcers_count (list-length ANNOUNCER_REGISTRY 0)
               change_amount (r (divmod rewards_per_interval announcers_count))
               issuance_coin_id (coinid
-                (f issuance_coin_info)
+                (f issuance_coin_info) ; verified by coinid operator
                 (curry_hashes CAT_MOD_HASH
                   (sha256 ONE CAT_MOD_HASH)
                   (sha256 ONE crt_tail_hash)
@@ -143,7 +139,9 @@
                 (r issuance_coin_info)
               )
               (assert
-                ; don't verify issuance_coin_info
+                (is-uint64 statutes_price_update_counter)
+                (is-uint64 rewards_per_interval)
+                (is-uint64 (r issuance_coin_info))
                 (is-size-b32 change_receiver_hash)
                 (is-size-b32 my_coin_id)
                 (> statutes_price_update_counter REWARDS_CLAIMABLE_AT)
@@ -209,7 +207,11 @@
               rewards_interval ; rewards claimable at
               (assert
                 ; check that lineage_proof is parent of launcher
-                (= (f (r STATUTES_STRUCT)) (coinid lineage_proof (f (r (r args))) 1))
+                (= (f (r STATUTES_STRUCT)) (coinid
+                  lineage_proof
+                  (f (r (r args))) ; verified by coinid operator
+                  1
+                ))
                 (list
                   (list CREATE_COIN_ANNOUNCEMENT (sha256tree STATUTES_STRUCT))
                   (assert-statute statutes_puzzle_hash STATUTE_ANNOUNCER_REWARDS_INTERVAL_PRICE_UPDATES rewards_interval)

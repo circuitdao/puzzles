@@ -14,9 +14,9 @@
       (
         byc_issuing_coin_parent_id ; verify
         statutes_cumulative_stability_fee_df ; statute
-        byc_treasury_coin_info ; see below
+        byc_treasury_coin_info ; destructure
         min_treasury_delta ; statute
-        current_timestamp_in ; to int
+        current_timestamp ; is uint
         current_stability_fee_df ; statute
         price_info ; statute
         liquidation_ratio ; statute
@@ -32,7 +32,6 @@
   (include curry.clib)
 
   (assign
-    current_timestamp (to-uint64 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -47,19 +46,15 @@
       (f price_info)
     )
     fees_to_treasury (calculate-total-fees undiscounted_principal PRINCIPAL 0)
-    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) byc_treasury_coin_info
-    treasury_amount (to-uint64 treasury_amount_in)
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) byc_treasury_coin_info
     new_treasury_amount (+ fees_to_treasury treasury_amount)
-    byc_issuing_coin_id (assert
-      (is-size-b32 byc_issuing_coin_parent_id)
-      (calculate-byc-coin-id
-        CAT_MOD_HASH
-        byc_tail_hash
-        (list
-          byc_issuing_coin_parent_id
-          fees_to_treasury
-          RUN_TAIL_MOD_HASH
-        )
+    byc_issuing_coin_id (calculate-byc-coin-id
+      CAT_MOD_HASH
+      byc_tail_hash
+      (list
+        byc_issuing_coin_parent_id
+        fees_to_treasury
+        RUN_TAIL_MOD_HASH
       )
     )
     treasury_coin_id (calculate-byc-coin-id
@@ -78,9 +73,12 @@
       )
     )
     (assert
+      (is-uint64 current_timestamp)
+      (is-size-b32 byc_issuing_coin_parent_id)
       (is-size-b32 treasury_parent_id)
       (is-size-b32 treasury_launcher_id)
       (is-size-b32 treasury_prev_launcher_id)
+      (is-uint64 treasury_amount)
       ; only if there are fees to transfer
       (> fees_to_treasury 0)
       ; to avoid keepers dusting and hogging treasury coins

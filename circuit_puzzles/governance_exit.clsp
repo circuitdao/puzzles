@@ -1,4 +1,7 @@
-(mod (INNER_PUZZLE_HASH AMOUNT parent_id)
+(mod (INNER_PUZZLE_HASH AMOUNT
+      parent_id ; implicitly verified
+    )
+
   (include condition_codes.clib)
 
   (list

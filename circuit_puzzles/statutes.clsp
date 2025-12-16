@@ -14,9 +14,9 @@
       PRICE_UPDATE_COUNTER
 
       ; solution
-      governance_curried_args_hash ; as required by tree_hash_of_apply
+      governance_curried_args_hash ; verified in resp. operation. as required by tree_hash_of_apply
       .
-      mutation
+      mutation ; destructure
      )
 
   (include *standard-cl-23.1*)
@@ -91,8 +91,8 @@
         ; announce
         (assert
           ; ensure unique solution when announcing to facilitate identical spend aggregation
-          (= governance_curried_args_hash ())
-          (= mutation ())
+          (not governance_curried_args_hash)
+          (not mutation)
           (list
             ; set PREV_ANNOUNCE to 1
             ONE

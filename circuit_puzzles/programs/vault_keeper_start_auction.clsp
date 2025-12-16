@@ -10,8 +10,8 @@
     )
     (@ args
       (
-        start_only ; see below -> () or (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
-        current_timestamp_in ; to int
+        start_only ; destructure. -> () or (initiator_incentive_flat_fee initiator_incentive_relative_fee_bps liquidation_ratio statutes_cumulative_stability_fee_df current_stability_fee_df liquidation_penalty_bps)
+        current_timestamp ; to int
         step_time_interval ; statute
         step_price_decrease_factor ; statute
         price_info ; statute
@@ -35,7 +35,6 @@
   ; charged on the borrower anymore (whereas it typically would if there’s a late payment only
   ; that does not allow the lender to seize collateral)
   (assign
-    current_timestamp (to-uint64 current_timestamp_in)
     (
       initiator_incentive_flat_fee ; statute
       initiator_incentive_relative_fee_bps ; statute
@@ -97,6 +96,7 @@
       minimum_bid_amount_flat
     )
     auction_state (assert
+      (is-uint64 current_timestamp)
       (is-size-b32 initiator_puzzle_hash)
       (list
         current_timestamp

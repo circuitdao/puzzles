@@ -37,11 +37,11 @@
     input_conditions (a inner_puzzle inner_solution)
     (
       (
-        lineage_proof ; -> (parent_id launcher_id amount last_bid)
-        signed_operation_hash
-        op_args
+        lineage_proof ; no need to verify. -> (parent_id launcher_id amount last_bid)
+        signed_operation_hash ; verified indirectly
+        op_args ; verified in operation programs
       )
-      inner_conditions
+      inner_conditions ; don't verify
     ) (filter-and-extract-remark-solution input_conditions () ())
     operation_hash (sha256tree operation)
     inner_puzzle_hash (sha256tree inner_puzzle)

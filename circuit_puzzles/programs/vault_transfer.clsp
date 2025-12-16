@@ -11,7 +11,7 @@
     (@ args
       (
          target_puzzle_hash ; verify
-         current_timestamp_in ; to int
+         current_timestamp ; is uint
          price_info ; statute
          liquidation_ratio ; statute
          statutes_cumulative_stability_fee_df ; statute
@@ -27,7 +27,6 @@
   (include statutes_utils.clib)
 
   (assign
-    current_timestamp (to-uint64 current_timestamp_in)
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
       current_stability_fee_df
@@ -42,6 +41,7 @@
     )
     (assert
       (is-size-b32 target_puzzle_hash)
+      (is-uint64 current_timestamp)
       (> COLLATERAL (- min_collateral_amount ONE))  ; must be at or above liquidation threshold
       (list
         (list COLLATERAL PRINCIPAL AUCTION_STATE target_puzzle_hash DISCOUNTED_PRINCIPAL)

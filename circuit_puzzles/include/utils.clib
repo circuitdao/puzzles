@@ -25,7 +25,15 @@
   (defun-inline to-int64 (var)
     (assert
       (> 9 (strlen var))
-      (+ var)
+      (+ var)  ; encode to int
+    )
+  )
+
+  (defun-inline is-int64 (var)
+    (assert
+      (> 9 (strlen var))
+      (= (+ var) var) ; enforce canonical representation
+      ONE
     )
   )
 
@@ -42,6 +50,16 @@
       (+ var)  ; encode to int
     )
   )
+
+  (defun-inline is-uint64 (var)
+    (assert
+      (> var MINUS_ONE) ; var >= 0
+      (> 0x10000000000000000 var) ; var <= 2^64 - 1 (max uint64)
+      (= (+ var) var) ; enforce canonical representation
+      ONE
+    )
+  )
+
 
   (defun-inline is-size-b32 (var)
     (= (strlen var) BYTES_32)

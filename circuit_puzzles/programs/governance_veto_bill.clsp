@@ -3,12 +3,12 @@
     (BILL MOD_HASH INNER_PUZZLE_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT
      statutes_puzzle_hash inner_puzzle_hash)
     (
-      amount_in
-      parent_veto_id
-      veto_amount_in
-      veto_inner_puzzle_hash
-      veto_bill_hash
-      current_timestamp_in
+      amount ; is uint
+      parent_veto_id ; verify
+      veto_amount ; is uint
+      veto_inner_puzzle_hash ; verify
+      veto_bill_hash ; verify
+      current_timestamp ; is uint
     )
   )
 
@@ -30,12 +30,10 @@
       new_delay_seconds
       new_max_delta
     ) BILL
-    (assign
-      ; validate and convert types
-      amount (to-uint64 amount_in)
-      veto_amount (to-uint64 veto_amount_in)
-      current_timestamp (to-uint64 current_timestamp_in)
     (assert
+      (is-uint64 amount)
+      (is-uint64 veto_amount)
+      (is-uint64 current_timestamp)
       (is-size-b32 parent_veto_id)
       (is-size-b32 veto_inner_puzzle_hash)
       (is-size-b32 veto_bill_hash)
@@ -71,6 +69,6 @@
           )
         )
       )
-    ))
+    )
   )
 )

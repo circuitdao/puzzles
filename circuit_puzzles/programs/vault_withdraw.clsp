@@ -10,10 +10,10 @@
     )
     (@ args
       (
-        withdraw_amount_in ; to int
+        withdraw_amount ; is uint
         price_info ; statute
         liquidation_ratio ; statute
-        current_timestamp_in ; to int
+        current_timestamp ; is uint
         statutes_cumulative_stability_fee_df ; statute
         current_stability_fee_df ; statute
       )
@@ -28,8 +28,6 @@
 
 
   (assign
-    withdraw_amount (to-uint64 withdraw_amount_in)
-    current_timestamp (to-uint64 current_timestamp_in)
     new_collateral (- COLLATERAL withdraw_amount)
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -46,6 +44,8 @@
         (f price_info)
     )
     (assert
+      (is-uint64 withdraw_amount)
+      (is-uint64 current_timestamp)
       (> new_collateral MINUS_ONE)
       (> COLLATERAL new_collateral)
       (> new_collateral (- min_collateral_amount ONE))

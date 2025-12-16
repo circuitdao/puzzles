@@ -17,9 +17,9 @@
     input_conditions (a inner_puzzle inner_solution)
     (
       (
-        lineage_proof
-        signed_operation_hash
-        op_args
+        lineage_proof ; no need to verify
+        signed_operation_hash ; verified indirectly
+        op_args ; verified in operation programs
       )
       inner_conditions
     ) (filter-and-extract-remark-solution input_conditions () ())

@@ -11,8 +11,8 @@
     )
     (@ args
       (
-         repay_amount_in ; to int. amount of byc to repay
-         sf_transfer_amount_in ; to int. amount of accrued SFs to repay (part of repay_amount. gets transferred to treasury)
+         repay_amount ; is uint. amount of byc to repay
+         sf_transfer_amount ; is uint. amount of accrued SFs to repay (part of repay_amount, gets transferred to treasury)
          statutes_cumulative_stability_fee_df ; statute
          byc_melting_coin_parent_id ; verify
          minimum_debt_amount ; statute
@@ -20,7 +20,7 @@
          min_treasury_delta ; statute
          price_info ; statute
          current_stability_fee_df ; statute
-         current_timestamp_in ; to int
+         current_timestamp ; is uint
          liquidation_ratio ; statute
       )
     )
@@ -34,9 +34,6 @@
   (include vault.clib)
 
   (assign
-    repay_amount (to-uint64 repay_amount_in)
-    sf_transfer_amount (to-uint64 sf_transfer_amount_in)
-    current_timestamp (to-uint64 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_stability_fee_df (calculate-cumulative-discount-factor
       statutes_cumulative_stability_fee_df
@@ -62,8 +59,7 @@
         liquidation_ratio
         (f price_info)
     )
-    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
-    treasury_amount (to-uint64 treasury_amount_in)
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) (if byc_treasury_coin_info byc_treasury_coin_info (list 0 0 0 0))
     treasury_coin_id (if byc_treasury_coin_info
       (calculate-byc-coin-id
         CAT_MOD_HASH
@@ -84,24 +80,26 @@
     )
     new_treasury_amount (+ sf_transfer_amount treasury_amount)
     byc_coin_id_to_melt (if byc_melting_coin_parent_id
-      (assert
-        (is-size-b32 byc_melting_coin_parent_id)
-        (calculate-byc-coin-id
-          CAT_MOD_HASH
-          byc_tail_hash
-          (list
-            byc_melting_coin_parent_id
-            principal_to_repay
-            RUN_TAIL_MOD_HASH
-          )
+      (calculate-byc-coin-id
+        CAT_MOD_HASH
+        byc_tail_hash
+        (list
+          byc_melting_coin_parent_id
+          principal_to_repay
+          RUN_TAIL_MOD_HASH
         )
       )
       ()
     )
     (assert
+      (is-uint64 repay_amount)
+      (is-uint64 sf_transfer_amount)
+      (is-uint64 current_timestamp)
+      (is-size-b32 byc_melting_coin_parent_id)
       (is-size-b32-or-nil treasury_parent_id)
       (is-size-b32-or-nil treasury_launcher_id)
       (is-size-b32-or-nil treasury_prev_launcher_id)
+      (is-uint64 treasury_amount)
       (> repay_amount MINUS_ONE) ; repay amount must not be negative (but can be 0)
       (> undiscounted_principal (- repay_amount ONE)) ; cannot repay more than outstanding debt
       (> sf_transfer_amount MINUS_ONE) ; cannot transfer a negative amount

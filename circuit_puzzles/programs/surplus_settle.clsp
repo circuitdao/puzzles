@@ -5,12 +5,14 @@
 (mod
   (PAYOUT_MOD_HASH RUN_TAIL_MOD_HASH
     (MOD_HASH CAT_MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH CRT_TAIL_HASH LAUNCHER_ID BID_TTL MIN_PRICE_INCREASE_BPS BYC_LOT_AMOUNT LAST_BID)
-    lineage_proof input_conditions inner_puzzle_hash
+    lineage_proof ; no need to verify
+    input_conditions ; don't verify
+    inner_puzzle_hash ; verified in main puzzle
     (
-      statutes_inner_puzzle_hash
-      payout_coin_parent_id
-      my_amount_in
-      my_coin_id
+      statutes_inner_puzzle_hash ; verify
+      payout_coin_parent_id ; verify
+      my_amount ; is uint
+      my_coin_id ; verify
     )
   )
 
@@ -21,7 +23,6 @@
   (include utils.clib)
 
   (assign
-    my_amount (to-uint64 my_amount_in)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     (target_puzzle_hash . timestamp) LAST_BID
     payout_puzzle_hash (
@@ -50,9 +51,9 @@
       my_amount
     )
     (assert
-      ; verify types
       (is-size-b32 statutes_inner_puzzle_hash)
       (is-size-b32 payout_coin_parent_id)
+      (is-uint64 my_amount)
       (is-size-b32 my_coin_id)
       ; must have a bid
       LAST_BID

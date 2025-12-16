@@ -2,10 +2,10 @@
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
     lineage_proof
     input_conditions
-    inner_puzzle_hash
+    inner_puzzle_hash ; verified in main puzzle
     (
-      statutes_inner_puzzle_hash
-      my_coin_id
+      statutes_inner_puzzle_hash ; verify
+      my_coin_id ; verify
     )
   )
 
@@ -22,7 +22,7 @@
     ; enforce eve state
     (= LAUNCHER_ID 0)
     (= AUCTION_PARAMS ())
-    (= LAST_BID ()) 
+    (= LAST_BID ())
     (c
       (list
         CREATE_COIN

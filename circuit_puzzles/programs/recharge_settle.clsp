@@ -8,10 +8,12 @@
     CRT_TAIL_MOD_HASH
     TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    lineage_proof input_conditions inner_puzzle_hash
+    lineage_proof
+    input_conditions
+    inner_puzzle_hash ; verified in main puzzle
     (
-      treasury_coins ; (partly) verified in deposit-to-treasury
-      funding_coin_info ; don't verify
+      treasury_coins ; verified in deposit-to-treasury -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
+      funding_coin_info ; destructure below
     )
   )
 
@@ -31,13 +33,19 @@
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (treasury_deposit_per_coin . remainder) (divmod winning_byc_bid_amount treasury_coins_count)
     funding_coin_id (coinid
-      (f funding_coin_info)
+      (assert
+        (is-size-b32 (f funding_coin_info))
+        (f funding_coin_info)
+      )
       (curry_hashes CAT_MOD_HASH
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE crt_tail_hash)
         RUN_TAIL_MOD_HASH
       )
-      (r funding_coin_info)
+      (assert
+        (is-uint64 (r funding_coin_info))
+        (r funding_coin_info)
+      )
     )
     (assert
       ; must provide at least one treasury coin to deposit to

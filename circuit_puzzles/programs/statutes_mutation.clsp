@@ -2,9 +2,9 @@
       GOVERNANCE_MOD_HASH
       MOD_HASH STATUTES PRICE_INFO PAST_CUMULATIVE_STABILITY_FEE_DF PAST_CUMULATIVE_INTEREST_DF
        PRICE_UPDATE_COUNTER
-      mutation_index
-      mutation_value ; don't verify type
-      governance_curried_args_hash ; don't verify type
+      mutation_index ; verify range and enforce canonical representation
+      mutation_value ; don't verify type. done when proposing bill
+      governance_curried_args_hash ; verify
     )
 
   (include *standard-cl-23.1*)
@@ -35,6 +35,7 @@
     ; updating statutes
     (assert
       (is-size-b32 governance_curried_args_hash)
+      (= (+ mutation_index) mutation_index) ; enforce canonical representation
       (> mutation_index -2) ; -1 for custom conditions, >= 0 for statutes
       (> STATUTES_MAX_IDX (- mutation_index ONE))
       (if (= mutation_index CUSTOM_CONDITIONS_MUTATION_INDEX)

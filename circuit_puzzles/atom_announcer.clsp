@@ -4,7 +4,7 @@
        ;; lineage_proof is
        ;;   () for eve spend
        ;;   (prev_parent_id prev_deposit . prev_puzzle_args_hash) for non-eve spends
-       lineage_proof
+       lineage_proof ; no need to verify
        inner_puzzle
        operation
        .

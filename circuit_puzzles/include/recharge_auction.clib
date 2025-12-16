@@ -5,63 +5,75 @@
   ; asserts post-deposit treasury ring amounts, ensuring intended amount has been deposited to treasury
   ; total deposited to treasury = no. treasury coins * deposit_amount_per_coin + remainder
   (defun deposit-to-treasury (TREASURY_MOD_HASH CAT_MOD_HASH BYC_TAIL_HASH STATUTES_STRUCT inner_puzzle_hash
-                              treasury_minimum_in
-                              deposit_amount_per_coin_in ; amount being deposited into each treasury coin
-                              remainder_in ; amount being deposited in addition to deposit_amount_per_coin into first of treasury_coins
+                              treasury_minimum
+                              deposit_amount_per_coin ; amount being deposited into each treasury coin
+                              remainder ; amount being deposited in addition to deposit_amount_per_coin into first of treasury_coins
                               first_treasury_coin
                               treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
                               announcements
                               new_total_amount ; post-deposit treasury amount. must be passed 0 when function is called
                               )
-    (assign
-      treasury_minimum (to-uint64 treasury_minimum_in)
-      deposit_amount_per_coin (to-uint64 deposit_amount_per_coin_in)
-      remainder (to-uint64 remainder_in)
-      (if treasury_coins
-        (assign
-          (parent_id launcher_id ring_prev_launcher_id current_amount_in) (f treasury_coins)
-          ; don't verify treasury coin ids
-          current_amount (to-uint64 current_amount_in)
-          (potential_remainder next_parent_id next_launcher_id next_ring_prev_launcher_id next_current_amount_in) (
-            if (r treasury_coins)
-              (c 0x00 (f (r treasury_coins)))
-              (c remainder first_treasury_coin)
+
+    (if treasury_coins
+      (assign
+        (
+          parent_id ; verify
+          launcher_id ; verify
+          ring_prev_launcher_id ; verify
+          current_amount ; is uint
+        ) (f treasury_coins)
+        (
+          potential_remainder ; no need to verify (calc in puzzle)
+          next_parent_id ; verify
+          next_launcher_id ; verify
+          next_ring_prev_launcher_id ; verify
+          next_current_amount ; is uint
+        ) (if (r treasury_coins)
+            (c 0x00 (f (r treasury_coins)))
+            (c remainder first_treasury_coin)
+        )
+        delta (+ deposit_amount_per_coin potential_remainder)
+        new_amount (+ next_current_amount delta)
+        new_prev_amount (+ current_amount deposit_amount_per_coin (if (= launcher_id (f (r first_treasury_coin))) remainder 0))
+        prev_treasury_coin_id (coinid
+          parent_id
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (curry_hashes
+              TREASURY_MOD_HASH
+              (sha256 ONE TREASURY_MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE launcher_id)
+              (sha256 ONE ring_prev_launcher_id)
+            )
           )
-          ; don't verify treasury coin ids
-          next_current_amount (to-uint64 next_current_amount_in)
-          delta (+ deposit_amount_per_coin potential_remainder)
-          new_amount (+ next_current_amount delta)
-          new_prev_amount (+ current_amount deposit_amount_per_coin (if (= launcher_id (f (r first_treasury_coin))) remainder 0))
-          prev_treasury_coin_id (coinid
-              parent_id
-              (curry_hashes CAT_MOD_HASH
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE BYC_TAIL_HASH)
-                (curry_hashes
-                  TREASURY_MOD_HASH
-                  (sha256 ONE TREASURY_MOD_HASH)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256 ONE launcher_id)
-                  (sha256 ONE ring_prev_launcher_id)
-                )
-              )
-              current_amount
+          current_amount
+        )
+        treasury_coin_id (coinid
+          next_parent_id
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE BYC_TAIL_HASH)
+            (curry_hashes
+              TREASURY_MOD_HASH
+              (sha256 ONE TREASURY_MOD_HASH)
+              (sha256tree STATUTES_STRUCT)
+              (sha256 ONE next_launcher_id)
+              (sha256 ONE next_ring_prev_launcher_id)
+            )
           )
-          treasury_coin_id (coinid
-              next_parent_id
-              (curry_hashes CAT_MOD_HASH
-                (sha256 ONE CAT_MOD_HASH)
-                (sha256 ONE BYC_TAIL_HASH)
-                (curry_hashes
-                  TREASURY_MOD_HASH
-                  (sha256 ONE TREASURY_MOD_HASH)
-                  (sha256tree STATUTES_STRUCT)
-                  (sha256 ONE next_launcher_id)
-                  (sha256 ONE next_ring_prev_launcher_id)
-                )
-              )
-              next_current_amount
-          )
+          next_current_amount
+        )
+        (assert
+          (is-size-b32 parent_id)
+          (is-size-b32 launcher_id)
+          (is-size-b32 ring_prev_launcher_id)
+          (is-uint64 current_amount)
+          (is-size-b32 next_parent_id)
+          (is-size-b32 next_launcher_id)
+          (is-size-b32 next_ring_prev_launcher_id)
+          (is-uint64 next_current_amount)
           (c
             ; we also send a message to each treasury coin so they can run
             (list SEND_MESSAGE 0x3f
@@ -101,13 +113,13 @@
             )
           )
         )
-        (if (all (= deposit_amount_per_coin 0) (= remainder 0))
-          ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
-          (assert (> treasury_minimum new_total_amount)
-            announcements
-          )
+      )
+      (if (all (= deposit_amount_per_coin 0) (= remainder 0))
+        ; this is assert balance of treasury coins, point is to prove that recharge auction can be started
+        (assert (> treasury_minimum new_total_amount)
           announcements
         )
+        announcements
       )
     )
   )

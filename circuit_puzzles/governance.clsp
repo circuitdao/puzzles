@@ -10,7 +10,7 @@
       STATUTES_STRUCT
       INNER_PUZZLE_HASH ; hash of the inner puzzle. saves costs in veto operation vs currying full puzzle
       BILL ; -> (bill_expiries statute_index statute) where bill_expiries -> (veto_interval_expiry implementation_delay_expiry . implementation_interval_expiry)
-      lineage_proof
+      lineage_proof ; no need to verify
       inner_puzzle
       inner_solution
       bill_operation
@@ -73,7 +73,7 @@
                       ; disable governance and use existing inner puzzle if first of condition body is not a 32-byte hash
                       (curry_hashes EXIT_MOD_HASH
                         (sha256 ONE INNER_PUZZLE_HASH)
-                        (sha256 ONE (f (r condition_body))) ; amount
+                        (sha256 ONE (f (r condition_body))) ; amount. was already verified in find-bill-condition
                       )
                     )
                     (r condition_body) ; amount + memos (if any)
@@ -203,7 +203,20 @@
           (find-bill-condition rest_of_conditions bill_operation create_coin_amount)
         )
       )
-      (c (if bill_operation bill_operation (list () ())) create_coin_amount)
+      (c
+        (if bill_operation
+          (assert
+            (is-size-b32-or-nil (f bill_operation)) ; statutes_inner_puzzle_hash. allow nil for ops that don't require statutes spend
+            (is-size-b32-or-nil (f (r bill_operation))) ; signed_bill_operation_hash
+            bill_operation
+          )
+          (list () ())
+        )
+        (assert
+          (is-uint64 create_coin_amount)
+          create_coin_amount
+        )
+      )
     )
   )
 

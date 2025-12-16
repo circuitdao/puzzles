@@ -17,7 +17,7 @@
 (mod ((OWNER_OPERATIONS . KEEPER_OPERATIONS) MOD_HASH STATUTES_STRUCT COLLATERAL PRINCIPAL
       AUCTION_STATE INNER_PUZZLE_HASH DISCOUNTED_PRINCIPAL
       (
-        lineage_proof
+        lineage_proof ; no need to verify
         ; owner mode iff keeper_operation_info is nil
         inner_puzzle
         solution  ; normal solution for inner puzzle, usually a list of conditions, must include vault operation condition

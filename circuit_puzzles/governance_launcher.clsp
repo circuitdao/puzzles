@@ -1,6 +1,8 @@
 (mod (GOVERNANCE_MOD_HASH CAT_MOD_HASH CRT_TAIL_HASH STATUTES_STRUCT_HASH
         ; solution
-        inner_puzzle_hash my_parents_parent_id amount
+        inner_puzzle_hash ; verify
+        my_parents_parent_id ; implicitly verified
+        amount ; is uint
      )
 
   (include *standard-cl-23.1*)
@@ -8,47 +10,52 @@
   (include curry.clib)
   (include prefixes.clib)
   (include sha256tree.clib)
+  (include utils.clib)
 
   (defconstant ONE 1)
 
-  (list
-    (list CREATE_COIN
-      (curry_hashes GOVERNANCE_MOD_HASH
-        (sha256 ONE GOVERNANCE_MOD_HASH)
-        (sha256 ONE CRT_TAIL_HASH)
-        STATUTES_STRUCT_HASH
-        (sha256 ONE inner_puzzle_hash)
-        (sha256 ONE ())
-      )
-      amount
-      (list inner_puzzle_hash)
-    )
-    (list ASSERT_MY_PARENT_ID
-      (coinid
-        my_parents_parent_id
-        (curry_hashes CAT_MOD_HASH
-          (sha256 ONE CAT_MOD_HASH)
+  (assert
+    (is-size-b32 inner_puzzle_hash)
+    (is-uint64 amount)
+    (list
+      (list CREATE_COIN
+        (curry_hashes GOVERNANCE_MOD_HASH
+          (sha256 ONE GOVERNANCE_MOD_HASH)
           (sha256 ONE CRT_TAIL_HASH)
-          inner_puzzle_hash
+          STATUTES_STRUCT_HASH
+          (sha256 ONE inner_puzzle_hash)
+          (sha256 ONE ())
         )
         amount
+        (list inner_puzzle_hash)
       )
-    )
-    (list ASSERT_MY_AMOUNT amount)
-    ; confirm that newly created coin was spent
-    (list RECEIVE_MESSAGE
-      0x3f
-      '*'
-      (coinid
-        my_parents_parent_id
-        (curry_hashes CAT_MOD_HASH
-          (sha256 ONE CAT_MOD_HASH)
-          (sha256 ONE CRT_TAIL_HASH)
-          inner_puzzle_hash
+      (list ASSERT_MY_PARENT_ID
+        (coinid
+          my_parents_parent_id
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            inner_puzzle_hash
+          )
+          amount
         )
-        amount
       )
+      (list ASSERT_MY_AMOUNT amount)
+      ; confirm that newly created coin was spent
+      (list RECEIVE_MESSAGE
+        0x3f
+        '*'
+        (coinid
+          my_parents_parent_id
+          (curry_hashes CAT_MOD_HASH
+            (sha256 ONE CAT_MOD_HASH)
+            (sha256 ONE CRT_TAIL_HASH)
+            inner_puzzle_hash
+          )
+          amount
+        )
+      )
+      (list REMARK PROTOCOL_PREFIX () () inner_puzzle_hash)
     )
-    (list REMARK PROTOCOL_PREFIX () () inner_puzzle_hash)
   )
 )

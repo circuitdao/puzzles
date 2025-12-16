@@ -110,7 +110,7 @@
 
   (defun announcer-list-length (lst count)
     (if lst
-      ; force announcer price to be given in canoncial int represenation
+      ; force announcer price to be given as integer in canoncial represenation
       (if (not (= (+ (f (r (r (f lst)))) 0) (f (r (r (f lst))))))
         (x)
         (announcer-list-length (r lst) (+ count 1))

@@ -22,13 +22,13 @@
     input_conditions (a inner_puzzle inner_solution)
     (
       (
-        surplus_auction_parent_id
-        surplus_auction_curried_args_hash
-        surplus_auction_amount
-        puzzle_hash
-        amount
+        surplus_auction_parent_id ; verify
+        surplus_auction_curried_args_hash ; verify
+        surplus_auction_amount ; is uint
+        puzzle_hash ; verify
+        amount ; is uint
       )
-      inner_conditions
+      inner_conditions ; don't verify
     ) (filter-and-extract-remark-solution input_conditions () ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     surplus_auction_coin_id (coinid
@@ -41,50 +41,57 @@
       )
       surplus_auction_amount
     )
-    (if (all (= surplus_auction_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
-      ; first spend of the coin
-      (li  ; create / fill the coin from treasury
-        ; surplus auction is being created and started, since we should have enough in treasury
-        ; to fill this coin, let see. We also guarantee we locked them delegating control to surplus auction coin id
-        (list SEND_MESSAGE 0x3f
-          (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash amount)))
-          surplus_auction_coin_id
-        )
-        ; recreate ourselves with the surplus BYC lot amount
-        (list
-          CREATE_COIN
-          (curry_hashes MOD_HASH
-            (sha256 ONE MOD_HASH)
-            (sha256 ONE CRT_TAIL_HASH)
-            (sha256 ONE SURPLUS_AUCTION_MOD_HASH)
-            (sha256 ONE SURPLUS_AUCTION_LAUNCHER_ID)
+    (assert
+      (is-size-b32 surplus_auction_parent_id)
+      (is-size-b32 surplus_auction_curried_args_hash)
+      (is-uint64 surplus_auction_amount)
+      (is-size-b32-or-nil puzzle_hash)
+      (is-uint64 amount)
+      (if (all (= surplus_auction_coin_id SURPLUS_AUCTION_LAUNCHER_ID) (= puzzle_hash ()))
+        ; first spend of the coin
+        (li  ; create / fill the coin from treasury
+          ; surplus auction is being created and started, since we should have enough in treasury
+          ; to fill this coin, let see. We also guarantee we locked them delegating control to surplus auction coin id
+          (list SEND_MESSAGE 0x3f
+            (concat PROTOCOL_PREFIX (sha256tree (c inner_puzzle_hash amount)))
+            surplus_auction_coin_id
           )
-          amount
-        )
-        ; must be zero when locking the coin. also ensures this spend path can only be taken once
-        ; since Surplus Auction Lot Amount > 0 (or ow/ there's no possibility of loss to protocol)
-        (list ASSERT_MY_AMOUNT 0)
-        &rest
-        inner_conditions
-      )
-      ; we're transferring funds to surplus auction winner,
-      ; we don't know if recent surplus coin contains our launcher id, but we're going to assert that with coin ann
-      (li
-        ; can only transfer full amount
-        (list ASSERT_MY_AMOUNT amount)
-        ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
-        ; and the winning bid amount to melt
-        (list RECEIVE_MESSAGE 0x3f
-          (concat
-            PROTOCOL_PREFIX
-            (sha256tree (c inner_puzzle_hash (c amount (c puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID))))
+          ; recreate ourselves with the surplus BYC lot amount
+          (list
+            CREATE_COIN
+            (curry_hashes MOD_HASH
+              (sha256 ONE MOD_HASH)
+              (sha256 ONE CRT_TAIL_HASH)
+              (sha256 ONE SURPLUS_AUCTION_MOD_HASH)
+              (sha256 ONE SURPLUS_AUCTION_LAUNCHER_ID)
+            )
+            amount
           )
-          surplus_auction_coin_id
+          ; must be zero when locking the coin. also ensures this spend path can only be taken once
+          ; since Surplus Auction Lot Amount > 0 (or ow/ there's no possibility of loss to protocol)
+          (list ASSERT_MY_AMOUNT 0)
+          &rest
+          inner_conditions
         )
-        ; transfer out
-        (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
-        &rest
-        inner_conditions
+        ; we're transferring funds to surplus auction winner,
+        ; we don't know if recent surplus coin contains our launcher id, but we're going to assert that with coin ann
+        (li
+          ; can only transfer full amount
+          (list ASSERT_MY_AMOUNT amount)
+          ; get confirmation from surplus auction that it indeed wants to transfer funds to the winner (puzzle_hash)
+          ; and the winning bid amount to melt
+          (list RECEIVE_MESSAGE 0x3f
+            (concat
+              PROTOCOL_PREFIX
+              (sha256tree (c inner_puzzle_hash (c amount (c puzzle_hash SURPLUS_AUCTION_LAUNCHER_ID))))
+            )
+            surplus_auction_coin_id
+          )
+          ; transfer out
+          (list CREATE_COIN puzzle_hash amount (list puzzle_hash))
+          &rest
+          inner_conditions
+        )
       )
     )
   )

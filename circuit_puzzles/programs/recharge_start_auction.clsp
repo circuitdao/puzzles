@@ -1,18 +1,20 @@
 (mod (
     CAT_MOD_HASH TREASURY_MOD_HASH
     (MOD_HASH STATUTES_STRUCT BYC_TAIL_HASH LAUNCHER_ID AUCTION_PARAMS LAST_BID)
-    lineage_proof input_conditions inner_puzzle_hash
+    lineage_proof
+    input_conditions
+    inner_puzzle_hash ; verified in main puzzle
     (
-      statutes_inner_puzzle_hash
-      current_time_in
-      auction_ttl_in
-      bid_ttl_in
-      min_crt_price_in
-      min_byc_bid_amount_in
-      min_price_increase_bps_in
-      max_byc_bid_amount_in
-      treasury_minimum_in
-      treasury_coins ; -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
+      statutes_inner_puzzle_hash ; verify
+      current_time ; is uint
+      auction_ttl ; statue
+      bid_ttl ; statue
+      min_crt_price ; statue
+      min_byc_bid_amount ; statue
+      min_price_increase_bps ; statue
+      max_byc_bid_amount ; statue
+      treasury_minimum ; statue
+      treasury_coins ; verified in deposit-to-treasury. -> ((parent_id launcher_id ring_prev_launcher_id current_amount))
     )
   )
 
@@ -24,15 +26,6 @@
   (include recharge_auction.clib)
 
   (assign
-    current_time (to-uint64 current_time_in)
-    auction_ttl (to-uint64 auction_ttl_in)
-    bid_ttl (to-uint64 bid_ttl_in)
-    min_crt_price (to-uint64 min_crt_price_in)
-    min_byc_bid_amount (to-uint64 min_byc_bid_amount_in)
-    min_price_increase_bps (to-uint64 min_price_increase_bps_in)
-    max_byc_bid_amount (to-uint64 max_byc_bid_amount_in)
-    treasury_minimum (to-uint64 treasury_minimum_in)
-    ; (partly) verify treasury coins in deposit-to-treasury
     statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
     auction_params (list
       current_time
@@ -45,8 +38,8 @@
     )
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (assert
-      ; verify types
       (is-size-b32 statutes_inner_puzzle_hash)
+      (is-uint64 current_time)
       (> treasury_coins_count 0)
       LAUNCHER_ID
       ; can't run if LAST_BID is set. must settle first

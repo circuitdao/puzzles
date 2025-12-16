@@ -9,8 +9,8 @@
   )
   (@ args
     (
-      deposit_amount_in ; to int
-      current_timestamp_in ; to int
+      deposit_amount ; is uint
+      current_timestamp ; is uint
       price_info ; statute
       liquidation_ratio ; statute
       statutes_cumulative_stability_fee_df ; statute
@@ -27,8 +27,6 @@
 
 
  (assign
-   deposit_amount (to-uint64 deposit_amount_in)
-   current_timestamp (to-uint64 current_timestamp_in)
    new_collateral (+ COLLATERAL deposit_amount)
    cumulative_stability_fee_df (calculate-cumulative-discount-factor
      statutes_cumulative_stability_fee_df
@@ -43,6 +41,8 @@
      (f price_info)
    )
    (assert
+     (is-uint64 deposit_amount)
+     (is-uint64 current_timestamp)
      (> deposit_amount 0)
      (> new_collateral (- min_collateral_amount ONE))
      (list

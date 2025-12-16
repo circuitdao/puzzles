@@ -27,32 +27,25 @@
     (
       lineage_proof ; don't verify
       statutes_inner_puzzle_hash ; verify
-      current_amount_in
+      current_amount ; is uint
       statutes_cumulative_interest_df ; statute
-      current_timestamp_in
+      current_timestamp ; is uint
       current_interest_df ; statute
       price_info ; statute
       min_treasury_delta ; statute
       (@ treasury_coin_info
         (
-          treasury_coin_parent_id treasury_coin_launcher_id
-          treasury_coin_prev_launcher_id treasury_coin_amount_in
-          treasury_withdraw_amount_in ; amount of interest to be paid
+          treasury_coin_parent_id ; verify
+          treasury_coin_launcher_id ; verify
+          treasury_coin_prev_launcher_id ; verify
+          treasury_coin_amount ; is uint
+          treasury_withdraw_amount ; is uint. amount of interest to be paid
         )
-      ) ; see below
+      ) ; destructure
       memos ; don't verify. memos for CREATE_COIN condition
     ) (f (r (r create_coin_body)))
-    (treasury_coin_amount . treasury_withdraw_amount) (if treasury_coin_info
-      (c (to-uint64 treasury_coin_amount_in) (to-uint64 treasury_withdraw_amount_in))
-      (c () ())
-    )
-    current_amount (to-uint64 current_amount_in)
-    current_timestamp (to-uint64 current_timestamp_in)
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
-    statutes_puzzle_hash (assert
-      (is-size-b32 statutes_inner_puzzle_hash)
-      (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
-    )
+    statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
     cumulative_interest_df (calculate-cumulative-discount-factor
       statutes_cumulative_interest_df
@@ -65,6 +58,8 @@
         (is-size-b32 treasury_coin_parent_id)
         (is-size-b32 treasury_coin_launcher_id)
         (is-size-b32 treasury_coin_prev_launcher_id)
+        (is-uint64 treasury_coin_amount)
+        (is-uint64 treasury_withdraw_amount)
         (c
           (calculate-interest
             DISCOUNTED_BALANCE
@@ -162,6 +157,10 @@
     )
     new_inner_puzzle_hash (f create_coin_body)
     (assert
+      (is-size-b32 statutes_inner_puzzle_hash)
+      (is-uint64 current_amount)
+      (is-uint64 current_timestamp)
+      (is-uint64 new_amount)
       (is-size-b32 new_inner_puzzle_hash)
       (> interest_payment MINUS_ONE)
       (li

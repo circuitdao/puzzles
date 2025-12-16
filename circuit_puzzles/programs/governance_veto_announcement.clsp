@@ -5,8 +5,8 @@
     )
     (
       _ ; amount
-      target_bill_hash
-      target_coin_id
+      target_bill_hash ; verify
+      target_coin_id ; verify
     )
   )
 

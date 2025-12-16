@@ -11,9 +11,9 @@
     )
     (@ args
       (
-        recover_amount_in ; to int
-        current_timestamp_in ; to int
-        byc_treasury_coin_info ; see below
+        recover_amount ; is uint
+        current_timestamp ; is uint
+        byc_treasury_coin_info ; destructure
         min_treasury_delta ; statute
       )
     )
@@ -27,11 +27,8 @@
   (include curry.clib)
 
   (assign
-    recover_amount (to-uint64 recover_amount_in)
-    current_timestamp (to-uint64 current_timestamp_in)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
-    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount_in) byc_treasury_coin_info
-    treasury_amount (to-uint64 treasury_amount_in)
+    (treasury_parent_id treasury_launcher_id treasury_prev_launcher_id treasury_amount) byc_treasury_coin_info
     new_treasury_amount (- treasury_amount recover_amount)
     treasury_coin_id (assert
       (is-size-b32 treasury_parent_id)
@@ -85,6 +82,12 @@
       )
     )
     (assert
+      (is-uint64 recover_amount)
+      (is-uint64 current_timestamp)
+      (is-uint64 treasury_amount)
+      (is-size-b32 treasury_parent_id)
+      (is-size-b32 treasury_launcher_id)
+      (is-size-b32 treasury_prev_launcher_id)
       ; check that there is no collateral left
       (= COLLATERAL 0)
       ; must recover debt fully or partially, but amount must be at least min treasury delta
