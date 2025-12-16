@@ -36,7 +36,6 @@
       (is-size-b32 registry_mod_hash)
       (is-size-b32 registry_args_hash)
       (is-size-b32 target_puzzle_hash)
-      (is-size-b32 statutes_inner_puzzle_hash)
       APPROVED
       (> registry_claim_counter CLAIM_COUNTER)
       (> deposit (- MIN_DEPOSIT ONE)) ; must not be penalizable for deposit

@@ -112,7 +112,6 @@
         statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         crt_tail_hash (curry_hashes CRT_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
         (assert
-          (is-size-b32 statutes_inner_puzzle_hash)
           (is-uint64 rewards_interval)
           (if (= reward_or_register REWARD_OPCODE)
             ; ### distribute rewards ###

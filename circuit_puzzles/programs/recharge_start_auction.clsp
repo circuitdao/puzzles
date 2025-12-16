@@ -38,7 +38,6 @@
     )
     treasury_coins_count (count-treasury-coins treasury_coins 0 ())
     (assert
-      (is-size-b32 statutes_inner_puzzle_hash)
       (is-uint64 current_time)
       (> treasury_coins_count 0)
       LAUNCHER_ID

@@ -75,7 +75,6 @@
     ;### MAIN EXPRESSION ###
     (assert
       ; verify types
-      (is-size-b32 statutes_inner_puzzle_hash)
       (is-size-b32 vault_operation_hash)
       (= operation_hash vault_operation_hash)
       ; validate operation

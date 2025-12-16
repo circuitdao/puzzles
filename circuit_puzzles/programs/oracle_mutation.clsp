@@ -48,7 +48,6 @@
     ; most recent price info in existing buffer, i.e. excluding new price info being appended
     (last_price . last_price_updated) (last-item cut_price_infos)
     (assert
-      (is-size-b32 statutes_inner_puzzle_hash)
       (is-uint64 current_timestamp)
       ; oracle price update requires at least M-of-N announcers
       (> price_announcers_length (- m_of_n ONE))

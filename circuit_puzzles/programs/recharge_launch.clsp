@@ -17,7 +17,6 @@
 
   (assert
     ; verify types
-    (is-size-b32 statutes_inner_puzzle_hash)
     (is-size-b32 my_coin_id)
     ; enforce eve state
     (= LAUNCHER_ID 0)

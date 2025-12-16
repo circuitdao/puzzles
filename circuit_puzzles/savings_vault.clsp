@@ -157,7 +157,6 @@
     )
     new_inner_puzzle_hash (f create_coin_body)
     (assert
-      (is-size-b32 statutes_inner_puzzle_hash)
       (is-uint64 current_amount)
       (is-uint64 current_timestamp)
       (is-uint64 new_amount)

@@ -51,7 +51,6 @@
       my_amount
     )
     (assert
-      (is-size-b32 statutes_inner_puzzle_hash)
       (is-size-b32 payout_coin_parent_id)
       (is-uint64 my_amount)
       (is-size-b32 my_coin_id)

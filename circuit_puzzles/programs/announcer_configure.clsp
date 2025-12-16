@@ -47,13 +47,7 @@
         new_value_ttl (to-uint64 new_value_ttl_in)
         new_value (to-uint64 new_value_in)
         new_min_deposit (to-uint64 new_min_deposit_in)
-        statutes_puzzle_hash (calculate-statutes-puzzle-hash
-          STATUTES_STRUCT
-          (assert
-            (is-size-b32 statutes_inner_puzzle_hash)
-            statutes_inner_puzzle_hash
-          )
-        )
+        statutes_puzzle_hash (calculate-statutes-puzzle-hash STATUTES_STRUCT statutes_inner_puzzle_hash)
         (approved . cooldown_start)
           (assert
             (is-atom input_toggle_activation)

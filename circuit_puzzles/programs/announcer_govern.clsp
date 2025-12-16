@@ -24,7 +24,6 @@
 
   (assert
     (not new_puzzle_hash)
-    (is-size-b32 statutes_inner_puzzle_hash)
     (is-atom input_toggle_activation) ; is-atom check for boolean
     (assign
       ; validate and convert types
