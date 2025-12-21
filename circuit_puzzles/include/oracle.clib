@@ -37,12 +37,22 @@
   )
 
 
-  ; fails if create coin or protocol condition encountered
-  ; fails if no solution remark condition encountered
-  ; fails if more than one solution remark encountered (ambiguity / injection)
-  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
-  ; extracts third field from first solution remark condition encountered
-  ; returns all other conditions
+  ;; Filters inner puzzle conditions and extracts the solution from a REMARK condition.
+  ;;
+  ;; SECURITY: This function explicitly blocks CREATE_PUZZLE_ANNOUNCEMENT from inner puzzles
+  ;; to prevent fake price announcement injection attacks. Without this, an attacker could
+  ;; emit a 32-byte sha256tree hash matching the oracle's price announcement format, which
+  ;; would be appended to the oracle's output via &rest inner_conditions.
+  ;;
+  ;; Fails if:
+  ;; - CREATE_COIN condition encountered (inner puzzle cannot create coins)
+  ;; - CREATE_PUZZLE_ANNOUNCEMENT condition encountered (prevents price spoofing)
+  ;; - Protocol REMARK/MESSAGE condition encountered (is-valid-rmk-cond / is-valid-msg-cond)
+  ;; - No solution REMARK condition found
+  ;; - More than one solution REMARK encountered (ambiguity / injection)
+  ;;
+  ;; Solution REMARK format: (REMARK SOLUTION_PREFIX solution_data)
+  ;; Returns: (solution_data filtered_conditions)
   (defun filter-and-extract-remark-solution-without-puz-announcements (
         (@ conditions ((condition_code . condition_body) . rest_of_conditions))
         found_solution
@@ -68,7 +78,7 @@
               (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
             )
             (if (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
-              (x)
+              (x) ; SECURITY: block to prevent fake price announcement injection
               ; all other conditions allowed
               (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
             )
