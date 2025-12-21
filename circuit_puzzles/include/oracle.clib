@@ -36,31 +36,52 @@
     )
   )
 
-  (defun return-non-protocol-conditions ((@ input_conditions ((condition_code . condition_body) . rest_of_conditions)) conditions)
-    (if input_conditions
-      (if (= condition_code REMARK)
-        (assert
-          (is-valid-rmk-cond condition_body)
-          (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
-        )
-        (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+
+  ; fails if create coin or protocol condition encountered
+  ; fails if no solution remark condition encountered
+  ; fails if more than one solution remark encountered (ambiguity / injection)
+  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
+  ; extracts third field from first solution remark condition encountered
+  ; returns all other conditions
+  (defun filter-and-extract-remark-solution-without-puz-announcements (
+        (@ conditions ((condition_code . condition_body) . rest_of_conditions))
+        found_solution
+        filtered_conditions
+      )
+    (if conditions
+      (if (= condition_code CREATE_COIN)
+        (x) ; no create coin condition allowed
+        (if (= condition_code REMARK)
           (assert
-            (is-valid-msg-cond condition_body)
-            (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
-          )
-          (if (any (= condition_code CREATE_COIN_ANNOUNCEMENT) (= condition_code CREATE_PUZZLE_ANNOUNCEMENT))
-            (assert
-              (is-valid-ann-cond condition_body)
-            (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
+            (is-valid-rmk-cond condition_body) ; must not be a protocol remark
+            (if (= (f condition_body) SOLUTION_PREFIX)
+              (if found_solution
+                (x) ; multiple solution remarks are not allowed
+                (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions (f (r condition_body)) filtered_conditions) ; found solution remark
+              )
+              (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; non-solution remark passes through
             )
-            ; all other conditions allowed
-            (return-non-protocol-conditions rest_of_conditions (c (f conditions) input_conditions))
+          )
+          (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
+            (assert
+              (is-valid-msg-cond condition_body)
+              (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            )
+            (if (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
+              (x)
+              ; all other conditions allowed
+              (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            )
           )
         )
       )
-      ()
+      (assert
+        found_solution ; must have found a solution
+        (list found_solution filtered_conditions)
+      )
     )
   )
+
 
   (defun-inline abs (number)
     (if (> number MINUS_ONE) number (* number MINUS_ONE))

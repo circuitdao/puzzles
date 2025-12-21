@@ -24,7 +24,7 @@
         op_args ; verify in operation programs
       )
       inner_conditions
-    ) (filter-and-extract-remark-solution input_conditions () ())
+    ) (filter-and-extract-remark-solution-without-puz-announcements input_conditions () ())
     operation_hash (if operation (sha256tree operation) ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
