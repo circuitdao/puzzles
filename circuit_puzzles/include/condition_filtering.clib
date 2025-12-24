@@ -36,17 +36,16 @@
   )
 
   ; true/false if non-protocol/protocol remark condition
+  ; Handles nil condition_body by returning 1 (valid).
   (defun-inline is-valid-rmk-cond (condition_body)
     (not
       (and
-        (l condition_body)
-        (not (l (f condition_body)))
-        (= (strlen (f condition_body)) ONE)
-        (= (substr (f condition_body) 0 ONE) PROTOCOL_PREFIX)
+        condition_body            ; If nil, (and) is false, (not) returns 1
+        (= (strlen (f condition_body)) 1) ; If len=1, it must be an atom
+        (= (f condition_body) PROTOCOL_PREFIX) ; If len is 1, f is the prefix
       )
     )
   )
-
 
   ; fails if protocol condition encountered, o/w returns 1
   (defun fail-on-protocol-condition ((@ conditions ((condition_code . condition_body) . rest_of_conditions)))
@@ -172,12 +171,17 @@
         (if (= condition_code REMARK)
           (assert
             (is-valid-rmk-cond condition_body) ; must not be a protocol remark
-            (if (= (f condition_body) SOLUTION_PREFIX)
-              (if found_solution
-                (x) ; multiple solution remarks are not allowed
-                (filter-and-extract-remark-solution rest_of_conditions (f (r condition_body)) filtered_conditions) ; found solution remark
+            ; check if condition_body is non-empty before accessing (f condition_body)
+            (if (l condition_body)
+              (if (= (f condition_body) SOLUTION_PREFIX)
+                (if found_solution
+                  (x) ; multiple solution remarks are not allowed
+                  (filter-and-extract-remark-solution rest_of_conditions (f (r condition_body)) filtered_conditions) ; found solution remark
+                )
+                (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; non-solution remark passes through
               )
-              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; non-solution remark passes through
+              ; empty remark body - passes through
+              (filter-and-extract-remark-solution rest_of_conditions found_solution (c (f conditions) filtered_conditions))
             )
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
