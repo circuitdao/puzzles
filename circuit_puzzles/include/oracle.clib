@@ -36,10 +36,19 @@
     )
   )
 
+  ; true if remark condition body is a valid solution remark (has SOLUTION_PREFIX)
+  ; implicitly non-protocol since SOLUTION_PREFIX != PROTOCOL_PREFIX
+  (defun-inline is-valid-rmk-solution (condition_body)
+    (and
+      (l condition_body)
+      (not (l (f condition_body)))
+      (= (f condition_body) SOLUTION_PREFIX)
+    )
+  )
 
   ;; Filters inner puzzle conditions and extracts the solution from a REMARK condition.
   ;;
-  ;; SECURITY: This function explicitly blocks CREATE_PUZZLE_ANNOUNCEMENT from inner puzzles
+  ;; This function explicitly blocks CREATE_PUZZLE_ANNOUNCEMENT from inner puzzles
   ;; to prevent fake price announcement injection attacks. Without this, an attacker could
   ;; emit a 32-byte sha256tree hash matching the oracle's price announcement format, which
   ;; would be appended to the oracle's output via &rest inner_conditions.
@@ -63,22 +72,18 @@
         (x) ; no create coin condition allowed
         (if (= condition_code REMARK)
           (assert
-            (is-valid-rmk-cond condition_body) ; must not be a protocol remark
-            (if (= (f condition_body) SOLUTION_PREFIX)
-              (if found_solution
-                (x) ; multiple solution remarks are not allowed
-                (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions (f (r condition_body)) filtered_conditions) ; found solution remark
-              )
-              (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions)) ; non-solution remark passes through
-            )
+            (is-valid-rmk-solution condition_body) ; must not be a protocol remark
+            (not found_solution) ; only one solution remark allowed
+            ; found solution remark
+            (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions (f (r condition_body)) filtered_conditions)
           )
           (if (any (= condition_code SEND_MESSAGE) (= condition_code RECEIVE_MESSAGE))
             (assert
               (is-valid-msg-cond condition_body)
               (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
             )
-            (if (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
-              (x) ; SECURITY: block to prevent fake price announcement injection
+            (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
+              (x) ; block to prevent fake announcement injection
               ; all other conditions allowed
               (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
             )
