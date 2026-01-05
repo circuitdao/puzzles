@@ -24,7 +24,7 @@
         op_args ; verify in operation programs
       )
       inner_conditions
-    ) (filter-and-extract-remark-solution-without-puz-announcements input_conditions () ())
+    ) (filter-and-extract-remark-solution input_conditions () ()) ;(filter-and-extract-remark-solution-without-puz-announcements input_conditions () ())
     operation_hash (if operation (sha256tree operation) ())
     inner_puzzle_hash (sha256tree inner_puzzle)
     (assert
@@ -81,7 +81,7 @@
                 )
                 (if last_matured_price_timestamp
                   (list CREATE_PUZZLE_ANNOUNCEMENT
-                    (sha256tree (c last_matured_price (c last_matured_price_timestamp price_delay)))
+                    (concat PROTOCOL_PREFIX (sha256tree (c last_matured_price (c last_matured_price_timestamp price_delay))))
                   )
                   (x)  ; no matured price infos available, fail. this can only occur during launch
                 )

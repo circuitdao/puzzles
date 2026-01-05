@@ -40,10 +40,10 @@
   (defun-inline is-valid-rmk-cond (condition_body)
     (not
       (and
-        condition_body            ; If nil, (and) is false, (not) returns 1
+        condition_body  ; If nil, (and) is false, (not) returns 1
         (not (l (f condition_body)))
-        (= (strlen (f condition_body)) ONE) ; If len=1, it must be an atom
-        (= (f condition_body) PROTOCOL_PREFIX) ; If len is 1, f is the prefix
+        (= (strlen (f condition_body)) ONE)  ; If len=1, it must be an atom
+        (= (f condition_body) PROTOCOL_PREFIX)  ; If len is 1, f is the prefix
       )
     )
   )
@@ -158,9 +158,10 @@
   ; fails if create coin or protocol condition encountered
   ; fails if no solution remark condition encountered
   ; fails if more than one solution remark encountered (ambiguity / injection)
-  ; solution REMARK has format: (REMARK SOLUTION_PREFIX inner_puzzle_hash)
-  ; extracts third field from first solution remark condition encountered
-  ; returns all other conditions
+  ; solution REMARK has format: (REMARK SOLUTION_PREFIX solution_data)
+  ; returns a two element list:
+  ;   - third field from solution remark condition
+  ;   - all other conditions
   (defun filter-and-extract-remark-solution (
         (@ conditions ((condition_code . condition_body) . rest_of_conditions))
         found_solution
