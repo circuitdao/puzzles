@@ -82,10 +82,15 @@
               (is-valid-msg-cond condition_body)
               (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
             )
-            (if (any (= condition_code CREATE_PUZZLE_ANNOUNCEMENT) (= condition_code CREATE_COIN_ANNOUNCEMENT))
-              (x) ; block to prevent fake announcement injection
-              ; all other conditions allowed
-              (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+            (if (= condition_code CREATE_PUZZLE_ANNOUNCEMENT)
+              (x) ; block to prevent fake puzzle announcement injection
+              (if (= condition_code CREATE_COIN_ANNOUNCEMENT)
+                (assert (is-valid-ann-cond condition_body)
+                  (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+                )
+                ; all other conditions allowed
+                (filter-and-extract-remark-solution-without-puz-announcements rest_of_conditions found_solution (c (f conditions) filtered_conditions))
+              )
             )
           )
         )

@@ -41,7 +41,8 @@
     (not
       (and
         condition_body            ; If nil, (and) is false, (not) returns 1
-        (= (strlen (f condition_body)) 1) ; If len=1, it must be an atom
+        (not (l (f condition_body)))
+        (= (strlen (f condition_body)) ONE) ; If len=1, it must be an atom
         (= (f condition_body) PROTOCOL_PREFIX) ; If len is 1, f is the prefix
       )
     )

@@ -1,6 +1,6 @@
 [project]
 name = "circuit-puzzles"
-version = "4.3.0"
+version = "4.3.1"
 description = "Puzzles powering Circuit Protocol - a decentralized stablecoin and lending system on the Chia blockchain that enables permissionless borrowing of BYC against XCH collateral"
 readme = "README.md"
 license = {text = "All rights reserved"}
@@ -62,7 +62,7 @@ ruff = "^0.8"
 
 [tool.circuit]
 # SHA256 checksum of all compiled puzzle .hex files for integrity verification
-puzzle_checksum = "cc0804e7c6fd45a5135b50122c01d2ab93b81c770bf026f588d8dae8bb1cc89c"
+puzzle_checksum = "57915fb029458a1e5c7ef5012ae41fdb6dd1fbec35b598e8f3b716253a84e44c"
 
 [tool.ruff]
 target-version = "py311"
