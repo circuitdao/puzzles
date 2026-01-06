@@ -44,7 +44,7 @@
       (assert
         ; check for cheeky conditions
         (fail-on-protocol-condition inner_conditions)
-        ; we only support collateral vault as approval mod (they are the only ones that can issue BYC)
+        ; we only support collateral vault as approval mod (the only one that can issue or melt BYC)
         (= vault_mod_hash (f approval_mod_hashes))
         (any
           ; when melting, parent must be a cat, and delta must be negative (indicates melt)
