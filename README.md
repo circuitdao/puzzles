@@ -9,10 +9,11 @@ The puzzles have undergone security audits by Zellic and competitions on Immunef
 * [Immunefi audit competition](./audits/Immunefi-invite-only-audit.pdf)
 * [Cantina audit competition](./audits/Cantina-public-competition-audit.pdf)
 
-We're currently working on final review.
+There is an ongoing bug bounty program hosted on Cantina:
+* [Cantina bug bountry program](https://cantina.xyz/bounties/8f671963-4313-4ac3-aed9-3186a240b75a)
 
 ## Documentation 
-The documentation for Circuit Protocol is available [here](https://docs.circuitdao.com)
+The documentation for Circuit Protocol is available [here](https://docs.circuitdao.com).
 
 ## Contributing
 We welcome contributions from the community.
