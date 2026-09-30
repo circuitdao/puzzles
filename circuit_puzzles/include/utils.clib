@@ -12,6 +12,7 @@
   (defconst BYTES_32 32)
   (defconst TRUE 1)
   (defconst FALSE ())
+  (defconst MAX_DISCOUNT_EXP 52560000) ; 100 years in minutes to bound discount factor exponentiation
 
   (defun-inline is-atom (var)
     (not (l var))
@@ -31,15 +32,26 @@
   )
 
   ; Validate that var is unsigned 64-bit integer (range: 0 to 2^64-1 = ~18.4 quintillion) in canonical representation.
-  ; 64 bits is sufficient because:
-  ; - Coin amounts are capped at uint64 by Chia consensus (max ~18.4e18 mojos = ~18.4 million XCH)
-  ; - Timestamps fit well beyond year 2100+ (current Unix time ~1.7e9, 2^64 seconds = ~584 billion years)
-  ; - Prices, fees, BPS values, and other protocol parameters are well within this range
-  ; - Keeps atoms compact (8 bytes) for efficient serialization and validation
+  ; Terminal state notes:
+  ; - Coin amounts and on-chain state values are strictly constrained to uint64 by Chia consensus
+  ; - Intermediate fixed-point products and discount factors may widen up to uint128 during CLVM evaluation
+  ; - Keeps terminal atoms compact (8 bytes) for efficient serialization and validation
   (defun-inline is-uint64 (var)
     (assert
       (> var MINUS_ONE) ; var >= 0
       (> 0x10000000000000000 var) ; var <= 2^64 - 1 (max uint64)
+      (= (+ var) var) ; enforce canonical representation
+      ONE
+    )
+  )
+
+  ; Validate that var is unsigned 128-bit integer (range: 0 to 2^128-1) in canonical representation.
+  ; Accommodates fixed-point intermediate products (e.g., base * base or past * multiplier up to ~2^124)
+  ; prior to fixed-point scaling division by PRECISION.
+  (defun-inline is-uint128 (var)
+    (assert
+      (> var MINUS_ONE) ; var >= 0
+      (> 0x100000000000000000000000000000000 var) ; var <= 2^128 - 1 (max uint128)
       (= (+ var) var) ; enforce canonical representation
       ONE
     )
@@ -74,16 +86,16 @@
 
   (defmac or CLAUSES (if CLAUSES (or_ CLAUSES) ()))
 
-
   (defun pow-discount (base exp)
     ;; Exponentiation-by-squaring in fixed point.
     ;; Each multiplication is followed immediately by `/ PRECISION`, preserving
     ;; the same rounding behaviour as applying the factor minute-by-minute.
-    (if (= exp 0)
+    ;; Returns PRECISION when exp <= 0; safely bounded by MAX_DISCOUNT_EXP.
+    (if (> 1 exp)
       PRECISION
       (assign
         squared (/ (* base base) PRECISION)
-        recur (pow-discount squared (/ exp 2))
+        recur (pow-discount squared (/ exp TWO))
         (if (= (% exp TWO) ONE)
           (/ (* recur base) PRECISION)
           recur
@@ -100,7 +112,8 @@
       start_timestamp (+ previous_timestamp (- ONE_MINUTE remainder))
       raw_elapsed (- current_timestamp start_timestamp)
       elapsed_minutes (if (> raw_elapsed MINUS_ONE) (+ (/ raw_elapsed ONE_MINUTE) ONE) 0)
-      multiplier (pow-discount current elapsed_minutes)
+      bounded_minutes (if (> elapsed_minutes MAX_DISCOUNT_EXP) MAX_DISCOUNT_EXP elapsed_minutes)
+      multiplier (pow-discount current bounded_minutes)
       (/ (* past multiplier) PRECISION)
     )
   )
@@ -114,7 +127,6 @@
       (= (f (r (r (r (r approval_mod_hashes))))) approval_mod)
     )
   )
-
 
   (defun contains (lst item)
     (if lst
