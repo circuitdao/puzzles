@@ -6,7 +6,7 @@
       bill_proposal_fee_mojos ; is uint
       (@ new_bill (
         statute_index ; is int
-        new_statute_value ; don't verify
+        new_statute_value ; verified
         new_threshold_amount_to_propose ; is uint
         new_veto_interval ; is uint
         new_implementation_delay ; is uint
@@ -32,26 +32,62 @@
   (defconst ANN_PROPOSED '^')
   (defconst INTERVAL_LOWER_HARD_LIMIT 1800) ; 30 mins in seconds
   (defconst INTERVAL_UPPER_HARD_LIMIT 604800) ; 7 days in seconds
+  (defconst IMPLEMENTATION_INTERVAL_UPPER_LIMIT 2592000) ; 30 days max in seconds
+  (defconst MAX_FEE_DF_UPPER_LIMIT 20000000000) ; 2 * PRECISION (maximum 100% discount factor per interval)
+  (defconst MAX_ORACLE_M_OF_N 32) ; Maximum 32 oracle signers threshold
+  (defconst MAX_LIQUIDATION_RATIO_PCT 10000) ; 10000% maximum liquidation ratio
+  (defconst MAX_AUCTION_PRICE_FACTOR_BPS 1000000) ; 100x max starting price factor (1000000 BPS)
+  (defconst MAX_AUCTION_PRICE_TTL 604800) ; 7 days maximum auction price TTL in seconds
   (defconst MAINTAINER_MIN_VOTE_AMOUNT 350000000000)  ; min 350BN mCRT in a single vote to enable override
 
   (defun-inline validate-statute-value (statute_index new_statute_value)
     (if (= statute_index STATUTE_GOVERNANCE_IMPLEMENTATION_INTERVAL)
-      (> new_statute_value INTERVAL_LOWER_HARD_LIMIT)
+      (all
+        (> new_statute_value INTERVAL_LOWER_HARD_LIMIT)
+        (> (+ IMPLEMENTATION_INTERVAL_UPPER_LIMIT ONE) new_statute_value)
+      )
       (if (any
             (= statute_index STATUTE_STABILITY_FEE_DF)
             (= statute_index STATUTE_INTEREST_DF)
           )
-        ; must be at least PRECISION for non-negative rates
-        (> new_statute_value (- PRECISION ONE))
-        (if (any
-              (= statute_index STATUTE_ORACLE_M_OF_N)
-              (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
-              (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
-              (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
-              (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
+        ; must be between PRECISION and MAX_FEE_DF_UPPER_LIMIT
+        (all
+          (> new_statute_value (- PRECISION ONE))
+          (> (+ MAX_FEE_DF_UPPER_LIMIT ONE) new_statute_value)
+        )
+        (if (= statute_index STATUTE_ORACLE_M_OF_N)
+          (all
+            (> new_statute_value 0)
+            (> (+ MAX_ORACLE_M_OF_N ONE) new_statute_value)
+          )
+          (if (= statute_index STATUTE_VAULT_LIQUIDATION_RATIO_PCT)
+            (all
+              (> new_statute_value 0)
+              (> (+ MAX_LIQUIDATION_RATIO_PCT ONE) new_statute_value)
             )
-          (> new_statute_value 0) ; must be strictly larger than 0
-          (> new_statute_value -1) ; allow 0 for other statutes
+            (if (= statute_index STATUTE_VAULT_AUCTION_STARTING_PRICE_FACTOR_BPS)
+              (all
+                (> new_statute_value 0)
+                (> (+ MAX_AUCTION_PRICE_FACTOR_BPS ONE) new_statute_value)
+              )
+              (if (= statute_index STATUTE_VAULT_AUCTION_PRICE_TTL)
+                (all
+                  (> new_statute_value 0)
+                  (> (+ MAX_AUCTION_PRICE_TTL ONE) new_statute_value)
+                )
+                (if (= statute_index STATUTE_VAULT_AUCTION_MINIMUM_PRICE_FACTOR_BPS)
+                  (all
+                    (> new_statute_value 0)
+                    (> (+ MAX_AUCTION_PRICE_FACTOR_BPS ONE) new_statute_value)
+                  )
+                  (all
+                    (> new_statute_value -1) ; allow 0 for other statutes
+                    (is-uint64 new_statute_value)
+                  )
+                )
+              )
+            )
+          )
         )
       )
     )
@@ -73,10 +109,11 @@
       (if (= statute_index STATUTE_ORACLE_LAUNCHER_ID)
         ; oracle launcher id: must be 32 bytes
         (is-size-b32 new_statute_value)
-        ; standard statutes (index > 0)
+        ; standard statutes (index > 0): enforce atomicity, canonical representation, uint64 bound, and validation
         (all
           (is-atom new_statute_value)
           (= (+ new_statute_value) new_statute_value) ; must be in canonical representation
+          (is-uint64 new_statute_value) ; prevent bignum memory exhaustion
           (validate-statute-value
             statute_index
             new_statute_value

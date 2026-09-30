@@ -47,10 +47,17 @@
     statutes_struct_hash (sha256tree STATUTES_STRUCT)
     statutes_puzzle_hash (calculate-statutes-puzzle-hash (c (f STATUTES_STRUCT) statutes_struct_hash) statutes_inner_puzzle_hash)
     byc_tail_hash (curry_hashes BYC_TAIL_MOD_HASH (sha256tree STATUTES_STRUCT))
+    ; F14 Remediation: Synchronize interest settlement and balance discount timestamps.
+    ; When treasury_coin_info is present, evaluate cumulative_interest_df at the settlement timestamp
+    ; so that calculate-interest and new_discounted_balance use the exact same discount factor.
+    settlement_timestamp (if treasury_coin_info
+      (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest during settlement
+      current_timestamp
+    )
     cumulative_interest_df (calculate-cumulative-discount-factor
       statutes_cumulative_interest_df
       current_interest_df
-      current_timestamp
+      settlement_timestamp
       (r price_info)
     )
     (accrued_interest . interest_payment) (if treasury_coin_info
@@ -64,12 +71,7 @@
           (calculate-interest
             DISCOUNTED_BALANCE
             current_amount
-            (calculate-cumulative-discount-factor ; cumulative withdrawal interest
-              statutes_cumulative_interest_df
-              current_interest_df
-              (- current_timestamp (* 3 MAX_TX_BLOCK_TIME)) ; avoid future interest
-              (r price_info)
-            )
+            cumulative_interest_df
           )
           treasury_withdraw_amount
         )
@@ -79,7 +81,7 @@
     new_amount (f (r create_coin_body))
     delta_amount (- new_amount current_amount)
     new_discounted_balance (if treasury_coin_info
-      ; discount with interest
+      ; discount with interest using the synchronized settlement cumulative_interest_df
       (+ (/ (* (- delta_amount interest_payment) PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
       (+ (/ (* delta_amount PRECISION) cumulative_interest_df) DISCOUNTED_BALANCE)
     )
@@ -162,6 +164,7 @@
       (is-uint64 new_amount)
       (is-size-b32 new_inner_puzzle_hash)
       (> interest_payment MINUS_ONE)
+      (> new_discounted_balance MINUS_ONE)
       (li
         (list REMARK PROTOCOL_PREFIX new_discounted_balance new_amount new_inner_puzzle_hash memos)
         (list CREATE_COIN_ANNOUNCEMENT (concat PROTOCOL_PREFIX inner_puzzle_hash))
